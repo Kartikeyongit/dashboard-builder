@@ -2,33 +2,11 @@
 .app-shell {
   display: flex;
   min-height: 100vh;
-  position: relative;
-  /* overflow moved to content area only */
-}
-
-/* ---------- Background layer (image + blur) ---------- */
-.app-shell__bg {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  background: url('https://cdn.pixabay.com/photo/2024/05/30/08/48/pattern-8798134_1280.png') center / cover no-repeat;
-}
-
-.app-shell__bg::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: inherit;
-  filter: blur(18px);
-  transform: scale(1.04);
-  opacity: 0.55;
 }
 
 /* ---------- Sidebar ---------- */
 .sidebar {
   width: 240px;
-  position: relative;
-  z-index: 2;
   flex-shrink: 0;
   background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(16px);
@@ -41,12 +19,73 @@
   box-shadow: 10px 0 40px rgba(15, 23, 42, 0.08);
 }
 
+/* Sidebar internals (unchanged, just keep your existing) */
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #0f172a;
+  letter-spacing: -0.3px;
+}
+
+.sidebar-nav {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sidebar-nav a {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #475569;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: background 0.2s, color 0.2s;
+}
+
+.sidebar-nav a:hover,
+.sidebar-nav a.active {
+  background: rgba(239, 246, 255, 0.86);
+  color: #2563eb;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  font-size: 0.85rem;
+  color: #64748b;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.logout-btn {
+  background: transparent;
+  border: 1px solid #fee2e2;
+  color: #ef4444;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+.logout-btn:hover {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
 /* ---------- Main content ---------- */
 .main-content {
-  position: relative;
-  z-index: 1;
   flex: 1;
   padding: 2.5rem 2rem;
-  background: transparent;
+  background: transparent;               /* let the body background shine through */
   overflow-y: auto;
 }
