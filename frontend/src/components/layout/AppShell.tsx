@@ -21,7 +21,6 @@ const AppShell: React.FC = () => {
 
   return (
     <div className="app-shell">
-      <div className="app-shell__bg">
       <aside className="sidebar">
         <div className="sidebar-logo">
           <span className="sidebar-logo-mark">DB</span>
@@ -63,7 +62,6 @@ const AppShell: React.FC = () => {
       <main className="main-content">
         <Outlet />
       </main>
-    </div>
     </div>
   );
 };
