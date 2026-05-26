@@ -10,7 +10,21 @@
 
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background: #f5f7fb;
   color: #1e293b;
   -webkit-font-smoothing: antialiased;
+  /* Background image directly on body – same as .public-home */
+  background: url('https://cdn.pixabay.com/photo/2024/05/30/08/48/pattern-8798134_1280.png') center / cover fixed no-repeat;
+  /* Blurred overlay */
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: inherit;
+  filter: blur(18px);
+  transform: scale(1.04);
+  opacity: 0.55;
 }
