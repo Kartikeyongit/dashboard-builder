@@ -3,7 +3,6 @@
   min-height: 100vh;
   position: relative;
   overflow: hidden;
-  background: url('https://cdn.pixabay.com/photo/2024/05/30/08/48/pattern-8798134_1280.png') center / cover fixed no-repeat;
 }
 
 .app-shell::before {

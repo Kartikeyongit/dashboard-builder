@@ -6,7 +6,6 @@
   position: relative;
   overflow: hidden;
   padding: 2rem;
-  background: url('https://cdn.pixabay.com/photo/2024/05/30/08/48/pattern-8798134_1280.png') center / cover no-repeat;
 }
 
 .auth-page::before {
@@ -47,9 +46,7 @@
   position: absolute;
   inset: -24px;
   z-index: -2;
-  background:
-    linear-gradient(rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.34)),
-    url('https://cdn.pixabay.com/photo/2024/05/30/08/48/pattern-8798134_1280.png') center / cover no-repeat;
+  background: linear-gradient(rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.34));
   filter: blur(22px);
   transform: scale(1.08);
 }
