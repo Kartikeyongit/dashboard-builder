@@ -1,6 +1,6 @@
 module github.com/your-org/dashboard-builder/backend
 
-go 1.22
+go 1.24
 
 require (
 	github.com/ansrivas/fiberprometheus/v2 v2.17.0
