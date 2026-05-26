@@ -9,7 +9,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
-	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/your-org/dashboard-builder/backend/internal/api/handler"
 	"github.com/your-org/dashboard-builder/backend/internal/api/middleware"
 	"github.com/your-org/dashboard-builder/backend/internal/datasource"
