@@ -21,16 +21,19 @@ import (
 )
 
 func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
-	// Middleware
-	frontendURL := os.Getenv("FRONTEND_URL")
-	if frontendURL == "" {
-		frontendURL = "http://localhost:5173"
-	}
-	app.Use(logger.New())
-	app.Use(cors.New(cors.Config{
-		AllowOrigins: frontendURL,
-		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
-	}))
+    // Determine allowed origin
+    frontendURL := os.Getenv("FRONTEND_URL")
+    if frontendURL == "" {
+        frontendURL = "http://localhost:5173"   // local dev fallback
+    }
+
+    // CORS middleware
+    app.Use(cors.New(cors.Config{
+        AllowOrigins:     frontendURL,
+        AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
+        AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS",
+        AllowCredentials: false,   // set to true if you need cookies; false is fine for JWT
+    }))
 
 	// Prometheus
 	prometheus := fiberprometheus.New("dashboard-builder")
