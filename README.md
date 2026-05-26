@@ -4,7 +4,7 @@ A production‑ready, real‑time dashboard builder inspired by Retool and Grafa
 Connect databases, write SQL, and design live dashboards with drag‑and‑drop widgets – all through a modern UI.
 
 > **Live Demo** · `admin@acme.com` / `password123`  
-> https://dashboard-frontend-kms5.onrender.com *(replace with your actual Render frontend URL)*
+> https://dashboard-frontend-kms5.onrender.com
 
 ---
 
