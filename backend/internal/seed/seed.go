@@ -6,10 +6,35 @@ import (
 	"log"
 	"math/rand"
 	"time"
+	"net/url"
+	"strconv"
+	"strings"
+	"os"
 
 	"golang.org/x/crypto/bcrypt"
 	"github.com/your-org/dashboard-builder/backend/pkg/crypto"
 )
+
+func parsePostgresURL(rawURL string) (host string, port int, dbName, user, password string, err error) {
+    u, err := url.Parse(rawURL)
+    if err != nil {
+        return
+    }
+    host = u.Hostname()
+    portStr := u.Port()
+    if portStr == "" {
+        port = 5432
+    } else {
+        port, err = strconv.Atoi(portStr)
+        if err != nil {
+            return
+        }
+    }
+    dbName = strings.TrimPrefix(u.Path, "/")
+    user = u.User.Username()
+    password, _ = u.User.Password()
+    return
+}
 
 func RunSeed(db *sql.DB, encKey string) error {
 	rand.Seed(time.Now().UnixNano())
@@ -38,9 +63,19 @@ func RunSeed(db *sql.DB, encKey string) error {
 		('00000000-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000001', 'admin@acme.com', '%s', 'admin'),
 		('00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000000001', 'editor@acme.com', '%s', 'editor')
 		ON CONFLICT (id) DO UPDATE SET password_hash = EXCLUDED.password_hash`, pwHash, pwHash))
+	// Use the actual Render PostgreSQL credentials from DB_URL
+	dbURL := os.Getenv("DB_URL")
+	host, port, dbName, user, pass, err := parsePostgresURL(dbURL)
+	if err != nil {
+		return fmt.Errorf("failed to parse DB_URL: %w", err)
+	}
+	encPass, err = crypto.Encrypt(pass, encKey)
+	if err != nil {
+		return fmt.Errorf("encrypt db password: %w", err)
+	}
 	exec(fmt.Sprintf(`INSERT INTO datasources (id, org_id, name, type, host, port, db_name, username, encrypted_password, ssl_mode) VALUES
-		('11111111-1111-1111-1111-111111111111', '00000000-0000-0000-0000-000000000001', 'Internal PostgreSQL', 'postgres', 'localhost', 5432, 'dashboard_builder', 'dashboard', '%s', 'disable')
-		ON CONFLICT (id) DO NOTHING`, encPass))
+    ('11111111-1111-1111-1111-111111111111', '00000000-0000-0000-0000-000000000001', 'Internal PostgreSQL', 'postgres', '%s', %d, '%s', '%s', '%s', 'require')
+    ON CONFLICT (id) DO UPDATE SET host = EXCLUDED.host, port = EXCLUDED.port, db_name = EXCLUDED.db_name, username = EXCLUDED.username, encrypted_password = EXCLUDED.encrypted_password, ssl_mode = EXCLUDED.ssl_mode`, host, port, dbName, user, encPass))
 
 	// 2. Drop & recreate sample tables
 	exec(`DROP TABLE IF EXISTS sample_customers CASCADE`)
