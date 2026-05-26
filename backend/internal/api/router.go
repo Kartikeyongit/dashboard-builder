@@ -111,7 +111,7 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 	public.Post("/:token/verify", shareHandler.VerifyPassword)
 
 	// Protected WebSocket for dashboard editor
-	app.Get("/ws", middleware.AuthRequired(jwtSecret), middleware.AttachOrgID, ws.HandleWebSocket(wsHub))
+	app.Get("/ws", middleware.AuthRequiredWS(jwtSecret), middleware.AttachOrgID, ws.HandleWebSocket(wsHub))
 
 	// Public WebSocket for shared dashboards
 	api.Get("/ws/share", ws.HandleShareWebSocket(wsHub, shareService))
@@ -156,7 +156,7 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 	widgets.Delete("/:id", widgetHandler.Delete)
 
 	// Protected WebSocket for dashboard editor
-	app.Get("/ws", middleware.AuthRequired(jwtSecret), ws.HandleWebSocket(wsHub))
+	app.Get("/ws", middleware.AuthRequiredWS(jwtSecret), ws.HandleWebSocket(wsHub))
 
 	// Example protected endpoint
 	protected.Get("/me", func(c *fiber.Ctx) error {
