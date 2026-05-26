@@ -20,26 +20,22 @@ import (
 )
 
 func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
-    // Determine allowed origin
-    frontendURL := os.Getenv("FRONTEND_URL")
-    if frontendURL == "" {
-        frontendURL = "http://localhost:5173"   // local dev fallback
-    }
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = "http://localhost:5173"
+	}
 
-    // CORS middleware
-    app.Use(cors.New(cors.Config{
-        AllowOrigins:     frontendURL,
-        AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
-        AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS",
-        AllowCredentials: false,   // set to true if you need cookies; false is fine for JWT
-    }))
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:     frontendURL,
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
+		AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS",
+		AllowCredentials: false,
+	}))
 
-	// Prometheus
 	prometheus := fiberprometheus.New("dashboard-builder")
 	prometheus.RegisterAt(app, "/metrics")
 	app.Use(prometheus.Middleware)
 
-	// Rate limiter (global for API)
 	api := app.Group("/api/v1")
 	api.Use(limiter.New(limiter.Config{
 		Max:        100,
@@ -53,14 +49,12 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 		LimitReached: func(c *fiber.Ctx) error {
 			return c.Status(429).JSON(fiber.Map{"error": "rate limit exceeded"})
 		},
-		// Storage defaults to in‑memory; no explicit line needed
 	}))
 
 	// Seed endpoint (one‑time use)
 	seedRoute := api.Group("/seed")
 	seedRoute.Get("/", handler.SeedHandler)
 
-	// Repos
 	userRepo := repository.NewUserRepo(db.DB)
 	datasourceRepo := repository.NewDatasourceRepo(db.DB)
 	queryRepo := repository.NewQueryRepo(db.DB)
@@ -68,10 +62,8 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 	widgetRepo := repository.NewWidgetRepo(db.DB)
 	shareLinkRepo := repository.NewShareLinkRepo(db.DB)
 
-	// Pool manager
 	poolManager := datasource.NewPoolManager(encryptionKey)
 
-	// Services
 	authService := service.NewAuthService(userRepo, jwtSecret)
 	datasourceService := service.NewDatasourceService(datasourceRepo, poolManager, encryptionKey)
 	queryService := service.NewQueryService(queryRepo, datasourceRepo, poolManager)
@@ -79,18 +71,15 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 	widgetService := service.NewWidgetService(widgetRepo, dashboardRepo, queryService)
 	shareService := service.NewShareService(shareLinkRepo, dashboardRepo, widgetService)
 
-	// WebSocket hub
 	wsHub := ws.NewHub()
 	go wsHub.Run()
 	ws.StartRedisSubscriber(wsHub)
 
-	// Scheduler
 	sched := scheduler.NewScheduler(queryService, widgetRepo, dashboardRepo, poolManager)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	sched.Start(ctx)
 
-	// Handlers
 	authHandler := handler.NewAuthHandler(authService)
 	datasourceHandler := handler.NewDatasourceHandler(datasourceService)
 	queryHandler := handler.NewQueryHandler(queryService)
@@ -105,21 +94,20 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 	auth.Post("/login", authHandler.Login)
 	auth.Post("/refresh", authHandler.Refresh)
 
-	// Public share routes (no auth)
+	// Public share routes
 	public := api.Group("/share")
 	public.Get("/:token", shareHandler.GetSharedDashboard)
 	public.Post("/:token/verify", shareHandler.VerifyPassword)
 
-	// Protected WebSocket for dashboard editor
-	app.Get("/ws", middleware.AuthRequiredWS(jwtSecret), middleware.AttachOrgID, ws.HandleWebSocket(wsHub))
+	// ✅ Protected WebSocket for dashboard editor – FULL PATH, outside rate limiter
+	app.Get("/api/v1/ws", middleware.AuthRequiredWS(jwtSecret), middleware.AttachOrgID, ws.HandleWebSocket(wsHub))
 
-	// Public WebSocket for shared dashboards
-	api.Get("/ws/share", ws.HandleShareWebSocket(wsHub, shareService))
+	// ✅ Public WebSocket for shared dashboards – also outside rate limiter
+	app.Get("/api/v1/ws/share", ws.HandleShareWebSocket(wsHub, shareService))
 
 	// Protected routes
 	protected := api.Group("", middleware.AuthRequired(jwtSecret), middleware.AttachOrgID)
 
-	// Datasources
 	datasources := protected.Group("/datasources")
 	datasources.Post("/", datasourceHandler.Create)
 	datasources.Get("/", datasourceHandler.List)
@@ -129,7 +117,6 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 	datasources.Post("/:id/test", datasourceHandler.TestConnection)
 	datasources.Get("/:id/schema", datasourceHandler.GetSchema)
 
-	// Queries
 	queries := protected.Group("/queries")
 	queries.Post("/", queryHandler.Create)
 	queries.Get("/", queryHandler.List)
@@ -139,7 +126,6 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 	queries.Post("/:id/execute", queryHandler.ExecuteSaved)
 	queries.Post("/execute", queryHandler.ExecuteAdHoc)
 
-	// Dashboards
 	dashboards := protected.Group("/dashboards")
 	dashboards.Post("/", dashboardHandler.Create)
 	dashboards.Get("/", dashboardHandler.List)
@@ -149,16 +135,11 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 	dashboards.Get("/:id/full", dashboardFullHandler.GetFull)
 	dashboards.Post("/:id/share", shareHandler.CreateShareLink)
 
-	// Widgets (nested)
 	widgets := dashboards.Group("/:dashboardId/widgets")
 	widgets.Post("/", widgetHandler.Create)
 	widgets.Put("/:id", widgetHandler.Update)
 	widgets.Delete("/:id", widgetHandler.Delete)
 
-	// Protected WebSocket for dashboard editor
-	app.Get("/ws", middleware.AuthRequiredWS(jwtSecret), ws.HandleWebSocket(wsHub))
-
-	// Example protected endpoint
 	protected.Get("/me", func(c *fiber.Ctx) error {
 		orgID := c.Locals("orgID").(string)
 		return c.JSON(fiber.Map{"org_id": orgID})
