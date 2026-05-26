@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { shareAPI } from '../../api/share';
+import './ShareDialog.css';
 
 interface Props {
   dashboardId: string;
@@ -25,32 +26,65 @@ const ShareDialog: React.FC<Props> = ({ dashboardId, onClose }) => {
   };
 
   return (
-    <div style={{ position: 'fixed', top: '20%', left: '30%', background: 'white', padding: 20, border: '1px solid #ccc', zIndex: 1000 }}>
-      <h3>Share Dashboard</h3>
-      {link ? (
-        <div>
-          <p>Shareable link (read‑only):</p>
-          <input value={link} readOnly style={{ width: '100%' }} />
-          <button onClick={() => navigator.clipboard.writeText(link)}>Copy</button>
-          <button onClick={onClose}>Close</button>
-        </div>
-      ) : (
-        <div>
-          <label>
-            Password (optional):
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} />
-          </label>
-          <br />
-          <label>
-            Expiry (ISO date, optional):
-            <input type="datetime-local" value={expiry} onChange={e => setExpiry(new Date(e.target.value).toISOString())} />
-          </label>
-          <br />
-          <button onClick={handleCreate}>Generate Link</button>
-          <button onClick={onClose}>Cancel</button>
-          {error && <p style={{ color: 'red' }}>{error}</p>}
-        </div>
-      )}
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
+        <h3 className="modal-title">Share Dashboard</h3>
+
+        {link ? (
+          <>
+            <p style={{ color: '#475569', marginBottom: '0.5rem' }}>
+              Shareable link (read‑only):
+            </p>
+            <div className="link-output">
+              <input value={link} readOnly />
+              <button
+                className="modal-btn modal-btn--primary"
+                style={{ flex: '0 0 auto', padding: '0.6rem 1rem' }}
+                onClick={() => navigator.clipboard.writeText(link)}
+              >
+                Copy
+              </button>
+            </div>
+            <div className="modal-actions">
+              <button className="modal-btn modal-btn--secondary" onClick={onClose}>
+                Close
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="modal-field">
+              <label>Password (optional)</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Leave empty for public access"
+              />
+            </div>
+
+            <div className="modal-field">
+              <label>Expiry (optional)</label>
+              <input
+                type="datetime-local"
+                value={expiry}
+                onChange={(e) => setExpiry(new Date(e.target.value).toISOString())}
+              />
+            </div>
+
+            {error && <div className="error-message">{error}</div>}
+
+            <div className="modal-actions">
+              <button className="modal-btn modal-btn--primary" onClick={handleCreate}>
+                Generate Link
+              </button>
+              <button className="modal-btn modal-btn--secondary" onClick={onClose}>
+                Cancel
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 };
