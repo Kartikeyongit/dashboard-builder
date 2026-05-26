@@ -29,6 +29,13 @@ func Connect(databaseURL string) error {
 }
 
 func RunMigrations() error {
+	dir := os.Getenv("MIGRATIONS_DIR")
+	if dir == "" {
+		// Fallback to the directory relative to this source file (local dev)
+		_, b, _, _ := runtime.Caller(0)
+		basePath := filepath.Dir(b)
+		dir = filepath.Join(basePath, "migrations")
+	}
 	// Ensure migration tracking table exists
 	_, err := DB.Exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
 		version TEXT PRIMARY KEY
@@ -37,11 +44,7 @@ func RunMigrations() error {
 		return fmt.Errorf("failed to create schema_migrations: %w", err)
 	}
 
-	_, b, _, _ := runtime.Caller(0)
-	basePath := filepath.Dir(b)
-	migrationsDir := filepath.Join(basePath, "migrations")
-
-	files, err := os.ReadDir(migrationsDir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		return fmt.Errorf("failed to read migrations dir: %w", err)
 	}
@@ -65,7 +68,7 @@ func RunMigrations() error {
 			continue
 		}
 
-		content, err := os.ReadFile(filepath.Join(migrationsDir, fileName))
+		content, err := os.ReadFile(filepath.Join(dir, fileName))
 		if err != nil {
 			return fmt.Errorf("failed to read migration %s: %w", version, err)
 		}
