@@ -96,6 +96,7 @@
   -webkit-backdrop-filter: none;
   padding: 0;
   margin: 0;
+  border-radius: 14px;
 }
 
 /* Hide scrollbar */
@@ -112,10 +113,10 @@
 .skeleton-grid,
 .dashboard-grid {
   list-style: none;
-  padding: 0;
+  padding: 6px;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
+  gap: 0.5rem;
   margin: 0;
 }
 
