@@ -2,50 +2,47 @@
 
 /* ---------- Public landing ---------- */
 .public-home {
+  min-height: 100vh;             /* full viewport minus possible border */
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
   position: relative;
   overflow: hidden;
   padding: 2rem;
-  background: url('https://cdn.pixabay.com/photo/2024/05/30/08/48/pattern-8798134_1280.png') center / cover no-repeat;
 }
 
 .public-home::before {
   content: '';
   position: absolute;
-  inset: -24px;
-  z-index: -2;
-  background:
-    linear-gradient(rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.34)),
-    url('https://cdn.pixabay.com/photo/2024/05/30/08/48/pattern-8798134_1280.png') center / cover no-repeat;
-  filter: blur(22px);
-  transform: scale(1.08);
+  inset: -28px;
+  z-index: 0;
+  background: inherit;
+  filter: blur(18px);
+  transform: scale(1.04);
+  opacity: 0.55;
 }
 
 .public-home::after {
   content: '';
   position: absolute;
   inset: 0;
-  z-index: -1;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.58));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  z-index: 0;
+  background: radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.18), transparent 34%);
 }
 
 .public-home__panel {
   position: relative;
   z-index: 1;
-  overflow: hidden;
+  max-width: 560px;
+  width: 100%;
   background: rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-radius: 14px;
-  padding: 2.5rem;
-  width: 400px;
-  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.32);
-  border: 1px solid rgba(255, 255, 255, 0.48);
+  padding: 2.75rem 2.5rem;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  text-align: left;
 }
 
 .eyebrow {
