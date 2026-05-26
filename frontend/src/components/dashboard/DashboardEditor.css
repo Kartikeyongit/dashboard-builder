@@ -1,0 +1,245 @@
+/* DashboardEditor.css – glass-morphism toolbar & grid container */
+
+.editor-page {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 0.25rem 0 2rem;
+  height: calc(100vh - 5rem);          /* fixed height to avoid page scroll */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Glass toolbar */
+.editor-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  border-radius: 14px;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 8px 25px rgba(15, 23, 42, 0.08);
+  flex-shrink: 0;
+}
+
+.editor-toolbar h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.toolbar-actions button {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1rem;
+  border: 1px solid #1d4ed8;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  transition: background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.toolbar-actions button:hover {
+  background: #1d4ed8;
+  border-color: #1e40af;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.16);
+}
+
+.toolbar-actions button.secondary {
+  background: rgba(255,255,255,0.7);
+  color: #334155;
+  border-color: #cbd5e1;
+}
+
+.toolbar-actions button.secondary:hover {
+  background: rgba(248,250,252,0.9);
+  border-color: #94a3b8;
+}
+
+.toolbar-actions button:active {
+  transform: scale(0.98);
+}
+
+.toolbar-actions button:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.22);
+  outline-offset: 2px;
+}
+
+/* Glass grid container – fills remaining space, scrollable */
+.grid-container {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  border-radius: 14px;
+  padding: 1.5rem;
+  overflow-y: auto;
+  box-shadow: 0 12px 35px rgba(15, 23, 42, 0.1);
+}
+
+/* Hide grid container scrollbar */
+.grid-container::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+.grid-container {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+/* Widget boxes */
+.widget-box {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(15, 23, 42, 0.06);
+}
+
+.widget-header {
+  background: rgba(248,250,252,0.7);
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  color: #475569;
+  border-bottom: 1px solid rgba(226,232,240,0.6);
+}
+
+.widget-header button {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 1.2rem;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.widget-header button:hover {
+  color: #ef4444;
+}
+
+.widget-content {
+  padding: 1rem;
+  height: calc(100% - 36px);
+}
+
+.error-message {
+  background: #fef2f2;
+  color: #dc2626;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+.loading-text {
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+  color: #64748b;
+}
+
+/* Responsive – allow page scroll on small screens */
+@media (max-width: 720px) {
+  .editor-page {
+    height: auto;
+    display: block;
+  }
+
+  .grid-container {
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .editor-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbar-actions button {
+    width: 100%;
+  }
+}
+
+/* ---------- Save status pill ---------- */
+.save-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0.4rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  color: #475569;
+  transition: all 0.2s ease;
+}
+
+.save-status--saving {
+  color: #2563eb;
+  border-color: #bfdbfe;
+  background: rgba(239, 246, 255, 0.7);
+}
+
+.save-status--saved {
+  color: #10b981;
+  border-color: #a7f3d0;
+  background: rgba(236, 253, 245, 0.7);
+}
+
+.save-status--error {
+  color: #ef4444;
+  border-color: #fecaca;
+  background: rgba(254, 242, 242, 0.7);
+}
+
+.back-btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.6);
+  color: #475569;
+  padding: 0.4rem 1rem;
+  font-size: 0.85rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: rgba(255,255,255,0.5);
+  backdrop-filter: blur(8px);
+  align-self: flex-start;
+}
+
+.back-btn:hover {
+  background: rgba(255,255,255,0.8);
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
