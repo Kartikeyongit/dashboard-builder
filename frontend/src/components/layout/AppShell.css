@@ -1,7 +1,28 @@
 .app-shell {
   display: flex;
   min-height: 100vh;
+  position: relative;
+  overflow: hidden;
   background: url('https://cdn.pixabay.com/photo/2024/05/30/08/48/pattern-8798134_1280.png') center / cover fixed no-repeat;
+}
+
+.app-shell::before {
+  content: '';
+  position: absolute;
+  inset: -28px;
+  z-index: 0;
+  background: inherit;
+  filter: blur(18px);
+  transform: scale(1.04);
+  opacity: 0.55;
+}
+
+.app-shell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: radial-gradient(circle at 50% 16%, rgba(255, 255, 255, 0.22), transparent 34%);
 }
 
 .sidebar {
