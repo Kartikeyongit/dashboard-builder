@@ -54,6 +54,10 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 		// Storage defaults to in‑memory; no explicit line needed
 	}))
 
+	// Seed endpoint (one‑time use)
+	seedRoute := api.Group("/seed")
+	seedRoute.Get("/", handler.SeedHandler)
+
 	// Repos
 	userRepo := repository.NewUserRepo(db.DB)
 	datasourceRepo := repository.NewDatasourceRepo(db.DB)
