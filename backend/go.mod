@@ -1,6 +1,6 @@
 module github.com/your-org/dashboard-builder/backend
 
-go 1.26.3
+go 1.25.0
 
 require (
 	github.com/ansrivas/fiberprometheus/v2 v2.17.0
@@ -10,7 +10,6 @@ require (
 	github.com/gofiber/jwt/v3 v3.3.10
 	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/google/uuid v1.6.0
-	github.com/gorilla/websocket v1.5.3
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.12.3

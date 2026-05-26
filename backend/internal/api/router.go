@@ -2,12 +2,14 @@ package api
 
 import (
 	"context"
+	"os"
 	"time"
+
+	"github.com/ansrivas/fiberprometheus/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/ansrivas/fiberprometheus/v2"
 	"github.com/your-org/dashboard-builder/backend/internal/api/handler"
 	"github.com/your-org/dashboard-builder/backend/internal/api/middleware"
 	"github.com/your-org/dashboard-builder/backend/internal/datasource"
@@ -20,9 +22,13 @@ import (
 
 func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 	// Middleware
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = "http://localhost:5173"
+	}
 	app.Use(logger.New())
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "http://localhost:5173",
+		AllowOrigins: frontendURL,
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
 	}))
 
