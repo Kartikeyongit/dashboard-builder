@@ -488,24 +488,26 @@ const PublicLanding = () => (
       </div>
     </section>
 
-    {/* CTA Banner */}
-    <section className="cta-banner">
-      <motion.div
-        className="cta-content"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5 }}
-      >
-        <h2>Ready to visualize your data?</h2>
-        <p>Connect your first database in under a minute. No credit card required.</p>
-        <Link to="/register" className="cta-btn">
-          Get started for free
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
-          </svg>
-        </Link>
-      </motion.div>
+    {/* CTA Card */}
+    <section className="section cta-card-section">
+      <div className="section-inner">
+        <motion.div
+          className="cta-card"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+        >
+          <h2>Ready to visualize your data?</h2>
+          <p>Connect your first database in under a minute. No credit card required.</p>
+          <Link to="/register" className="cta-btn">
+            Get started for free
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </Link>
+        </motion.div>
+      </div>
     </section>
 
     {/* Footer */}

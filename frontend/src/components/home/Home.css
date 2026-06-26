@@ -442,36 +442,40 @@
 }
 
 /* ---------- CTA Banner ---------- */
-.cta-banner {
-  background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 50%, #1d4ed8 100%);
-  padding: 5rem 2rem;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
+.cta-card-section {
+  padding-bottom: 0;
 }
 
-.cta-banner::before {
+.cta-card {
+  background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 50%, #1d4ed8 100%);
+  padding: 4rem 2rem;
+  text-align: center;
+  border-radius: var(--radius-lg);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(30, 64, 175, 0.2);
+}
+
+.cta-card::before {
   content: '';
   position: absolute;
   inset: 0;
   background: radial-gradient(ellipse at center, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
+  pointer-events: none;
 }
 
-.cta-content {
+.cta-card h2 {
   position: relative;
   z-index: 1;
-  max-width: 560px;
-  margin: 0 auto;
-}
-
-.cta-content h2 {
   font-size: clamp(1.5rem, 3vw, 2rem);
   font-weight: 700;
   color: white;
   margin: 0 0 0.75rem;
 }
 
-.cta-content p {
+.cta-card p {
+  position: relative;
+  z-index: 1;
   font-size: 1rem;
   color: rgba(255, 255, 255, 0.7);
   margin: 0 0 2rem;
@@ -1545,7 +1549,7 @@
   .step {
     padding: 1rem 0;
   }
-  .cta-banner {
+  .cta-card {
     padding: 3rem 1.25rem;
   }
 }
