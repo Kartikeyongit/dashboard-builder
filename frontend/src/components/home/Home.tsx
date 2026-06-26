@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion, useInView, useMotionValue, useSpring, useTransform } from 'framer-motion';
+import { motion, useInView, useMotionValue, useSpring, useTransform, AnimatePresence } from 'framer-motion';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import { fetchDashboards } from '../../store/dashboardSlice';
 import { fetchDatasources } from '../../store/datasourceSlice';
@@ -54,6 +54,122 @@ const features = [
     desc: 'Generate shareable links with live data. No login required for viewers — perfect for stakeholders.',
   },
 ];
+
+/* ---------- FAQ Accordion ---------- */
+const faqs = [
+  { q: 'What databases do you support?', a: 'We currently support PostgreSQL and MySQL. Both SSL and non-SSL connections are supported with custom ports.' },
+  { q: 'Can I share dashboards with people who don\'t have an account?', a: 'Yes. Every dashboard has a shareable link that viewers can open without logging in. You control whether the link is public or requires authentication.' },
+  { q: 'How does the widget editor work?', a: 'Widgets are placed on a drag-and-drop grid. You can resize and rearrange them freely. Each widget connects to a saved query and renders as a chart, table, or metric card.' },
+  { q: 'Is my data secure?', a: 'Yes. Connections to your database use encrypted credentials. Dashboard links can be restricted. We never store raw query results — only the SQL text.' },
+  { q: 'Can I use my own domain?', a: 'Shared dashboards can be embedded in iframes on your own domain. Enterprise plans include custom domain support.' },
+];
+
+/* ---------- Testimonials ---------- */
+const testimonials = [
+  { name: 'Sarah Chen', role: 'Data Engineer at Acme', avatar: 'SC', quote: 'We replaced a complex BI stack with Dashboard Builder. Our team went from waiting days for reports to building their own dashboards in minutes.', color: '#3b82f6' },
+  { name: 'Marcus Johnson', role: 'CTO at Stackflow', avatar: 'MJ', quote: 'The SQL editor with schema auto-complete is a game changer. Our analysts can explore data without switching between tools.', color: '#8b5cf6' },
+  { name: 'Elena Rodriguez', role: 'Product Manager at Nimbus', avatar: 'ER', quote: 'Sharing live dashboards with stakeholders used to be a headache. Now I just send a link and they see real-time data instantly.', color: '#10b981' },
+];
+
+/* ---------- Pricing ---------- */
+const plans = [
+  {
+    name: 'Starter',
+    price: 'Free',
+    desc: 'For individual developers and small projects.',
+    features: ['1 datasource', '5 saved queries', '3 dashboards', 'Shareable links'],
+    cta: 'Get started',
+    to: '/register',
+    featured: false,
+  },
+  {
+    name: 'Pro',
+    price: '$19',
+    period: '/mo',
+    desc: 'For teams that need more power and flexibility.',
+    features: ['10 datasources', '50 saved queries', 'Unlimited dashboards', 'Team members', 'Priority support'],
+    cta: 'Start trial',
+    to: '/register',
+    featured: true,
+  },
+  {
+    name: 'Enterprise',
+    price: 'Custom',
+    desc: 'For organizations with advanced security and scale needs.',
+    features: ['Unlimited datasources', 'Unlimited queries', 'Custom domain', 'SSO / SAML', 'SLA & dedicated support', 'On-premise option'],
+    cta: 'Contact sales',
+    to: '/register',
+    featured: false,
+  },
+];
+
+/* ---------- Section wrapper ---------- */
+function SectionHeader({ label, title, desc }: { label: string; title: string; desc?: string }) {
+  return (
+    <>
+      <motion.p
+        className="section-label"
+        initial={{ opacity: 0, y: 10 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.4 }}
+      >
+        {label}
+      </motion.p>
+      <motion.h2
+        className="section-title"
+        initial={{ opacity: 0, y: 10 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ delay: 0.08, duration: 0.4 }}
+      >
+        {title}
+      </motion.h2>
+      {desc && (
+        <motion.p
+          className="section-desc"
+          initial={{ opacity: 0, y: 10 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.12, duration: 0.4 }}
+        >
+          {desc}
+        </motion.p>
+      )}
+    </>
+  );
+}
+
+/* ---------- Back to Top Button ---------- */
+function BackToTop() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setVisible(window.scrollY > 600);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.button
+          className="back-to-top"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.8 }}
+          transition={{ duration: 0.2 }}
+          aria-label="Back to top"
+        >
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+          </svg>
+        </motion.button>
+      )}
+    </AnimatePresence>
+  );
+}
 
 /* ---------- Public Landing Page ---------- */
 const PublicLanding = () => (
@@ -112,33 +228,7 @@ const PublicLanding = () => (
     {/* Features */}
     <section className="section">
       <div className="section-inner">
-        <motion.p
-          className="section-label"
-          initial={{ opacity: 0, y: 10 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.4 }}
-        >
-          Everything you need
-        </motion.p>
-        <motion.h2
-          className="section-title"
-          initial={{ opacity: 0, y: 10 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.1, duration: 0.4 }}
-        >
-          From database to dashboard in minutes
-        </motion.h2>
-        <motion.p
-          className="section-desc"
-          initial={{ opacity: 0, y: 10 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.15, duration: 0.4 }}
-        >
-          No ETL pipelines. No complex configuration. Connect, query, and visualize your data.
-        </motion.p>
+        <SectionHeader label="Everything you need" title="From database to dashboard in minutes" desc="No ETL pipelines. No complex configuration. Connect, query, and visualize your data." />
 
         <motion.div
           className="features-grid"
@@ -173,21 +263,15 @@ const PublicLanding = () => (
           transition={{ duration: 0.6 }}
         >
           <div className="stat-item">
-            <div className="stat-number">
-              <AnimatedCounter end={200} suffix="+" />
-            </div>
+            <div className="stat-number"><AnimatedCounter end={200} suffix="+" /></div>
             <div className="stat-label">Data Sources Connected</div>
           </div>
           <div className="stat-item">
-            <div className="stat-number">
-              <AnimatedCounter end={50} suffix="+" />
-            </div>
+            <div className="stat-number"><AnimatedCounter end={50} suffix="+" /></div>
             <div className="stat-label">Dashboards Built</div>
           </div>
           <div className="stat-item">
-            <div className="stat-number">
-              <AnimatedCounter end={99} suffix="%" />
-            </div>
+            <div className="stat-number"><AnimatedCounter end={99} suffix="%" /></div>
             <div className="stat-label">Uptime</div>
           </div>
         </motion.div>
@@ -197,24 +281,7 @@ const PublicLanding = () => (
     {/* How It Works */}
     <section className="section">
       <div className="section-inner">
-        <motion.p
-          className="section-label"
-          initial={{ opacity: 0, y: 10 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.4 }}
-        >
-          How it works
-        </motion.p>
-        <motion.h2
-          className="section-title"
-          initial={{ opacity: 0, y: 10 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.1, duration: 0.4 }}
-        >
-          Three steps to insight
-        </motion.h2>
+        <SectionHeader label="How it works" title="Three steps to insight" />
 
         <motion.div
           className="steps"
@@ -235,6 +302,187 @@ const PublicLanding = () => (
                 <p>{step.desc}</p>
               </div>
             </motion.div>
+          ))}
+        </motion.div>
+      </div>
+    </section>
+
+    {/* Integrations */}
+    <section className="section">
+      <div className="section-inner">
+        <SectionHeader label="Integrations" title="Works with your database" desc="Connect directly to the databases you already use. No middleware or ETL required." />
+
+        <motion.div
+          className="integrations-grid"
+          variants={staggerContainer}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+        >
+          {[
+            { name: 'PostgreSQL', icon: 'PG', color: '#336791', desc: 'Full support for PostgreSQL 12+ including SSL, connection pooling, and schema introspection.' },
+            { name: 'MySQL', icon: 'MY', color: '#4479A1', desc: 'Compatible with MySQL 8+ and MariaDB. Supports custom ports and SSL connections.' },
+            { name: 'REST API', icon: 'API', color: '#6d28d9', desc: 'Coming soon — connect to any REST API and visualize JSON responses as dashboards.' },
+          ].map((db, i) => (
+            <motion.div key={i} className="integration-card" variants={fadeInUp} whileHover={{ y: -4 }}>
+              <div className="integration-icon" style={{ background: db.color }}>{db.icon}</div>
+              <div className="integration-info">
+                <h3>{db.name}</h3>
+                <p>{db.desc}</p>
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
+    </section>
+
+    {/* Demo Preview */}
+    <section className="demo-preview">
+      <div className="section-inner">
+        <SectionHeader label="See it in action" title="A live dashboard in seconds" desc="Connect, query, and visualize — all from one interface." />
+
+        <motion.div
+          className="demo-mockup"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          <div className="mockup-toolbar">
+            <div className="mockup-tabs">
+              <span className="mockup-tab active">Revenue Overview</span>
+              <span className="mockup-tab">User Analytics</span>
+              <span className="mockup-tab">Performance</span>
+            </div>
+            <div className="mockup-actions">
+              <span className="mockup-pill">Share</span>
+              <span className="mockup-pill">Edit</span>
+            </div>
+          </div>
+          <div className="mockup-grid">
+            <div className="mockup-widget mockup-widget--wide">
+              <div className="mockup-widget-header">
+                <span className="mockup-widget-dot" style={{ background: '#3b82f6' }} />
+                <span>Revenue (last 30 days)</span>
+              </div>
+              <div className="mockup-chart">
+                <div className="mockup-bar" style={{ height: '60%' }} />
+                <div className="mockup-bar" style={{ height: '85%' }} />
+                <div className="mockup-bar" style={{ height: '45%' }} />
+                <div className="mockup-bar" style={{ height: '70%' }} />
+                <div className="mockup-bar" style={{ height: '90%' }} />
+                <div className="mockup-bar" style={{ height: '55%' }} />
+                <div className="mockup-bar" style={{ height: '75%' }} />
+              </div>
+            </div>
+            <div className="mockup-widget">
+              <div className="mockup-widget-header">
+                <span className="mockup-widget-dot" style={{ background: '#10b981' }} />
+                <span>Total Users</span>
+              </div>
+              <div className="mockup-metric">12,483</div>
+              <div className="mockup-change positive">+12% this month</div>
+            </div>
+            <div className="mockup-widget">
+              <div className="mockup-widget-header">
+                <span className="mockup-widget-dot" style={{ background: '#8b5cf6' }} />
+                <span>Active Queries</span>
+              </div>
+              <div className="mockup-metric">847</div>
+              <div className="mockup-change negative">-3% this week</div>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+
+    {/* Testimonials */}
+    <section className="section">
+      <div className="section-inner">
+        <SectionHeader label="Testimonials" title="Trusted by data teams" desc="See what our users say about Dashboard Builder." />
+
+        <motion.div
+          className="testimonials-grid"
+          variants={staggerContainer}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+        >
+          {testimonials.map((t, i) => (
+            <motion.div key={i} className="testimonial-card" variants={fadeInUp} whileHover={{ y: -4 }}>
+              <div className="testimonial-quote">"{t.quote}"</div>
+              <div className="testimonial-author">
+                <div className="testimonial-avatar" style={{ background: t.color }}>{t.avatar}</div>
+                <div>
+                  <div className="testimonial-name">{t.name}</div>
+                  <div className="testimonial-role">{t.role}</div>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
+    </section>
+
+    {/* Pricing */}
+    <section className="section pricing-section">
+      <div className="section-inner">
+        <SectionHeader label="Pricing" title="Simple, transparent pricing" desc="Start free. Upgrade when you need more." />
+
+        <motion.div
+          className="pricing-grid"
+          variants={staggerContainer}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+        >
+          {plans.map((plan, i) => (
+            <motion.div
+              key={i}
+              className={`pricing-card ${plan.featured ? 'pricing-card--featured' : ''}`}
+              variants={fadeInUp}
+              whileHover={plan.featured ? { y: -6 } : { y: -3 }}
+            >
+              {plan.featured && <div className="pricing-badge">Most popular</div>}
+              <h3 className="pricing-name">{plan.name}</h3>
+              <div className="pricing-price">
+                <span className="pricing-amount">{plan.price}</span>
+                {plan.period && <span className="pricing-period">{plan.period}</span>}
+              </div>
+              <p className="pricing-desc">{plan.desc}</p>
+              <ul className="pricing-features">
+                {plan.features.map((f, j) => (
+                  <li key={j}>
+                    <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <Link to={plan.to} className={`pricing-cta ${plan.featured ? 'pricing-cta--primary' : ''}`}>
+                {plan.cta}
+              </Link>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
+    </section>
+
+    {/* FAQ */}
+    <section className="section faq-section">
+      <div className="section-inner">
+        <SectionHeader label="FAQ" title="Frequently asked questions" />
+
+        <motion.div
+          className="faq-list"
+          variants={staggerContainer}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+        >
+          {faqs.map((faq, i) => (
+            <FaqItem key={i} question={faq.q} answer={faq.a} />
           ))}
         </motion.div>
       </div>
@@ -264,8 +512,43 @@ const PublicLanding = () => (
     <footer className="landing-footer">
       <p>&copy; {new Date().getFullYear()} Dashboard Builder. Built with React, TypeScript &amp; PostgreSQL.</p>
     </footer>
+
+    <BackToTop />
   </div>
 );
+
+/* ---------- FAQ Item ---------- */
+function FaqItem({ question, answer }: { question: string; answer: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <motion.div className={`faq-item ${open ? 'faq-item--open' : ''}`} variants={fadeInUp}>
+      <button className="faq-question" onClick={() => setOpen(!open)}>
+        <span>{question}</span>
+        <motion.svg
+          width="16" height="16" viewBox="0 0 20 20" fill="currentColor"
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+        </motion.svg>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            className="faq-answer"
+            key="answer"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+          >
+            <p>{answer}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
 
 /* ---------- Authenticated Home ---------- */
 const AuthenticatedHome = () => {
@@ -335,7 +618,7 @@ const AuthenticatedHome = () => {
           { to: '/datasources', icon: <path d="M4 7c0 1.657 3.582 3 8 3s8-1.343 8-3M4 7v6c0 1.657 3.582 3 8 3s8-1.343 8-3V7M4 7c0 1.657 3.582 3 8 3s8-1.343 8-3" stroke="currentColor" strokeWidth="2" fill="none" />, color: '#3b82f6', bg: 'linear-gradient(135deg, #3b82f6, #2563eb)', value: datasources.length, label: 'Datasources' },
           { to: '/queries', icon: <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" fill="currentColor" />, color: '#8b5cf6', bg: 'linear-gradient(135deg, #8b5cf6, #6d28d9)', value: queries.length, label: 'Queries' },
           { to: '/dashboards', icon: <><rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" fill="none" /><rect x="14" y="3" width="7" height="4" rx="1" stroke="currentColor" strokeWidth="2" fill="none" /><rect x="3" y="14" width="7" height="4" rx="1" stroke="currentColor" strokeWidth="2" fill="none" /><rect x="14" y="11" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" fill="none" /></>, color: '#10b981', bg: 'linear-gradient(135deg, #10b981, #059669)', value: dashboards.length, label: 'Dashboards' },
-          { to: null, icon: <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" fill="currentColor" />, color: '#f59e0b', bg: 'linear-gradient(135deg, #f59e0b, #d97706)', value: user?.role || '—', label: 'Role', isString: true },
+          { to: null, icon: <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" fill="currentColor" />, color: '#f59e0b', bg: 'linear-gradient(135deg, #f59e0b, #d97706)', value: user?.role || '—', label: 'Role' },
         ].map((stat, i) => (
           <motion.div key={i} variants={fadeInUp}>
             {stat.to ? (
@@ -390,7 +673,7 @@ const AuthenticatedHome = () => {
         ))}
       </motion.div>
 
-      {/* Activity Section */}
+      {/* Activity */}
       {activities.length > 0 && (
         <motion.div
           className="home-section"
@@ -459,7 +742,7 @@ const AuthenticatedHome = () => {
         </motion.div>
       )}
 
-      {/* Getting Started Checklist */}
+      {/* Getting Started */}
       {!hasData && (
         <motion.div
           className="home-section"
@@ -481,11 +764,7 @@ const AuthenticatedHome = () => {
               { done: queries.length > 0, num: 2, title: 'Write a query', desc: 'Create SQL queries to fetch your data', link: '/queries/new', action: 'Write' },
               { done: dashboards.length > 0, num: 3, title: 'Build a dashboard', desc: 'Add charts, tables, and metrics', link: '/dashboards', action: 'Build' },
             ].map((item, i) => (
-              <motion.div
-                key={i}
-                className={`checklist-item ${item.done ? 'done' : ''}`}
-                variants={fadeInUp}
-              >
+              <motion.div key={i} className={`checklist-item ${item.done ? 'done' : ''}`} variants={fadeInUp}>
                 <div className="checklist-check">
                   {item.done ? (
                     <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
@@ -499,9 +778,7 @@ const AuthenticatedHome = () => {
                   <span className="checklist-title">{item.title}</span>
                   <span className="checklist-desc">{item.desc}</span>
                 </div>
-                {!item.done && (
-                  <Link to={item.link} className="checklist-action">{item.action}</Link>
-                )}
+                {!item.done && <Link to={item.link} className="checklist-action">{item.action}</Link>}
               </motion.div>
             ))}
           </motion.div>
@@ -514,9 +791,7 @@ const AuthenticatedHome = () => {
 /* ---------- Home Entry Point ---------- */
 const Home: React.FC = () => {
   const user = useAppSelector((state) => state.auth.user);
-
   if (!user) return <PublicLanding />;
-
   return <AuthenticatedHome />;
 };
 
