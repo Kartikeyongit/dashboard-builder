@@ -1,16 +1,20 @@
 .app-shell {
-  display: flex;
   min-height: 100vh;
 }
 
 .sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 240px;
-  flex-shrink: 0;
+  height: 100vh;
   background: var(--color-sidebar);
   display: flex;
   flex-direction: column;
   padding: 1.5rem 0.75rem;
   gap: 1.5rem;
+  z-index: 100;
+  overflow-y: auto;
 }
 
 .sidebar-logo {
@@ -152,7 +156,8 @@
 }
 
 .main-content {
-  flex: 1;
+  margin-left: 240px;
+  min-height: 100vh;
   padding: 2rem 2rem;
   overflow-y: auto;
   background: var(--color-bg);
