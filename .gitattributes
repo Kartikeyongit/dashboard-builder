@@ -1,0 +1,18 @@
+* text=auto
+
+*.go text
+*.tsx text
+*.ts text
+*.css text
+*.js text
+*.json text
+*.md text
+*.yml text
+*.yaml text
+*.sql text
+*.env text eol=lf
+
+*.png binary
+*.jpg binary
+*.svg binary
+*.ico binary
