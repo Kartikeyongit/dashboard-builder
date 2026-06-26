@@ -261,6 +261,7 @@
 .section-inner {
   max-width: 1100px;
   margin: 0 auto;
+  width: 100%;
 }
 
 .section-label {
@@ -448,7 +449,7 @@
 
 .cta-card {
   background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 50%, #1d4ed8 100%);
-  padding: 4rem 2rem;
+  padding: 4rem;
   text-align: center;
   border-radius: var(--radius-lg);
   position: relative;
