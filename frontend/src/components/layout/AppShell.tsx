@@ -22,7 +22,7 @@ const AppShell: React.FC = () => {
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const handler = (e: MediaQueryListEvent) => {
-      if (!localStorage.getItem('theme')) {
+      if (localStorage.getItem('theme_manual') !== '1') {
         const next = e.matches ? 'dark' : 'light';
         setThemeState(next);
         setTheme(next);
@@ -41,6 +41,7 @@ const AppShell: React.FC = () => {
     const next = theme === 'light' ? 'dark' : 'light';
     setThemeState(next);
     localStorage.setItem('theme', next);
+    localStorage.setItem('theme_manual', '1');
     setTheme(next);
   };
 

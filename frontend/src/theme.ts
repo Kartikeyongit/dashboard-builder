@@ -1,6 +1,7 @@
 let saved: string | null = null;
-try { saved = localStorage.getItem('theme'); } catch {}
-if (saved) {
+let manual = false;
+try { saved = localStorage.getItem('theme'); manual = localStorage.getItem('theme_manual') === '1'; } catch {}
+if (saved && manual) {
   document.documentElement.setAttribute('data-theme', saved);
 } else {
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
