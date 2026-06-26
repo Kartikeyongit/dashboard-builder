@@ -225,6 +225,9 @@
 
 :root[data-theme='dark'] .hero-title {
   background: linear-gradient(135deg, #f1f5f9 0%, #93c5fd 50%, #a5b4fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 :root[data-theme='dark'] .hero-subtitle {
