@@ -26,7 +26,6 @@ const AppShell: React.FC = () => {
 
   useEffect(() => {
     applyTheme(theme);
-    localStorage.setItem('theme', theme);
   }, [theme]);
 
   useEffect(() => {
@@ -46,7 +45,11 @@ const AppShell: React.FC = () => {
   };
 
   const toggleTheme = () => {
-    setThemeState(prev => prev === 'light' ? 'dark' : 'light');
+    setThemeState(prev => {
+      const next = prev === 'light' ? 'dark' : 'light';
+      localStorage.setItem('theme', next);
+      return next;
+    });
   };
 
   if (!user) {
