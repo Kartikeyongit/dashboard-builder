@@ -18,6 +18,7 @@
     0 0 24px rgba(34, 211, 238, 0.2),
     0 0 60px rgba(34, 211, 238, 0.1),
     var(--shadow-lg);
+  overflow: hidden;
   animation: slide-up var(--transition-slow) ease;
 }
 
@@ -32,7 +33,6 @@
   justify-content: center;
   position: relative;
   overflow: hidden;
-  border-radius: var(--radius-xl) 0 0 var(--radius-xl);
 }
 
 .auth-brand::before {
