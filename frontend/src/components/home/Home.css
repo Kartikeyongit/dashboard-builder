@@ -444,14 +444,14 @@
 
 /* ---------- CTA Card ---------- */
 .cta-card-section {
-  padding-bottom: 3rem;
+  padding-bottom: 5rem;
 }
 
 .cta-card {
   background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 50%, #1d4ed8 100%);
-  padding: 4rem;
+  padding: 2rem 1.75rem;
   text-align: center;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   position: relative;
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(30, 64, 175, 0.2);
@@ -1551,6 +1551,6 @@
     padding: 1rem 0;
   }
   .cta-card {
-    padding: 3rem 1.25rem;
+    padding: 2rem 1.25rem;
   }
 }
