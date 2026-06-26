@@ -138,16 +138,14 @@ const Register: React.FC = () => {
                   )}
                 </button>
               </div>
-              {password && (
-                <div className="password-strength">
-                  <div className="strength-bar">
-                    <div className="strength-bar-fill" style={{ width: `${strength.score}%`, background: strength.color }} />
-                  </div>
-                  <span className="strength-label" style={{ color: strength.color }}>
-                    {strength.label}
-                  </span>
+              <div className="password-strength" style={{ visibility: password ? 'visible' : 'hidden' }}>
+                <div className="strength-bar">
+                  <div className="strength-bar-fill" style={{ width: `${strength.score}%`, background: strength.color }} />
                 </div>
-              )}
+                <span className="strength-label" style={{ color: strength.color }}>
+                  {strength.label}
+                </span>
+              </div>
             </div>
 
             <button type="submit" className="auth-btn" disabled={isLoading}>
