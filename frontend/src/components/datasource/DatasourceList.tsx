@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import { fetchDatasources, deleteDatasource, testDatasourceConnection } from '../../store/datasourceSlice';
+import { addToast } from '../../store/toastSlice';
 import './DatasourceList.css';
 
 const DatasourceList: React.FC = () => {
@@ -15,11 +16,17 @@ const DatasourceList: React.FC = () => {
   const handleDelete = (id: string) => {
     if (window.confirm('Delete this datasource?')) {
       dispatch(deleteDatasource(id));
+      dispatch(addToast({ message: 'Datasource deleted', type: 'success' }));
     }
   };
 
-  const handleTest = (id: string) => {
-    dispatch(testDatasourceConnection(id));
+  const handleTest = async (id: string) => {
+    const result = await dispatch(testDatasourceConnection(id));
+    if (testDatasourceConnection.fulfilled.match(result)) {
+      dispatch(addToast({ message: 'Connection successful', type: 'success' }));
+    } else {
+      dispatch(addToast({ message: 'Connection failed', type: 'error' }));
+    }
   };
 
   return (

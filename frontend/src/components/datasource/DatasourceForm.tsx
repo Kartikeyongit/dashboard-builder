@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import { createDatasource, updateDatasource } from '../../store/datasourceSlice';
 import type { CreateDatasourcePayload } from '../../types';
+import { addToast } from '../../store/toastSlice';
 import './DatasourceForm.css';
 
 const DatasourceForm: React.FC = () => {
@@ -50,8 +51,10 @@ const DatasourceForm: React.FC = () => {
     e.preventDefault();
     if (id) {
       await dispatch(updateDatasource({ id, data: form }));
+      dispatch(addToast({ message: 'Datasource updated', type: 'success' }));
     } else {
       await dispatch(createDatasource(form));
+      dispatch(addToast({ message: 'Datasource created', type: 'success' }));
     }
     navigate('/datasources');
   };

@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import { fetchDashboards, createDashboard, deleteDashboard } from '../../store/dashboardSlice';
+import { addToast } from '../../store/toastSlice';
 import './DashboardList.css';
 
 const DashboardList: React.FC = () => {
@@ -18,6 +19,7 @@ const DashboardList: React.FC = () => {
     if (name) {
       const result = await dispatch(createDashboard({ name }));
       if (createDashboard.fulfilled.match(result)) {
+        dispatch(addToast({ message: 'Dashboard created', type: 'success' }));
         navigate(`/dashboards/${result.payload.id}/edit`);
       }
     }
@@ -26,6 +28,7 @@ const DashboardList: React.FC = () => {
   const handleDelete = (id: string) => {
     if (window.confirm('Delete dashboard?')) {
       dispatch(deleteDashboard(id));
+      dispatch(addToast({ message: 'Dashboard deleted', type: 'success' }));
     }
   };
 

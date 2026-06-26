@@ -7,6 +7,7 @@ import { fetchDatasources } from '../../store/datasourceSlice';
 import { fetchQueries, createQuery, updateQuery } from '../../store/querySlice';
 import { datasourceAPIWithSchema, queryAPI } from '../../api/query';
 import type { CreateQueryPayload, QueryResult, TableSchema } from '../../types';
+import { addToast } from '../../store/toastSlice';
 import './QueryEditor.css';
 
 const QueryEditor: React.FC = () => {
@@ -113,12 +114,15 @@ const QueryEditor: React.FC = () => {
     try {
       if (queryId) {
         await dispatch(updateQuery({ id: queryId, data: payload })).unwrap();
+        dispatch(addToast({ message: 'Query updated', type: 'success' }));
       } else {
         await dispatch(createQuery(payload)).unwrap();
+        dispatch(addToast({ message: 'Query created', type: 'success' }));
       }
       navigate('/queries');
     } catch (err: any) {
       setError(err.message || 'Save failed');
+      dispatch(addToast({ message: err.message || 'Save failed', type: 'error' }));
     }
   };
 
