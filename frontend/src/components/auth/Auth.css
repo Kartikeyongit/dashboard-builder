@@ -141,18 +141,19 @@
 
 .input-wrapper .input-icon {
   position: absolute;
-  left: 0.75rem;
+  left: 0.9rem;
   top: 50%;
   transform: translateY(-50%);
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   color: var(--color-text-muted);
   pointer-events: none;
+  flex-shrink: 0;
 }
 
 .input-wrapper input {
   width: 100%;
-  padding: 0.6rem 2.5rem 0.6rem 2.75rem;
+  padding: 0.6rem 2.5rem 0.6rem 3.25rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   font-family: inherit;
