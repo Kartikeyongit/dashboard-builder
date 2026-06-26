@@ -5,8 +5,12 @@ import { logoutUser } from '../../store/authSlice';
 import Toast from '../Toast';
 import './AppShell.css';
 
+function getSystemTheme(): string {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
 function getTheme(): string {
-  return localStorage.getItem('theme') || 'light';
+  return localStorage.getItem('theme') || getSystemTheme();
 }
 
 function setTheme(theme: string) {
@@ -24,6 +28,17 @@ const AppShell: React.FC = () => {
   useEffect(() => {
     setTheme(theme);
   }, [theme]);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e: MediaQueryListEvent) => {
+      if (!localStorage.getItem('theme')) {
+        setThemeState(e.matches ? 'dark' : 'light');
+      }
+    };
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   const handleLogout = () => {
     dispatch(logoutUser());
