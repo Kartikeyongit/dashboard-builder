@@ -442,9 +442,9 @@
   margin: 0;
 }
 
-/* ---------- CTA Banner ---------- */
+/* ---------- CTA Card ---------- */
 .cta-card-section {
-  padding-bottom: 0;
+  padding: 1rem 2rem 0;
 }
 
 .cta-card {
