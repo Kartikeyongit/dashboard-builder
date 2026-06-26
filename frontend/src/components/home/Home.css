@@ -289,8 +289,6 @@
   grid-template-columns: repeat(3, 1fr);
   max-width: 800px;
   margin: 0 auto;
-  gap: 1px;
-  background: var(--color-border);
 }
 
 .stat-item {
