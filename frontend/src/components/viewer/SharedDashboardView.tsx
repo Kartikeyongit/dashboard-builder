@@ -6,6 +6,7 @@ import ChartWidget from '../dashboard/ChartWidget';
 import TableWidget from '../dashboard/TableWidget';
 import MetricWidget from '../dashboard/MetricWidget';
 import DashboardSocket from '../../api/websocket';
+import './SharedDashboardView.css';
 
 const SharedDashboardView: React.FC = () => {
   const { token } = useParams<{ token: string }>();
@@ -42,7 +43,6 @@ const SharedDashboardView: React.FC = () => {
     loadDashboard();
   }, [token]);
 
-  // Connect WebSocket for live updates
   useEffect(() => {
     if (!dashboard || !token) return;
     const socket = DashboardSocket;
@@ -73,32 +73,52 @@ const SharedDashboardView: React.FC = () => {
 
   if (passwordRequired) {
     return (
-      <div style={{ padding: 20, maxWidth: 400, margin: '0 auto' }}>
-        <h3>Password required</h3>
-        <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" />
-        <button onClick={() => loadDashboard(password)}>Submit</button>
-        {error && <p style={{ color: 'red' }}>{error}</p>}
+      <div className="shared-view-password">
+        <div className="shared-view-card">
+          <h3>Password Required</h3>
+          <input
+            type="password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            placeholder="Enter dashboard password"
+            onKeyDown={e => e.key === 'Enter' && loadDashboard(password)}
+          />
+          <button onClick={() => loadDashboard(password)}>Submit</button>
+          {error && <p className="shared-view-error">{error}</p>}
+        </div>
       </div>
     );
   }
 
-  if (!dashboard) return <div style={{ padding: 20 }}>Loading...</div>;
+  if (!dashboard) {
+    return (
+      <div className="shared-view-loading">
+        <div className="shared-view-card">Loading dashboard...</div>
+      </div>
+    );
+  }
+
   const widgets = Array.isArray(dashboard.widgets) ? dashboard.widgets : [];
 
   return (
-    <div style={{ padding: 20 }}>
-      <h2>{dashboard.dashboard.name} (read‑only)</h2>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+    <div className="shared-view">
+      <header className="shared-view-header">
+        <h2>{dashboard.dashboard.name}</h2>
+        <span className="shared-view-badge">Read-only</span>
+      </header>
+      <div className="shared-view-grid">
         {widgets.map(wd => (
-          <div key={wd.widget.id} style={{ border: '1px solid #ccc', padding: 12, background: '#fff' }}>
+          <div key={wd.widget.id} className="shared-view-widget">
             {wd.widget.widget_type === 'chart' && <ChartWidget data={wd.data} config={wd.widget.config} />}
             {wd.widget.widget_type === 'table' && <TableWidget data={wd.data} />}
             {wd.widget.widget_type === 'metric' && <MetricWidget data={wd.data} config={wd.widget.config} />}
-            {wd.error && <div style={{ color: 'red' }}>{wd.error}</div>}
+            {wd.error && <div className="shared-view-widget-error">{wd.error}</div>}
           </div>
         ))}
+        {widgets.length === 0 && (
+          <div className="shared-view-empty">No widgets are available for this dashboard.</div>
+        )}
       </div>
-      {widgets.length === 0 && <p>No widgets are available for this dashboard.</p>}
     </div>
   );
 };

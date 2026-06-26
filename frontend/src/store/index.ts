@@ -3,6 +3,7 @@ import authReducer from './authSlice';
 import datasourceReducer from './datasourceSlice';
 import queryReducer from './querySlice';
 import dashboardReducer from './dashboardSlice';
+import toastReducer from './toastSlice';
 
 export const store = configureStore({
   reducer: {
@@ -10,6 +11,7 @@ export const store = configureStore({
     datasources: datasourceReducer,
     queries: queryReducer,
     dashboards: dashboardReducer,
+    toast: toastReducer,
   },
 });
 
