@@ -1,38 +1,31 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import { logoutUser } from '../../store/authSlice';
 import Toast from '../Toast';
+import { setTheme } from '../../theme';
 import './AppShell.css';
-
-function getSystemTheme(): string {
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
-
-function getTheme(): string {
-  return localStorage.getItem('theme') || getSystemTheme();
-}
-
-function applyTheme(theme: string) {
-  document.documentElement.setAttribute('data-theme', theme);
-}
 
 const AppShell: React.FC = () => {
   const user = useAppSelector((state) => state.auth.user);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const location = useLocation();
-  const [theme, setThemeState] = React.useState(getTheme);
+  const [theme, setThemeState] = useState(() =>
+    document.documentElement.getAttribute('data-theme') || 'light'
+  );
 
   useEffect(() => {
-    applyTheme(theme);
+    setTheme(theme);
   }, [theme]);
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const handler = (e: MediaQueryListEvent) => {
       if (!localStorage.getItem('theme')) {
-        setThemeState(e.matches ? 'dark' : 'light');
+        const next = e.matches ? 'dark' : 'light';
+        setThemeState(next);
+        setTheme(next);
       }
     };
     mq.addEventListener('change', handler);
@@ -45,11 +38,10 @@ const AppShell: React.FC = () => {
   };
 
   const toggleTheme = () => {
-    setThemeState(prev => {
-      const next = prev === 'light' ? 'dark' : 'light';
-      localStorage.setItem('theme', next);
-      return next;
-    });
+    const next = theme === 'light' ? 'dark' : 'light';
+    setThemeState(next);
+    localStorage.setItem('theme', next);
+    setTheme(next);
   };
 
   if (!user) {
