@@ -444,7 +444,7 @@
 
 /* ---------- CTA Card ---------- */
 .cta-card-section {
-  padding: 1rem 2rem 0;
+  padding-bottom: 3rem;
 }
 
 .cta-card {
