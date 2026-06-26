@@ -13,9 +13,6 @@ function getTheme(): string {
   return localStorage.getItem('theme') || getSystemTheme();
 }
 
-const initialTheme = getTheme();
-document.documentElement.setAttribute('data-theme', initialTheme);
-
 function applyTheme(theme: string) {
   document.documentElement.setAttribute('data-theme', theme);
 }
