@@ -13,8 +13,10 @@ function getTheme(): string {
   return localStorage.getItem('theme') || getSystemTheme();
 }
 
-function setTheme(theme: string) {
-  localStorage.setItem('theme', theme);
+const initialTheme = getTheme();
+document.documentElement.setAttribute('data-theme', initialTheme);
+
+function applyTheme(theme: string) {
   document.documentElement.setAttribute('data-theme', theme);
 }
 
@@ -26,7 +28,8 @@ const AppShell: React.FC = () => {
   const [theme, setThemeState] = React.useState(getTheme);
 
   useEffect(() => {
-    setTheme(theme);
+    applyTheme(theme);
+    localStorage.setItem('theme', theme);
   }, [theme]);
 
   useEffect(() => {
