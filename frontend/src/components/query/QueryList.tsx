@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import { fetchQueries, deleteQuery } from '../../store/querySlice';
 import { queryAPI } from '../../api/query';
+import { addToast } from '../../store/toastSlice';
 import './QueryList.css';
 
 const QueryList: React.FC = () => {
@@ -16,15 +17,16 @@ const QueryList: React.FC = () => {
   const handleDelete = (id: string) => {
     if (window.confirm('Delete this query?')) {
       dispatch(deleteQuery(id));
+      dispatch(addToast({ message: 'Query deleted', type: 'success' }));
     }
   };
 
   const handleRun = async (id: string) => {
     try {
       await queryAPI.executeSaved(id);
-      alert('Query executed successfully');
+      dispatch(addToast({ message: 'Query executed successfully', type: 'success' }));
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Execution failed');
+      dispatch(addToast({ message: err.response?.data?.message || 'Execution failed', type: 'error' }));
     }
   };
 

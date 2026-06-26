@@ -12,6 +12,7 @@ import {
 } from '../../store/dashboardSlice';
 import { widgetAPI } from '../../api/dashboard';
 import type { CreateWidgetPayload } from '../../api/dashboard';
+import { addToast } from '../../store/toastSlice';
 import { useDashboardSocket } from '../../hooks/useDashboardSocket';
 import ChartWidget from './ChartWidget';
 import TableWidget from './TableWidget';
@@ -50,14 +51,16 @@ const DashboardEditor: React.FC = () => {
         await Promise.all(
           updates.map(([widgetId, layout]) => widgetAPI.update(dashId, widgetId, layout))
         );
-        setSaveStatus('saved');
-      } catch (error) {
-        updates.forEach(([widgetId, layout]) => {
-          pendingLayoutUpdates.current.set(widgetId, layout);
-        });
-        console.error(error);
-        setSaveStatus('error');
-      }
+      setSaveStatus('saved');
+      dispatch(addToast({ message: 'Layout saved', type: 'success' }));
+    } catch (error) {
+      updates.forEach(([widgetId, layout]) => {
+        pendingLayoutUpdates.current.set(widgetId, layout);
+      });
+      console.error(error);
+      setSaveStatus('error');
+      dispatch(addToast({ message: 'Failed to save layout', type: 'error' }));
+    }
     }, 500),
     []
   );
@@ -94,12 +97,14 @@ const DashboardEditor: React.FC = () => {
   const handleAddWidget = async (payload: CreateWidgetPayload) => {
     if (!dashboardId) return;
     await widgetAPI.create(dashboardId, payload);
+    dispatch(addToast({ message: 'Widget added', type: 'success' }));
     dispatch(loadDashboardFull(dashboardId));
   };
 
   const handleDeleteWidget = async (widgetId: string) => {
     if (!dashboardId) return;
     await widgetAPI.delete(dashboardId, widgetId);
+    dispatch(addToast({ message: 'Widget removed', type: 'success' }));
     dispatch(removeWidgetFromCurrent(widgetId));
   };
 
