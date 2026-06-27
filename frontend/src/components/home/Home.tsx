@@ -674,14 +674,14 @@ const AuthenticatedHome = () => {
         {[
           { to: '/datasources', icon: <path d="M2 7c0 1.657 3.582 3 8 3s8-1.343 8-3M2 7v6c0 1.657 3.582 3 8 3s8-1.343 8-3V7M2 7c0 1.657 3.582 3 8 3s8-1.343 8-3" stroke="currentColor" strokeWidth="2" fill="none" />, color: '#3b82f6', bg: 'linear-gradient(135deg, #3b82f6, #2563eb)', value: datasources.length, label: 'Datasources' },
           { to: '/queries', icon: <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" fill="currentColor" />, color: '#8b5cf6', bg: 'linear-gradient(135deg, #8b5cf6, #6d28d9)', value: queries.length, label: 'Queries' },
-          { to: '/dashboards', icon: <><rect x="2" y="2" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" fill="none" /><rect x="11" y="2" width="7" height="4" rx="1" stroke="currentColor" strokeWidth="2" fill="none" /><rect x="2" y="11" width="7" height="4" rx="1" stroke="currentColor" strokeWidth="2" fill="none" /><rect x="11" y="11" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" fill="none" /></>, color: '#10b981', bg: 'linear-gradient(135deg, #10b981, #059669)', value: dashboards.length, label: 'Dashboards' },
+          { to: '/dashboards', icon: <><rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" fill="none" /><rect x="14" y="3" width="7" height="4" rx="1" stroke="currentColor" strokeWidth="2" fill="none" /><rect x="3" y="14" width="7" height="4" rx="1" stroke="currentColor" strokeWidth="2" fill="none" /><rect x="14" y="11" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" fill="none" /></>, color: '#10b981', bg: 'linear-gradient(135deg, #10b981, #059669)', value: dashboards.length, label: 'Dashboards' },
           { to: null, icon: <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" fill="currentColor" />, color: '#f59e0b', bg: 'linear-gradient(135deg, #f59e0b, #d97706)', value: user?.role || '—', label: 'Role' },
         ].map((stat, i) => (
           <motion.div key={i} variants={fadeInUp}>
             {stat.to ? (
               <Link to={stat.to} className="stat-card">
                 <div className="stat-card-icon" style={{ background: stat.bg }}>
-                  <svg width="16" height="16" viewBox="0 0 20 20">{stat.icon}</svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24">{stat.icon}</svg>
                 </div>
                 <div className="stat-card-value" style={{ textTransform: 'capitalize' } as React.CSSProperties}>
                   {stat.value}
@@ -691,7 +691,7 @@ const AuthenticatedHome = () => {
             ) : (
               <div className="stat-card">
                 <div className="stat-card-icon" style={{ background: stat.bg }}>
-                  <svg width="16" height="16" viewBox="0 0 20 20">{stat.icon}</svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24">{stat.icon}</svg>
                 </div>
                 <div className="stat-card-value" style={{ textTransform: 'capitalize' } as React.CSSProperties}>
                   {String(stat.value)}
@@ -713,13 +713,13 @@ const AuthenticatedHome = () => {
         {[
           { to: '/datasources/new', icon: <path d="M2 7c0 1.657 3.582 3 8 3s8-1.343 8-3M2 7v6c0 1.657 3.582 3 8 3s8-1.343 8-3V7M2 7c0 1.657 3.582 3 8 3s8-1.343 8-3" stroke="currentColor" strokeWidth="2" fill="none" />, bg: 'linear-gradient(135deg, #3b82f6, #2563eb)', title: 'Add Datasource', desc: 'Connect a PostgreSQL or MySQL database' },
           { to: '/queries/new', icon: <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" fill="currentColor" />, bg: 'linear-gradient(135deg, #8b5cf6, #6d28d9)', title: 'Write a Query', desc: 'Create SQL with schema auto-complete' },
-          { to: '/dashboards', icon: <><rect x="2" y="2" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" fill="none" /><rect x="11" y="2" width="7" height="4" rx="1" stroke="currentColor" strokeWidth="2" fill="none" /><rect x="2" y="11" width="7" height="4" rx="1" stroke="currentColor" strokeWidth="2" fill="none" /><rect x="11" y="11" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" fill="none" /></>, bg: 'linear-gradient(135deg, #10b981, #059669)', title: 'View Dashboards', desc: 'Explore, view and edit your dashboards' },
+          { to: '/dashboards', icon: <><rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" fill="none" /><rect x="14" y="3" width="7" height="4" rx="1" stroke="currentColor" strokeWidth="2" fill="none" /><rect x="3" y="14" width="7" height="4" rx="1" stroke="currentColor" strokeWidth="2" fill="none" /><rect x="14" y="11" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" fill="none" /></>, bg: 'linear-gradient(135deg, #10b981, #059669)', title: 'View Dashboards', desc: 'Explore, view and edit your dashboards' },
         ].map((action, i) => (
           <motion.div key={i} variants={fadeInUp}>
             <Link to={action.to} className="action-card">
-              <div className="action-card-icon" style={{ background: action.bg }}>
-                <svg width="18" height="18" viewBox="0 0 20 20">{action.icon}</svg>
-              </div>
+                <div className="action-card-icon" style={{ background: action.bg }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24">{action.icon}</svg>
+                </div>
               <div className="action-card-title">{action.title}</div>
               <p className="action-card-desc">{action.desc}</p>
               <svg className="action-card-arrow" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
