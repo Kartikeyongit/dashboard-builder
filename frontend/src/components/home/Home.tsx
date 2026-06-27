@@ -291,12 +291,16 @@ const PublicLanding = () => (
           viewport={{ once: true }}
         >
           {[
-            { num: 1, title: 'Connect a datasource', desc: 'Add your PostgreSQL or MySQL database with connection details. Test the connection to make sure everything works.' },
-            { num: 2, title: 'Write SQL queries', desc: 'Use the built-in editor with syntax highlighting and schema auto-complete. Run ad-hoc queries to validate your results.' },
-            { num: 3, title: 'Build & share dashboards', desc: 'Add charts, tables, and metrics to a grid layout. Share a live link with your team — no login required for viewers.' },
+            { icon: <path d="M4 7c0 1.657 3.582 3 8 3s8-1.343 8-3M4 7v6c0 1.657 3.582 3 8 3s8-1.343 8-3V7M4 7c0 1.657 3.582 3 8 3s8-1.343 8-3" stroke="currentColor" strokeWidth="1.8" fill="none" />, title: 'Connect a datasource', desc: 'Add your PostgreSQL or MySQL database with connection details. Test the connection to make sure everything works.' },
+            { icon: <path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />, title: 'Write SQL queries', desc: 'Use the built-in editor with syntax highlighting and schema auto-complete. Run ad-hoc queries to validate your results.' },
+            { icon: <><rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.8" fill="none" /><rect x="14" y="3" width="7" height="4" rx="1" stroke="currentColor" strokeWidth="1.8" fill="none" /><rect x="3" y="14" width="7" height="4" rx="1" stroke="currentColor" strokeWidth="1.8" fill="none" /><rect x="14" y="11" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.8" fill="none" /></>, title: 'Build & share dashboards', desc: 'Add charts, tables, and metrics to a grid layout. Share a live link with your team — no login required for viewers.' },
           ].map((step, i) => (
             <motion.div key={i} className="step" variants={fadeInUp}>
-              <div className="step-number">{step.num}</div>
+              <div className="step-number">
+                <svg width="22" height="22" viewBox="0 0 24 24">
+                  {step.icon}
+                </svg>
+              </div>
               <div className="step-content">
                 <h3>{step.title}</h3>
                 <p>{step.desc}</p>

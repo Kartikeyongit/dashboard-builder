@@ -4,7 +4,7 @@
   justify-content: center;
   min-height: 100vh;
   padding: 2rem;
-  background: #0c1e3a;
+  background: var(--color-bg);
 }
 
 .auth-container {
