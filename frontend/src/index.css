@@ -78,18 +78,6 @@
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.45);
 }
 
-:root[data-theme='dark'] .ag-theme-alpine {
-  --ag-background-color: #1e293b;
-  --ag-foreground-color: #f1f5f9;
-  --ag-header-background-color: #0f172a;
-  --ag-header-foreground-color: #f1f5f9;
-  --ag-border-color: #334155;
-  --ag-secondary-border-color: #334155;
-  --ag-row-hover-color: rgba(255, 255, 255, 0.05);
-  --ag-odd-row-background-color: rgba(0, 0, 0, 0.15);
-  --ag-input-focus-border-color: rgba(59, 130, 246, 0.4);
-}
-
 *,
 *::before,
 *::after {
