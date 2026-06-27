@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppSelector } from '../../hooks';
 import type { CreateWidgetPayload } from '../../api/dashboard';
+import Dropdown from '../ui/Dropdown';
 import './AddWidgetDialog.css';
 
 interface Props {
@@ -43,31 +44,42 @@ const AddWidgetDialog: React.FC<Props> = ({ onClose, onAdd }) => {
 
         <div className="modal-field">
           <label>Query</label>
-          <select value={selectedQueryId} onChange={e => setSelectedQueryId(e.target.value)}>
-            <option value="">Select a query</option>
-            {queries.map(q => (
-              <option key={q.id} value={q.id}>{q.name}</option>
-            ))}
-          </select>
+          <Dropdown
+            value={selectedQueryId}
+            onChange={setSelectedQueryId}
+            options={[
+              { value: '', label: 'Select a query' },
+              ...queries.map(q => ({ value: q.id, label: q.name })),
+            ]}
+            placeholder="Select a query"
+          />
         </div>
 
         <div className="modal-field">
           <label>Widget type</label>
-          <select value={widgetType} onChange={e => setWidgetType(e.target.value as any)}>
-            <option value="chart">Chart</option>
-            <option value="table">Table</option>
-            <option value="metric">Metric</option>
-          </select>
+          <Dropdown
+            value={widgetType}
+            onChange={(v) => setWidgetType(v as 'chart' | 'table' | 'metric')}
+            options={[
+              { value: 'chart', label: 'Chart' },
+              { value: 'table', label: 'Table' },
+              { value: 'metric', label: 'Metric' },
+            ]}
+          />
         </div>
 
         {widgetType === 'chart' && (
           <div className="modal-field">
             <label>Chart type</label>
-            <select value={chartType} onChange={e => setChartType(e.target.value)}>
-              <option value="bar">Bar</option>
-              <option value="line">Line</option>
-              <option value="pie">Pie</option>
-            </select>
+            <Dropdown
+              value={chartType}
+              onChange={setChartType}
+              options={[
+                { value: 'bar', label: 'Bar' },
+                { value: 'line', label: 'Line' },
+                { value: 'pie', label: 'Pie' },
+              ]}
+            />
           </div>
         )}
 
