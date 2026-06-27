@@ -24,7 +24,19 @@ const QueryEditor: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [schema, setSchema] = useState<TableSchema[]>([]);
+  const [monacoTheme, setMonacoTheme] = useState<string>(
+    document.documentElement.getAttribute('data-theme') === 'dark' ? 'vs-dark' : 'vs'
+  );
   const editorRef = useRef<any>(null);
+
+  useEffect(() => {
+    const el = document.documentElement;
+    const observer = new MutationObserver(() => {
+      setMonacoTheme(el.getAttribute('data-theme') === 'dark' ? 'vs-dark' : 'vs');
+    });
+    observer.observe(el, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     dispatch(fetchDatasources());
@@ -155,6 +167,7 @@ const QueryEditor: React.FC = () => {
         <MonacoEditor
           height="300px"
           language="sql"
+          theme={monacoTheme}
           value={sqlText}
           onChange={val => setSqlText(val || '')}
           onMount={handleEditorMount}
