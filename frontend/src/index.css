@@ -4,12 +4,12 @@
   --color-bg: #f1f5f9;
   --color-surface: #ffffff;
   --color-surface-hover: #f8fafc;
-  --color-sidebar: #0f172a;
-  --color-sidebar-hover: rgba(255, 255, 255, 0.06);
-  --color-sidebar-active: rgba(255, 255, 255, 0.1);
+  --color-sidebar: #ffffff;
+  --color-sidebar-hover: #f1f5f9;
+  --color-sidebar-active: #eff6ff;
   --color-sidebar-text: #64748b;
-  --color-sidebar-text-active: #ffffff;
-  --color-sidebar-accent: #3b82f6;
+  --color-sidebar-text-active: #0f172a;
+  --color-sidebar-accent: #2563eb;
   --color-text: #0f172a;
   --color-text-secondary: #475569;
   --color-text-muted: #94a3b8;
