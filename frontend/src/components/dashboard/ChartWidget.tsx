@@ -29,6 +29,7 @@ function buildEChartsOption(type: string, data?: QueryResult) {
   const textColor = cssVar('--color-text');
   const mutedColor = cssVar('--color-text-muted');
   const borderColor = cssVar('--color-border');
+  const surfaceColor = cssVar('--color-surface');
 
   const columns = data?.columns ?? [];
   const rows = data?.rows ?? [];
@@ -41,7 +42,7 @@ function buildEChartsOption(type: string, data?: QueryResult) {
       value: Number(row[1]) || 0,
     }));
     return {
-      tooltip: { trigger: 'item', backgroundColor: 'transparent', textStyle: baseTextStyle },
+      tooltip: { trigger: 'item', backgroundColor: surfaceColor, textStyle: baseTextStyle },
       series: [{ type: 'pie', data: pieData, label: baseTextStyle }],
     };
   }
@@ -54,7 +55,7 @@ function buildEChartsOption(type: string, data?: QueryResult) {
   }));
 
   return {
-    tooltip: { backgroundColor: 'transparent', textStyle: baseTextStyle },
+    tooltip: { backgroundColor: surfaceColor, textStyle: baseTextStyle },
     legend: { data: columns.slice(1), textStyle: baseTextStyle },
     grid: { containLabel: true },
     xAxis: {
