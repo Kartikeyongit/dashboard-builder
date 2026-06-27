@@ -10,7 +10,6 @@ interface Props {
 const ChartWidget: React.FC<Props> = ({ data, config }) => {
   const chartType = config?.chartType || 'bar';
 
-  // Always build option, even with empty data
   const option = buildEChartsOption(chartType, data);
 
   return (
@@ -22,9 +21,19 @@ const ChartWidget: React.FC<Props> = ({ data, config }) => {
   );
 };
 
+function cssVar(name: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
 function buildEChartsOption(type: string, data?: QueryResult) {
+  const textColor = cssVar('--color-text');
+  const mutedColor = cssVar('--color-text-muted');
+  const borderColor = cssVar('--color-border');
+
   const columns = data?.columns ?? [];
-  const rows = data?.rows ?? [];   // safe now, but fallback to empty array
+  const rows = data?.rows ?? [];
+
+  const baseTextStyle = { color: textColor };
 
   if (type === 'pie') {
     const pieData = rows.map((row) => ({
@@ -32,8 +41,8 @@ function buildEChartsOption(type: string, data?: QueryResult) {
       value: Number(row[1]) || 0,
     }));
     return {
-      tooltip: { trigger: 'item' },
-      series: [{ type: 'pie', data: pieData }],
+      tooltip: { trigger: 'item', backgroundColor: 'transparent', textStyle: baseTextStyle },
+      series: [{ type: 'pie', data: pieData, label: baseTextStyle }],
     };
   }
 
@@ -45,10 +54,21 @@ function buildEChartsOption(type: string, data?: QueryResult) {
   }));
 
   return {
-    tooltip: {},
-    legend: { data: columns.slice(1) },
-    xAxis: { data: categories },
-    yAxis: {},
+    tooltip: { backgroundColor: 'transparent', textStyle: baseTextStyle },
+    legend: { data: columns.slice(1), textStyle: baseTextStyle },
+    grid: { containLabel: true },
+    xAxis: {
+      data: categories,
+      axisLabel: { color: mutedColor },
+      axisLine: { lineStyle: { color: borderColor } },
+      axisTick: { lineStyle: { color: borderColor } },
+    },
+    yAxis: {
+      axisLabel: { color: mutedColor },
+      splitLine: { lineStyle: { color: borderColor } },
+      axisLine: { show: false },
+      axisTick: { show: false },
+    },
     series,
   };
 }
