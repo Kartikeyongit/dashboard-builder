@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import { logoutUser } from '../../store/authSlice';
 import Toast from '../Toast';
-import { setTheme } from '../../theme';
 import './AppShell.css';
 
 const AppShell: React.FC = () => {
@@ -11,22 +10,11 @@ const AppShell: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const location = useLocation();
-  const [theme, setThemeState] = useState(() =>
-    document.documentElement.getAttribute('data-theme') || 'light'
-  );
-
-  useEffect(() => {
-    setTheme(theme);
-  }, [theme]);
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const handler = (e: MediaQueryListEvent) => {
-      if (localStorage.getItem('theme_manual') !== '1') {
-        const next = e.matches ? 'dark' : 'light';
-        setThemeState(next);
-        setTheme(next);
-      }
+      document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
     };
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
@@ -35,14 +23,6 @@ const AppShell: React.FC = () => {
   const handleLogout = () => {
     dispatch(logoutUser());
     navigate('/login');
-  };
-
-  const toggleTheme = () => {
-    const next = theme === 'light' ? 'dark' : 'light';
-    setThemeState(next);
-    localStorage.setItem('theme', next);
-    localStorage.setItem('theme_manual', '1');
-    setTheme(next);
   };
 
   if (!user) {
@@ -106,20 +86,7 @@ const AppShell: React.FC = () => {
           <div className="sidebar-user">
             <span className="user-email">{user.email}</span>
           </div>
-          <div className="sidebar-actions">
-            <button className="theme-btn" onClick={toggleTheme} title={theme === 'light' ? 'Dark mode' : 'Light mode'}>
-              {theme === 'light' ? (
-                <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
-                  <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
-                </svg>
-              ) : (
-                <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
-                  <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-                </svg>
-              )}
-            </button>
-            <button className="logout-btn" onClick={handleLogout}>Logout</button>
-          </div>
+          <button className="logout-btn" onClick={handleLogout}>Logout</button>
         </div>
       </aside>
       <main className="main-content">
