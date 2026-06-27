@@ -4,6 +4,7 @@ import { useAppDispatch, useAppSelector } from '../../hooks';
 import { createDatasource, updateDatasource } from '../../store/datasourceSlice';
 import type { CreateDatasourcePayload } from '../../types';
 import { addToast } from '../../store/toastSlice';
+import Dropdown from '../ui/Dropdown';
 import './DatasourceForm.css';
 
 const DatasourceForm: React.FC = () => {
@@ -39,12 +40,16 @@ const DatasourceForm: React.FC = () => {
     }
   }, [existing]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setForm((prev) => ({
       ...prev,
       [name]: name === 'port' ? parseInt(value) : value,
     }));
+  };
+
+  const handleTypeChange = (value: string) => {
+    setForm((prev) => ({ ...prev, type: value as 'postgres' | 'mysql' }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -77,10 +82,14 @@ const DatasourceForm: React.FC = () => {
         </div>
         <div className="form-group">
           <label>Type</label>
-          <select name="type" value={form.type} onChange={handleChange}>
-            <option value="postgres">PostgreSQL</option>
-            <option value="mysql">MySQL</option>
-          </select>
+          <Dropdown
+            value={form.type}
+            onChange={handleTypeChange}
+            options={[
+              { value: 'postgres', label: 'PostgreSQL' },
+              { value: 'mysql', label: 'MySQL' },
+            ]}
+          />
         </div>
         <div className="form-row">
           <div className="form-group" style={{ flex: 2 }}>

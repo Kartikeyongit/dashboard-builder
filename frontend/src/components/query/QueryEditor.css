@@ -46,7 +46,6 @@
   box-shadow: var(--shadow-sm);
 }
 
-.query-toolbar select,
 .query-toolbar input {
   padding: 0.45rem 0.7rem;
   border: 1px solid var(--color-border);
@@ -58,11 +57,6 @@
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.query-toolbar select {
-  padding-right: 2rem;
-}
-
-.query-toolbar select:focus,
 .query-toolbar input:focus {
   outline: none;
   border-color: var(--color-primary);

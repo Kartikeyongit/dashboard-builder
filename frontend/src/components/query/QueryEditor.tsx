@@ -8,6 +8,7 @@ import { fetchQueries, createQuery, updateQuery } from '../../store/querySlice';
 import { datasourceAPIWithSchema, queryAPI } from '../../api/query';
 import type { CreateQueryPayload, QueryResult, TableSchema } from '../../types';
 import { addToast } from '../../store/toastSlice';
+import Dropdown from '../ui/Dropdown';
 import './QueryEditor.css';
 
 const QueryEditor: React.FC = () => {
@@ -150,12 +151,15 @@ const QueryEditor: React.FC = () => {
       </button>
 
       <div className="query-toolbar">
-        <select value={selectedDsId} onChange={e => setSelectedDsId(e.target.value)}>
-          <option value="">-- Select Datasource --</option>
-          {datasources.map(ds => (
-            <option key={ds.id} value={ds.id}>{ds.name} ({ds.type})</option>
-          ))}
-        </select>
+        <Dropdown
+          value={selectedDsId}
+          onChange={setSelectedDsId}
+          options={[
+            { value: '', label: '-- Select Datasource --' },
+            ...datasources.map(ds => ({ value: ds.id, label: `${ds.name} (${ds.type})` })),
+          ]}
+          placeholder="Select Datasource"
+        />
         <input placeholder="Query name" value={queryName} onChange={e => setQueryName(e.target.value)} />
         <button className="run-btn" onClick={handleRun} disabled={running || !selectedDsId}>
           {running ? 'Running...' : 'Run'}
