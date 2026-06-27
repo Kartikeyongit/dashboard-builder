@@ -139,6 +139,7 @@
 
 .grid-container::-webkit-scrollbar {
   width: 4px;
+  height: 4px;
 }
 
 .grid-container::-webkit-scrollbar-thumb {
