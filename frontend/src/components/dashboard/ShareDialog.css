@@ -6,6 +6,7 @@
   align-items: center;
   justify-content: center;
   background: var(--color-overlay);
+  backdrop-filter: blur(4px);
   animation: fade-in var(--transition-fast) ease;
 }
 
