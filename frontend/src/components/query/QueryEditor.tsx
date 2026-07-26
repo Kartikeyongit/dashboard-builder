@@ -141,12 +141,10 @@ const QueryEditor: React.FC = () => {
 
   return (
     <div className="query-editor-page">
-      {/* Back button */}
-      <button
-        type="button"
-        className="back-btn"
-        onClick={() => navigate('/queries')}
-      >
+      <button type="button" className="back-btn" onClick={() => navigate('/queries')}>
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+        </svg>
         Back to Queries
       </button>
 
@@ -161,10 +159,30 @@ const QueryEditor: React.FC = () => {
           placeholder="Select Datasource"
         />
         <input placeholder="Query name" value={queryName} onChange={e => setQueryName(e.target.value)} />
-        <button className="run-btn" onClick={handleRun} disabled={running || !selectedDsId}>
-          {running ? 'Running...' : 'Run'}
-        </button>
-        <button className="save-btn" onClick={handleSave}>Save</button>
+        <div className="query-toolbar-actions">
+          <button className="query-btn query-btn--primary" onClick={handleRun} disabled={running || !selectedDsId}>
+            {running ? (
+              <>
+                <span className="spinner" />
+                Running...
+              </>
+            ) : (
+              <>
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                </svg>
+                Run
+              </>
+            )}
+          </button>
+          <button className="query-btn query-btn--secondary" onClick={handleSave}>
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293z" />
+              <path d="M5 4a2 2 0 012-2h5.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V6h-7V4H5z" />
+            </svg>
+            Save
+          </button>
+        </div>
       </div>
 
       <div className="editor-container">
@@ -179,11 +197,14 @@ const QueryEditor: React.FC = () => {
         />
       </div>
 
-      {error && <div className="error-message">{error}</div>}
+      {error && <div className="query-error">{error}</div>}
 
       {result && (
         <div className="results-panel">
-          <h3>Results ({result.rows.length} rows)</h3>
+          <div className="results-panel-header">
+            <h3>Results ({result.rows.length} rows)</h3>
+            <span className="results-meta">{result.columns.length} columns</span>
+          </div>
           <div className="table-scroll">
             <table className="result-table">
               <thead>
@@ -198,7 +219,7 @@ const QueryEditor: React.FC = () => {
                   <tr key={i}>
                     {row.map((cell, j) => (
                       <td key={j}>
-                        {cell === null ? 'NULL' : String(cell)}
+                        {cell === null ? <span className="null-value">NULL</span> : String(cell)}
                       </td>
                     ))}
                   </tr>
