@@ -364,7 +364,7 @@
 
   .sidebar--collapsed {
     width: 240px;
-    padding: 1.25rem 0.75rem;
+    padding: 1rem;
   }
 
   .sidebar--collapsed .sidebar-logo-text,
