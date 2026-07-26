@@ -16,6 +16,10 @@ const AppShell: React.FC = () => {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    if (collapsed) setUserMenuOpen(false);
+  }, [collapsed]);
+
   const initals = user?.email
     ? user.email
         .split('@')[0]
@@ -69,10 +73,6 @@ const AppShell: React.FC = () => {
 
       <aside className={`sidebar${collapsed ? ' sidebar--collapsed' : ''}${mobileOpen ? ' sidebar--mobile-open' : ''}`}>
         <div className="sidebar-logo">
-          <svg className="sidebar-logo-icon" viewBox="0 0 32 32" fill="none">
-            <rect width="32" height="32" rx="8" fill="var(--color-primary)" />
-            <path d="M8 10h16v2H8zm0 5h12v2H8zm0 5h14v2H8z" fill="white" />
-          </svg>
           <span className="sidebar-logo-text">Dashboard Builder</span>
           <button
             className="sidebar-collapse-btn"
@@ -127,6 +127,7 @@ const AppShell: React.FC = () => {
             <button
               className={`user-avatar${userMenuOpen ? ' user-avatar--open' : ''}`}
               onClick={() => setUserMenuOpen((o) => !o)}
+              disabled={collapsed}
               aria-label="User menu"
             >
               {initals}
