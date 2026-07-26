@@ -11,14 +11,9 @@ const AppShell: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (collapsed) setUserMenuOpen(false);
-  }, [collapsed]);
 
   const initals = user?.email
     ? user.email
@@ -71,18 +66,9 @@ const AppShell: React.FC = () => {
       {/* Mobile backdrop */}
       {mobileOpen && <div className="sidebar-backdrop" onClick={() => setMobileOpen(false)} />}
 
-      <aside className={`sidebar${collapsed ? ' sidebar--collapsed' : ''}${mobileOpen ? ' sidebar--mobile-open' : ''}`}>
+      <aside className={`sidebar${mobileOpen ? ' sidebar--mobile-open' : ''}`}>
         <div className="sidebar-logo">
           <span className="sidebar-logo-text">Dashboard Builder</span>
-          <button
-            className="sidebar-collapse-btn"
-            onClick={() => setCollapsed((c) => !c)}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-            </svg>
-          </button>
         </div>
 
         <nav onClick={() => setMobileOpen(false)}>
@@ -127,12 +113,11 @@ const AppShell: React.FC = () => {
             <button
               className={`user-avatar${userMenuOpen ? ' user-avatar--open' : ''}`}
               onClick={() => setUserMenuOpen((o) => !o)}
-              disabled={collapsed}
               aria-label="User menu"
             >
               {initals}
             </button>
-            {!collapsed && <span className="user-email">{user.email}</span>}
+            <span className="user-email">{user.email}</span>
             {userMenuOpen && (
               <div className="user-dropdown">
                 <div className="user-dropdown-email">{user.email}</div>
