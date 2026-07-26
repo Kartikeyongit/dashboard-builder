@@ -158,7 +158,12 @@ const QueryEditor: React.FC = () => {
           ]}
           placeholder="Select Datasource"
         />
-        <input placeholder="Query name" value={queryName} onChange={e => setQueryName(e.target.value)} />
+        <div className="input-wrapper">
+          <svg className="input-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 0h8v2H6V4zm0 4h8v2H6V8zm0 4h4v2H6v-2z" clipRule="evenodd" />
+          </svg>
+          <input placeholder="Query name" value={queryName} onChange={e => setQueryName(e.target.value)} />
+        </div>
         <div className="query-toolbar-actions">
           <button className="query-btn query-btn--primary" onClick={handleRun} disabled={running || !selectedDsId}>
             {running ? (

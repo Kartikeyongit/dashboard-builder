@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import { fetchDashboards, createDashboard, deleteDashboard } from '../../store/dashboardSlice';
 import { addToast } from '../../store/toastSlice';
+import EmptyState from '../ui/EmptyState';
 import '../ui/ListPage.css';
 import './DashboardList.css';
 
@@ -71,14 +72,13 @@ const DashboardList: React.FC = () => {
                 </li>
               ))}
               {list.length === 0 && (
-                <li className="empty-state">
-                  <svg className="empty-state-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="3" width="7" height="7" rx="1" />
-                    <rect x="14" y="3" width="7" height="7" rx="1" />
-                    <rect x="3" y="14" width="7" height="7" rx="1" />
-                    <rect x="14" y="14" width="7" height="7" rx="1" />
-                  </svg>
-                  <div><strong>No dashboards yet</strong><br />Create your first one to get started.</div>
+                <li style={{ gridColumn: '1 / -1', listStyle: 'none' }}>
+                  <EmptyState
+                    icon="dashboard"
+                    title="No dashboards yet"
+                    description="Create your first dashboard to start visualizing your data."
+                    action={{ label: 'New Dashboard', onClick: handleCreate }}
+                  />
                 </li>
               )}
             </ul>

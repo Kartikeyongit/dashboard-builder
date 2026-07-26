@@ -19,6 +19,7 @@ import TableWidget from './TableWidget';
 import MetricWidget from './MetricWidget';
 import AddWidgetDialog from './AddWidgetDialog';
 import ShareDialog from './ShareDialog';
+import EmptyState from '../ui/EmptyState';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import './DashboardEditor.css';
@@ -229,15 +230,12 @@ const DashboardEditor: React.FC = () => {
         </GridLayout>
 
         {widgets.length === 0 && (
-          <div className="editor-empty">
-            <svg className="editor-empty-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="7" height="7" rx="1" />
-              <rect x="14" y="3" width="7" height="7" rx="1" />
-              <rect x="3" y="14" width="7" height="7" rx="1" />
-              <rect x="14" y="14" width="7" height="7" rx="1" />
-            </svg>
-            <div><strong>No widgets yet</strong><br />Click <strong>Add Widget</strong> to start building this dashboard.</div>
-          </div>
+          <EmptyState
+            icon="widget"
+            title="No widgets yet"
+            description="Add a chart, table, or metric to start building your dashboard."
+            action={{ label: 'Add Widget', onClick: () => setShowAddDialog(true) }}
+          />
         )}
       </div>
 

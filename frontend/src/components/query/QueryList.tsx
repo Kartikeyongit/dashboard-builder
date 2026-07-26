@@ -4,6 +4,7 @@ import { useAppDispatch, useAppSelector } from '../../hooks';
 import { fetchQueries, deleteQuery } from '../../store/querySlice';
 import { queryAPI } from '../../api/query';
 import { addToast } from '../../store/toastSlice';
+import EmptyState from '../ui/EmptyState';
 import '../ui/ListPage.css';
 import './QueryList.css';
 
@@ -76,12 +77,13 @@ const QueryList: React.FC = () => {
                 </li>
               ))}
               {items.length === 0 && (
-                <li className="empty-state">
-                  <svg className="empty-state-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="M21 21l-4.35-4.35" />
-                  </svg>
-                  <div><strong>No queries saved yet</strong><br />Write your first SQL query to get started.</div>
+                <li style={{ gridColumn: '1 / -1', listStyle: 'none' }}>
+                  <EmptyState
+                    icon="query"
+                    title="No queries saved yet"
+                    description="Write your first SQL query to start exploring your data."
+                    action={{ label: 'New Query', to: '/queries/new' }}
+                  />
                 </li>
               )}
             </ul>
