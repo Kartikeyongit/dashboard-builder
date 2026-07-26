@@ -41,6 +41,10 @@
   padding-right: 0;
 }
 
+.sidebar--collapsed .sidebar-nav a.active::before {
+  left: 0;
+}
+
 .sidebar-logo {
   display: flex;
   align-items: center;
@@ -91,7 +95,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform var(--transition-fast), background var(--transition-fast);
+  transition: transform var(--transition-fast), background var(--transition-fast), right var(--transition-normal);
 }
 
 .sidebar-collapse-btn:hover {
@@ -101,6 +105,7 @@
 
 .sidebar--collapsed .sidebar-collapse-btn {
   transform: translateY(-50%) rotate(180deg);
+  right: -0.5rem;
 }
 
 /* ──────── Nav ──────── */
@@ -148,6 +153,7 @@
   height: 20px;
   border-radius: 0 3px 3px 0;
   background: var(--color-sidebar-accent);
+  transition: left var(--transition-normal);
 }
 
 .nav-icon {
@@ -171,6 +177,10 @@
   opacity: 0;
   width: 0;
   overflow: hidden;
+}
+
+.sidebar--collapsed .nav-icon {
+  opacity: 1;
 }
 
 /* ──────── Sidebar Footer / User ──────── */
