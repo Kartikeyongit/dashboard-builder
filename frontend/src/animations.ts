@@ -23,7 +23,19 @@ export const cardHover = {
   transition: { type: 'spring', stiffness: 300, damping: 20 },
 };
 
-export const counterAnimation = (end: number, duration = 1.5) => ({
-  initial: { count: 0 },
-  animate: { count: end, transition: { duration, ease: 'easeOut' } },
+export const shapeFloat = (duration = 20) => ({
+  x: [0, 15, -10, 5, 0],
+  y: [0, -10, 15, -5, 0],
+  transition: { duration, repeat: Infinity, ease: 'easeInOut' as const },
+});
+
+export const nodePulse = (delay = 0) => ({
+  r: [3, 5, 3],
+  opacity: [0.3, 0.6, 0.3],
+  transition: { duration: 2 + delay * 0.5, repeat: Infinity, ease: 'easeInOut' as const },
+});
+
+export const slowRotate = (duration = 60) => ({
+  rotate: [0, 360],
+  transition: { duration, repeat: Infinity, ease: 'linear' as const },
 });
