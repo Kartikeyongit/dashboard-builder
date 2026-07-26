@@ -101,6 +101,12 @@
   transition: color var(--transition-fast);
 }
 
+.input-wrapper .input-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
 .input-wrapper:focus-within .input-icon {
   color: var(--color-primary);
 }

@@ -255,6 +255,12 @@
   color: white;
 }
 
+.feature-icon svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
 .feature-icon--database { background: linear-gradient(135deg, #6366f1, #4f46e5); }
 .feature-icon--code { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
 .feature-icon--dashboard { background: linear-gradient(135deg, #10b981, #059669); }
@@ -323,6 +329,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.step-card-icon svg {
+  width: 22px;
+  height: 22px;
+  display: block;
 }
 
 .step-card-title {
@@ -394,6 +406,12 @@
   gap: 0.35rem;
   flex: 1;
   max-width: 360px;
+}
+
+.showcase-address svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
 }
 
 .showcase-content {
@@ -709,6 +727,8 @@
 }
 
 .footer-brand svg {
+  width: 20px;
+  height: 20px;
   color: var(--color-primary);
 }
 
@@ -936,6 +956,12 @@
   color: white;
 }
 
+.stat-card-icon svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
 .stat-card-value {
   font-size: 1.75rem;
   font-weight: 700;
@@ -989,6 +1015,12 @@
   color: white;
 }
 
+.action-card-icon svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
 .action-card-title {
   font-size: 0.9rem;
   font-weight: 600;
@@ -1008,6 +1040,8 @@
   right: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
   color: var(--color-text-muted);
   opacity: 0;
   transition: opacity var(--transition-fast), transform var(--transition-fast);
@@ -1085,6 +1119,12 @@
   flex-shrink: 0;
 }
 
+.home-dashboard-icon svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
 .home-dashboard-info {
   flex: 1;
   min-width: 0;
@@ -1108,6 +1148,8 @@
 }
 
 .home-dashboard-chevron {
+  width: 16px;
+  height: 16px;
   color: var(--color-text-muted);
   flex-shrink: 0;
 }
@@ -1180,6 +1222,12 @@
   font-weight: 600;
   background: var(--color-bg);
   color: var(--color-text-muted);
+}
+
+.checklist-check svg {
+  width: 16px;
+  height: 16px;
+  display: block;
 }
 
 .checklist-item.done .checklist-check {
