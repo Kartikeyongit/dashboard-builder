@@ -4,19 +4,29 @@ import { useAppDispatch, useAppSelector } from '../../hooks';
 import { registerUser, clearError } from '../../store/authSlice';
 import './Auth.css';
 
+interface Requirement { key: string; label: string; test: (pw: string) => boolean; }
+
+const REQUIREMENTS: Requirement[] = [
+  { key: 'len', label: '6+ characters', test: pw => pw.length >= 6 },
+  { key: 'upper', label: 'Uppercase', test: pw => /[A-Z]/.test(pw) },
+  { key: 'lower', label: 'Lowercase', test: pw => /[a-z]/.test(pw) },
+  { key: 'digit', label: 'Digit', test: pw => /[0-9]/.test(pw) },
+  { key: 'special', label: 'Special char', test: pw => /[^A-Za-z0-9]/.test(pw) },
+];
+
 function getPasswordStrength(pw: string): { score: number; label: string; color: string } {
   if (!pw) return { score: 0, label: '', color: 'transparent' };
   let score = 0;
-  if (pw.length >= 6) score += 25;
-  if (pw.length >= 10) score += 15;
+  if (pw.length >= 6) score += 20;
+  if (pw.length >= 10) score += 10;
   if (/[A-Z]/.test(pw)) score += 20;
   if (/[a-z]/.test(pw)) score += 10;
-  if (/[0-9]/.test(pw)) score += 15;
-  if (/[^A-Za-z0-9]/.test(pw)) score += 15;
-  if (score < 30) return { score, label: 'Weak', color: '#ef4444' };
-  if (score < 60) return { score, label: 'Fair', color: '#f59e0b' };
-  if (score < 80) return { score, label: 'Good', color: '#3b82f6' };
-  return { score: 100, label: 'Strong', color: '#10b981' };
+  if (/[0-9]/.test(pw)) score += 20;
+  if (/[^A-Za-z0-9]/.test(pw)) score += 20;
+  if (score < 30) return { score, label: 'Weak', color: 'var(--color-danger)' };
+  if (score < 60) return { score, label: 'Fair', color: 'var(--color-warning)' };
+  if (score < 80) return { score, label: 'Good', color: 'var(--color-primary)' };
+  return { score: 100, label: 'Strong', color: 'var(--color-accent)' };
 }
 
 const Register: React.FC = () => {
@@ -86,6 +96,9 @@ const Register: React.FC = () => {
             <div className="form-group">
               <label>Organization Name</label>
               <div className="input-wrapper">
+                <svg className="input-icon" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 0h8v2H6V4zm0 4h8v2H6V8zm0 4h4v2H6v-2z" clipRule="evenodd" />
+                </svg>
                 <input
                   value={orgName}
                   onChange={(e) => setOrgName(e.target.value)}
@@ -98,6 +111,10 @@ const Register: React.FC = () => {
             <div className="form-group">
               <label>Email</label>
               <div className="input-wrapper">
+                <svg className="input-icon" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                  <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                </svg>
                 <input
                   type="email"
                   value={email}
@@ -111,6 +128,9 @@ const Register: React.FC = () => {
             <div className="form-group">
               <label>Password</label>
               <div className="input-wrapper">
+                <svg className="input-icon" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                </svg>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
@@ -145,6 +165,22 @@ const Register: React.FC = () => {
                 <span className="strength-label" style={{ color: strength.color }}>
                   {strength.label}
                 </span>
+                <div className="strength-requirements">
+                  {REQUIREMENTS.map(req => {
+                    const met = req.test(password);
+                    return (
+                      <span key={req.key} className="strength-requirement" style={{ color: met ? 'var(--color-accent)' : 'var(--color-text-muted)' }}>
+                        <svg viewBox="0 0 20 20" fill="currentColor">
+                          {met
+                            ? <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            : <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                          }
+                        </svg>
+                        {req.label}
+                      </span>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 

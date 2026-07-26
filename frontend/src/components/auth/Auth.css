@@ -5,6 +5,17 @@
   min-height: 100vh;
   padding: 2rem;
   background: var(--color-bg);
+  position: relative;
+}
+
+.auth-page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(600px circle at 20% 30%, color-mix(in srgb, var(--color-primary) 8%, transparent) 0%, transparent 70%),
+    radial-gradient(500px circle at 80% 70%, color-mix(in srgb, var(--color-accent) 6%, transparent) 0%, transparent 70%);
+  pointer-events: none;
 }
 
 .auth-container {
@@ -14,18 +25,18 @@
   min-height: 520px;
   border-radius: var(--radius-xl);
   box-shadow:
-    0 0 24px rgba(34, 211, 238, 0.2),
-    0 0 60px rgba(34, 211, 238, 0.1),
+    0 0 24px color-mix(in srgb, var(--color-primary) 15%, transparent),
+    0 0 60px color-mix(in srgb, var(--color-primary) 6%, transparent),
     var(--shadow-lg);
   overflow: hidden;
-  animation: slide-up var(--transition-slow) ease;
+  animation: slide-up var(--transition-slow) cubic-bezier(0.4,0,0.2,1);
 }
 
 /* ---------- Brand Side ---------- */
 .auth-brand {
   width: 380px;
   flex-shrink: 0;
-  background: linear-gradient(135deg, #1e40af, #2563eb);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
   padding: 3rem 2.5rem;
   display: flex;
   flex-direction: column;
@@ -52,6 +63,11 @@
   width: 80%;
   height: 80%;
   background: radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%);
+}
+
+.auth-brand::before,
+.auth-brand::after {
+  pointer-events: none;
 }
 
 .auth-brand-icon {
@@ -105,7 +121,9 @@
 /* ---------- Form Side ---------- */
 .auth-form-side {
   flex: 1;
-  background: var(--color-surface);
+  background: var(--color-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   padding: 2.5rem 3rem;
   display: flex;
   flex-direction: column;
@@ -137,21 +155,38 @@
   margin-bottom: 0.35rem;
 }
 
-/* ---------- Clean input (no icons) ---------- */
+/* ---------- Input with leading icon ---------- */
 .input-wrapper {
   position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-wrapper .input-icon {
+  position: absolute;
+  left: 0.75rem;
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-muted);
+  pointer-events: none;
+  flex-shrink: 0;
+  transition: color var(--transition-fast);
+}
+
+.input-wrapper:focus-within .input-icon {
+  color: var(--color-primary);
 }
 
 .input-wrapper input {
   width: 100%;
-  padding: 0.6rem 0.75rem;
+  padding: 0.6rem 0.75rem 0.6rem 2.2rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   font-family: inherit;
   font-size: 0.95rem;
   background: var(--color-surface);
   color: var(--color-text);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), padding-left var(--transition-fast);
   box-sizing: border-box;
 }
 
@@ -189,9 +224,9 @@
   color: var(--color-text-secondary);
 }
 
-/* Password strength (reserved height to prevent layout shift) */
+/* Password strength */
 .password-strength {
-  height: 1.5rem;
+  height: 2rem;
   margin-top: 0.5rem;
   display: flex;
   flex-direction: column;
@@ -199,21 +234,49 @@
 }
 
 .strength-bar {
-  height: 3px;
-  border-radius: 2px;
+  height: 4px;
+  border-radius: 3px;
   background: var(--color-border-light);
   overflow: hidden;
 }
 
 .strength-bar-fill {
   height: 100%;
-  border-radius: 2px;
-  transition: width var(--transition-normal), background var(--transition-normal);
+  border-radius: 3px;
+  transition: width var(--transition-normal), background var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.strength-bar-fill:not([style*='transparent']) {
+  box-shadow: 0 0 6px currentColor;
 }
 
 .strength-label {
   font-size: 0.75rem;
   color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+/* Strength requirements list */
+.strength-requirements {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.75rem;
+  margin-top: 0.35rem;
+}
+
+.strength-requirement {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  transition: color var(--transition-fast);
+}
+
+.strength-requirement svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
 }
 
 /* Error message */
@@ -252,7 +315,7 @@
   font-weight: 500;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background var(--transition-fast), transform var(--transition-fast);
+  transition: background var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
   margin-top: 0.5rem;
   display: inline-flex;
   align-items: center;
@@ -260,11 +323,12 @@
   gap: 0.5rem;
 }
 
-.auth-btn:hover {
+.auth-btn:hover:not(:disabled) {
   background: var(--color-primary-hover);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--color-primary) 25%, transparent);
 }
 
-.auth-btn:active {
+.auth-btn:active:not(:disabled) {
   transform: scale(0.98);
 }
 
@@ -293,26 +357,29 @@
 .demo-hint {
   margin-top: 1.25rem;
   padding: 0.75rem 1rem;
-  background: var(--color-primary-subtle);
-  border: 1px solid rgba(37, 99, 235, 0.15);
-  border-radius: var(--radius-md);
+  background: var(--color-glass);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
   font-size: 0.8rem;
   color: var(--color-text-secondary);
   text-align: center;
   line-height: 1.5;
   cursor: pointer;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
+  transition: background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .demo-hint:hover {
-  background: rgba(37, 99, 235, 0.12);
-  border-color: rgba(37, 99, 235, 0.3);
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-glass));
+  border-color: color-mix(in srgb, var(--color-primary) 30%, var(--color-glass-border));
+  box-shadow: 0 0 16px color-mix(in srgb, var(--color-primary) 12%, transparent);
 }
 
 .demo-hint code {
   font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
   font-size: 0.78rem;
-  background: rgba(37, 99, 235, 0.08);
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
   padding: 0.1rem 0.4rem;
   border-radius: var(--radius-xs);
   color: var(--color-primary);

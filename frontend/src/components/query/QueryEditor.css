@@ -17,12 +17,13 @@
   color: var(--color-text-secondary);
   cursor: pointer;
   font-weight: 500;
-  transition: border-color var(--transition-fast), color var(--transition-fast);
+  transition: border-color var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
   margin-bottom: 0.75rem;
 }
 
 .back-btn:hover {
   border-color: var(--color-text-muted);
+  background: var(--color-surface-hover);
   color: var(--color-text);
 }
 
@@ -32,17 +33,41 @@
   gap: 0.75rem;
   margin-bottom: 1rem;
   align-items: center;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  padding: 1rem 1.25rem;
-  box-shadow: var(--shadow-sm);
+  background: var(--color-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-2xl);
+  padding: 0.75rem 1.25rem;
+  box-shadow: var(--color-glass-shadow), var(--shadow-sm);
+}
+
+.query-toolbar .input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 160px;
+}
+
+.query-toolbar .input-wrapper .input-icon {
+  position: absolute;
+  left: 0.7rem;
+  width: 14px;
+  height: 14px;
+  color: var(--color-text-muted);
+  pointer-events: none;
+  flex-shrink: 0;
+  transition: color var(--transition-fast);
+}
+
+.query-toolbar .input-wrapper:focus-within .input-icon {
+  color: var(--color-primary);
 }
 
 .query-toolbar input {
-  flex: 1;
-  min-width: 160px;
-  padding: 0.45rem 0.7rem;
+  width: 100%;
+  padding: 0.45rem 0.7rem 0.45rem 2rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   font-family: inherit;
@@ -50,6 +75,7 @@
   background-color: var(--color-bg);
   color: var(--color-text);
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  box-sizing: border-box;
 }
 
 .query-toolbar input:focus {
@@ -71,14 +97,14 @@
   padding: 0.45rem 1rem;
   font-size: 0.85rem;
   font-weight: 500;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: background var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+  transition: background var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
   min-height: 36px;
 }
 
 .query-btn:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 
 .query-btn--primary {
@@ -89,7 +115,7 @@
 
 .query-btn--primary:hover:not(:disabled) {
   background: var(--color-primary-hover);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--color-primary) 25%, transparent);
 }
 
 .query-btn--primary:disabled {

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import { fetchDatasources, deleteDatasource, testDatasourceConnection } from '../../store/datasourceSlice';
 import { addToast } from '../../store/toastSlice';
+import EmptyState from '../ui/EmptyState';
 import '../ui/ListPage.css';
 import './DatasourceList.css';
 
@@ -76,13 +77,13 @@ const DatasourceList: React.FC = () => {
                 </li>
               ))}
               {items.length === 0 && (
-                <li className="empty-state">
-                  <svg className="empty-state-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <ellipse cx="12" cy="5" rx="9" ry="3" />
-                    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
-                    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
-                  </svg>
-                  <div><strong>No datasources yet</strong><br />Connect your first database to get started.</div>
+                <li style={{ gridColumn: '1 / -1', listStyle: 'none' }}>
+                  <EmptyState
+                    icon="datasource"
+                    title="No datasources yet"
+                    description="Connect your first database to start building queries."
+                    action={{ label: 'Add Datasource', to: '/datasources/new' }}
+                  />
                 </li>
               )}
             </ul>

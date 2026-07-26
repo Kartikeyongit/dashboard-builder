@@ -29,13 +29,16 @@ const ShareDialog: React.FC<Props> = ({ dashboardId, onClose }) => {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel modal-panel--wide" onClick={(e) => e.stopPropagation()}>
-        <h3 className="modal-title">Share Dashboard</h3>
+        <h3 className="modal-title">
+          <svg viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+          </svg>
+          Share Dashboard
+        </h3>
 
         {link ? (
           <>
-            <p style={{ color: '#475569', marginBottom: '0.5rem' }}>
-              Shareable link (read‑only):
-            </p>
+            <p className="share-description">Shareable link (read‑only):</p>
             <div className="link-output">
               <input value={link} readOnly />
               <button
