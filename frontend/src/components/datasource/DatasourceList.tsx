@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import { fetchDatasources, deleteDatasource, testDatasourceConnection } from '../../store/datasourceSlice';
 import { addToast } from '../../store/toastSlice';
+import '../ui/ListPage.css';
 import './DatasourceList.css';
 
 const DatasourceList: React.FC = () => {
@@ -30,8 +31,8 @@ const DatasourceList: React.FC = () => {
   };
 
   return (
-    <div className="datasource-page">
-      <div className="datasource-panel">
+    <div className="list-page">
+      <div className="list-panel">
         <div className="page-header">
           <div>
             <p className="eyebrow">Datasources</p>
@@ -41,34 +42,48 @@ const DatasourceList: React.FC = () => {
           <Link to="/datasources/new" className="add-btn">+ Add Datasource</Link>
         </div>
 
-        <div className="datasource-grid-wrapper">
+        <div className="list-grid-wrapper">
           {loading && (
-            <ul className="skeleton-grid">
+            <ul className="list-grid">
               {[...Array(4)].map((_, i) => <li key={i} className="skeleton-card" />)}
             </ul>
           )}
 
           {!loading && (
-            <ul className="datasource-grid">
+            <ul className="list-grid">
               {items.map((ds) => (
-                <li key={ds.id} className="datasource-card">
-                  <div className="card-title">
-                    {ds.name}
-                    <span className="type-badge">{ds.type}</span>
+                <li key={ds.id} className="list-card">
+                  <div className="card-header">
+                    <div className="card-icon card-icon--indigo">
+                      <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 5a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V9zm0 5a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2z" />
+                      </svg>
+                    </div>
+                    <div className="card-title">
+                      {ds.name}
+                      <span className="type-badge">{ds.type}</span>
+                    </div>
                   </div>
                   <div className="card-detail">
                     <span>{ds.host}:{ds.port}/{ds.db_name}</span>
                     <span>{ds.username}</span>
                   </div>
                   <div className="card-actions">
-                    <button className="test-btn" onClick={() => handleTest(ds.id)}>Test</button>
-                    <Link to={`/datasources/${ds.id}/edit`} className="edit-btn">Edit</Link>
+                    <button className="edit-link" onClick={() => handleTest(ds.id)}>Test</button>
+                    <Link to={`/datasources/${ds.id}/edit`} className="edit-link">Edit</Link>
                     <button className="delete-btn" onClick={() => handleDelete(ds.id)}>Delete</button>
                   </div>
                 </li>
               ))}
               {items.length === 0 && (
-                <li className="empty-state">No datasources yet. Connect your first database.</li>
+                <li className="empty-state">
+                  <svg className="empty-state-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <ellipse cx="12" cy="5" rx="9" ry="3" />
+                    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+                    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+                  </svg>
+                  <div><strong>No datasources yet</strong><br />Connect your first database to get started.</div>
+                </li>
               )}
             </ul>
           )}

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { shareAPI } from '../../api/share';
+import '../ui/Modal.css';
 import './ShareDialog.css';
 
 interface Props {
@@ -27,7 +28,7 @@ const ShareDialog: React.FC<Props> = ({ dashboardId, onClose }) => {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-panel modal-panel--wide" onClick={(e) => e.stopPropagation()}>
         <h3 className="modal-title">Share Dashboard</h3>
 
         {link ? (

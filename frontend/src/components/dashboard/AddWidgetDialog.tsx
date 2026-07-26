@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAppSelector } from '../../hooks';
 import type { CreateWidgetPayload } from '../../api/dashboard';
 import Dropdown from '../ui/Dropdown';
-import './AddWidgetDialog.css';
+import '../ui/Modal.css';
 
 interface Props {
   onClose: () => void;

@@ -1,20 +1,40 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useAppSelector, useAppDispatch } from '../hooks';
 import { removeToast } from '../store/toastSlice';
 import './Toast.css';
 
 const ToastItem: React.FC<{ id: string; message: string; type: string }> = ({ id, message, type }) => {
   const dispatch = useAppDispatch();
+  const [exiting, setExiting] = useState(false);
+  const [progress, setProgress] = useState(100);
+  const startRef = useRef(Date.now());
+  const rafRef = useRef<number>();
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      dispatch(removeToast(id));
-    }, 4000);
-    return () => clearTimeout(timer);
+  const dismiss = useCallback(() => {
+    setExiting(true);
+    setTimeout(() => dispatch(removeToast(id)), 300);
   }, [id, dispatch]);
 
+  useEffect(() => {
+    startRef.current = Date.now();
+    const duration = 4000;
+
+    const tick = () => {
+      const elapsed = Date.now() - startRef.current;
+      const remaining = Math.max(0, 100 - (elapsed / duration) * 100);
+      setProgress(remaining);
+      if (remaining > 0) {
+        rafRef.current = requestAnimationFrame(tick);
+      } else {
+        dismiss();
+      }
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [dismiss]);
+
   return (
-    <div className={`toast toast--${type}`} onClick={() => dispatch(removeToast(id))}>
+    <div className={`toast toast--${type} ${exiting ? 'toast--exit' : ''}`} role="alert">
       <span className="toast-icon">
         {type === 'success' ? (
           <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
@@ -30,7 +50,15 @@ const ToastItem: React.FC<{ id: string; message: string; type: string }> = ({ id
           </svg>
         )}
       </span>
-      {message}
+      <span className="toast-message">{message}</span>
+      <button className="toast-close" onClick={dismiss} aria-label="Dismiss">
+        <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+        </svg>
+      </button>
+      <div className="toast-progress-bar">
+        <div className={`toast-progress-fill toast-progress-fill--${type}`} style={{ width: `${progress}%` }} />
+      </div>
     </div>
   );
 };
