@@ -55,7 +55,7 @@
 .query-toolbar input:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 12%, transparent), 0 0 12px color-mix(in srgb, var(--color-primary) 8%, transparent);
 }
 
 .query-toolbar-actions {
