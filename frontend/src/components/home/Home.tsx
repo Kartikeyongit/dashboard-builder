@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAppDispatch, useAppSelector } from '../../hooks';
@@ -89,19 +89,22 @@ function HeroArt() {
     <div className="hero-art">
       <motion.svg viewBox="0 0 500 500" className="hero-art-svg" fill="none" overflow="visible">
         <motion.g animate={shapeFloat(22)}>
-          <circle cx="250" cy="260" r="180" fill="rgba(99, 102, 241, 0.07)" />
+          <circle cx="250" cy="260" r="200" fill="url(#heroGlow1)" />
         </motion.g>
         <motion.g animate={shapeFloat(18)}>
-          <circle cx="360" cy="150" r="100" fill="rgba(59, 130, 246, 0.05)" />
+          <circle cx="360" cy="150" r="120" fill="url(#heroGlow2)" />
         </motion.g>
         <motion.g animate={shapeFloat(26)}>
-          <circle cx="140" cy="360" r="70" fill="rgba(16, 185, 129, 0.04)" />
+          <circle cx="140" cy="360" r="90" fill="url(#heroGlow3)" />
+        </motion.g>
+        <motion.g animate={shapeFloat(14)}>
+          <circle cx="380" cy="330" r="60" fill="url(#heroGlow4)" />
         </motion.g>
         <motion.g animate={slowRotate(60)} style={{ originX: '250px', originY: '250px' }}>
           <polygon
-            points="250,90 320,130 320,210 250,250 180,210 180,130"
-            stroke="rgba(99, 102, 241, 0.12)"
-            strokeWidth="2"
+            points="250,80 330,120 330,220 250,260 170,220 170,120"
+            stroke="rgba(99, 102, 241, 0.15)"
+            strokeWidth="1.5"
           />
         </motion.g>
         {nodes.map((node, i) => (
@@ -115,8 +118,8 @@ function HeroArt() {
               />
             )}
             <motion.circle
-              cx={node.x} cy={node.y} r="3"
-              fill="rgba(99, 102, 241, 0.35)"
+              cx={node.x} cy={node.y} r="4"
+              fill="rgba(99, 102, 241, 0.4)"
               animate={nodePulse(i)}
             />
           </React.Fragment>
@@ -129,8 +132,78 @@ function HeroArt() {
             strokeWidth="1"
           />
         )}
+        <defs>
+          <radialGradient id="heroGlow1">
+            <stop offset="0%" stopColor="rgba(99, 102, 241, 0.12)" />
+            <stop offset="100%" stopColor="rgba(99, 102, 241, 0)" />
+          </radialGradient>
+          <radialGradient id="heroGlow2">
+            <stop offset="0%" stopColor="rgba(6, 182, 212, 0.1)" />
+            <stop offset="100%" stopColor="rgba(6, 182, 212, 0)" />
+          </radialGradient>
+          <radialGradient id="heroGlow3">
+            <stop offset="0%" stopColor="rgba(16, 185, 129, 0.08)" />
+            <stop offset="100%" stopColor="rgba(16, 185, 129, 0)" />
+          </radialGradient>
+          <radialGradient id="heroGlow4">
+            <stop offset="0%" stopColor="rgba(139, 92, 246, 0.08)" />
+            <stop offset="100%" stopColor="rgba(139, 92, 246, 0)" />
+          </radialGradient>
+        </defs>
       </motion.svg>
     </div>
+  );
+}
+
+type Testimonial = { name: string; role: string; avatar: string; quote: string; color: string };
+
+function AutoScrollTestimonials({ testimonials }: { testimonials: Testimonial[] }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
+  const [isPaused, setIsPaused] = useState(false);
+
+  const startScroll = useCallback(() => {
+    intervalRef.current = setInterval(() => {
+      if (!scrollRef.current || isPaused) return;
+      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+      const maxScroll = scrollWidth - clientWidth;
+      const next = scrollLeft + clientWidth;
+      scrollRef.current.scrollTo({
+        left: next >= maxScroll ? 0 : next,
+        behavior: 'smooth',
+      });
+    }, 4000);
+  }, [isPaused]);
+
+  useEffect(() => {
+    startScroll();
+    return () => clearInterval(intervalRef.current);
+  }, [startScroll]);
+
+  return (
+    <motion.div
+      className="testimonials-scroll"
+      ref={scrollRef}
+      variants={staggerContainer}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true }}
+      onMouseEnter={() => { setIsPaused(true); clearInterval(intervalRef.current); }}
+      onMouseLeave={() => { setIsPaused(false); startScroll(); }}
+    >
+      {testimonials.map((t, i) => (
+        <motion.div key={i} className="testimonial-card" variants={fadeInUp}>
+          <div className="testimonial-text">"{t.quote}"</div>
+          <div className="testimonial-author">
+            <div className="testimonial-avatar" style={{ background: t.color }}>{t.avatar}</div>
+            <div>
+              <div className="testimonial-name">{t.name}</div>
+              <div className="testimonial-role">{t.role}</div>
+            </div>
+          </div>
+        </motion.div>
+      ))}
+    </motion.div>
   );
 }
 
@@ -175,7 +248,7 @@ const PublicLanding = () => {
             </motion.div>
 
             <h1 className="hero-title">
-              Build dashboards from your database
+              Build <span className="hero-title-gradient">dashboards</span> from your <span className="hero-title-gradient">database</span>
             </h1>
             <p className="hero-subtitle">
               Connect PostgreSQL or MySQL, write SQL queries, and arrange charts, tables, and metrics
@@ -224,7 +297,13 @@ const PublicLanding = () => {
             viewport={{ once: true }}
           >
             {features.map((f, i) => (
-              <motion.div key={i} className="feature-card" variants={fadeInUp}>
+              <motion.div
+                key={i}
+                className="feature-card"
+                variants={fadeInUp}
+                whileHover={{ y: -6, scale: 1.02 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              >
                 <div className={`feature-icon ${f.iconClass}`}>
                   <svg width="20" height="20" viewBox="0 0 24 24">
                     {f.icon}
@@ -251,7 +330,13 @@ const PublicLanding = () => {
             viewport={{ once: true }}
           >
             {steps.map((step, i) => (
-              <motion.div key={i} className="step-card" variants={fadeInUp}>
+              <motion.div
+                key={i}
+                className="step-card"
+                variants={fadeInUp}
+                whileHover={{ y: -4, scale: 1.01 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              >
                 <div className="step-card-number">{i + 1}</div>
                 <div className="step-card-icon">
                   <svg width="22" height="22" viewBox="0 0 24 24">
@@ -345,26 +430,7 @@ const PublicLanding = () => {
         <div className="section-inner">
           <SectionHeader label="Testimonials" title="Trusted by data teams" desc="See what our users say about Dashboard Builder." />
 
-          <motion.div
-            className="testimonials-scroll"
-            variants={staggerContainer}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-          >
-            {testimonials.map((t, i) => (
-              <motion.div key={i} className="testimonial-card" variants={fadeInUp}>
-                <div className="testimonial-text">"{t.quote}"</div>
-                <div className="testimonial-author">
-                  <div className="testimonial-avatar" style={{ background: t.color }}>{t.avatar}</div>
-                  <div>
-                    <div className="testimonial-name">{t.name}</div>
-                    <div className="testimonial-role">{t.role}</div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
+          <AutoScrollTestimonials testimonials={testimonials} />
         </div>
       </section>
 
@@ -378,6 +444,9 @@ const PublicLanding = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
+            <div className="cta-glow" />
+            <div className="cta-glow cta-glow--2" />
+            <div className="cta-glow cta-glow--3" />
             <h2>Ready to visualize your data?</h2>
             <p>Connect your first database in under a minute. No credit card required.</p>
             <Link to="/register" className="cta-btn">

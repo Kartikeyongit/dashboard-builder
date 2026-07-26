@@ -85,6 +85,13 @@
   color: var(--color-text);
 }
 
+.hero-title-gradient {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 .hero-subtitle {
   font-size: clamp(1rem, 2vw, 1.15rem);
   color: var(--color-text-secondary);
@@ -221,16 +228,20 @@
 }
 
 .feature-card {
-  background: var(--color-surface);
+  background: var(--color-glass);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-radius: var(--radius-xl);
   padding: 2rem 1.5rem;
-  border: 1px solid var(--color-border);
-  transition: border-color var(--transition-fast);
+  border: 1px solid var(--color-glass-border);
+  box-shadow: var(--color-glass-shadow);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
   cursor: default;
 }
 
 .feature-card:hover {
   border-color: rgba(99, 102, 241, 0.25);
+  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.08), var(--color-glass-shadow);
 }
 
 .feature-icon {
@@ -278,12 +289,16 @@
 }
 
 .step-card {
-  background: var(--color-surface);
+  background: var(--color-glass);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-radius: var(--radius-xl);
   padding: 2rem 1.75rem;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-glass-border);
+  box-shadow: var(--color-glass-shadow);
   text-align: center;
   position: relative;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .step-card-number {
@@ -500,6 +515,12 @@
   padding: 0.5rem 0.25rem;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  cursor: grab;
+  scroll-behavior: smooth;
+}
+
+.testimonials-scroll:active {
+  cursor: grabbing;
 }
 
 .testimonials-scroll::-webkit-scrollbar {
@@ -509,18 +530,22 @@
 .testimonial-card {
   flex: 0 0 340px;
   scroll-snap-align: start;
-  background: var(--color-surface);
+  background: var(--color-glass);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-radius: var(--radius-xl);
   padding: 1.75rem;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-glass-border);
+  box-shadow: var(--color-glass-shadow);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  transition: border-color var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .testimonial-card:hover {
   border-color: rgba(99, 102, 241, 0.25);
+  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.06), var(--color-glass-shadow);
 }
 
 .testimonial-text {
@@ -577,12 +602,45 @@
   box-shadow: 0 8px 32px rgba(99, 102, 241, 0.2);
 }
 
-.cta-card::before {
-  content: '';
+.cta-glow {
   position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse at center, rgba(129, 140, 248, 0.15) 0%, transparent 70%);
+  border-radius: 50%;
   pointer-events: none;
+  animation: cta-glow-float 8s ease-in-out infinite;
+}
+
+.cta-glow {
+  width: 300px;
+  height: 300px;
+  top: -100px;
+  right: -80px;
+  background: radial-gradient(circle, rgba(129, 140, 248, 0.15) 0%, transparent 70%);
+}
+
+.cta-glow--2 {
+  width: 200px;
+  height: 200px;
+  bottom: -60px;
+  left: -60px;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.12) 0%, transparent 70%);
+  animation-delay: -3s;
+}
+
+.cta-glow--3 {
+  width: 150px;
+  height: 150px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.06) 0%, transparent 70%);
+  animation-delay: -5s;
+}
+
+@keyframes cta-glow-float {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+  25% { transform: translate(20px, -20px) scale(1.1); opacity: 0.8; }
+  50% { transform: translate(-10px, 10px) scale(0.95); opacity: 0.5; }
+  75% { transform: translate(15px, 15px) scale(1.05); opacity: 0.7; }
 }
 
 .cta-card h2 {
@@ -779,11 +837,12 @@
 
 /* Welcome Banner */
 .welcome-banner {
-  background: linear-gradient(135deg, #1e40af, #2563eb);
-  border-radius: var(--radius-xl);
+  background: linear-gradient(135deg, #312e81 0%, #4338ca 50%, #6366f1 100%);
+  border-radius: var(--radius-2xl);
   padding: 2rem 2.5rem;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.15);
 }
 
 .welcome-banner::before {
@@ -794,7 +853,8 @@
   width: 300px;
   height: 300px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.04);
+  background: radial-gradient(circle, rgba(129, 140, 248, 0.12) 0%, transparent 70%);
+  animation: cta-glow-float 10s ease-in-out infinite;
 }
 
 .welcome-banner::after {
@@ -805,7 +865,9 @@
   width: 200px;
   height: 200px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.03);
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.08) 0%, transparent 70%);
+  animation: cta-glow-float 8s ease-in-out infinite;
+  animation-delay: -4s;
 }
 
 .welcome-content {
