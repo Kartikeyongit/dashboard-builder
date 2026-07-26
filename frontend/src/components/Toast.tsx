@@ -8,7 +8,7 @@ const ToastItem: React.FC<{ id: string; message: string; type: string }> = ({ id
   const [exiting, setExiting] = useState(false);
   const [progress, setProgress] = useState(100);
   const startRef = useRef(Date.now());
-  const rafRef = useRef<number>();
+  const rafRef = useRef<number>(0);
 
   const dismiss = useCallback(() => {
     setExiting(true);
