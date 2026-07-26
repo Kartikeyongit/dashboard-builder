@@ -13,7 +13,7 @@
   background: var(--color-sidebar);
   display: flex;
   flex-direction: column;
-  padding: 1.25rem 0.75rem;
+  padding: 1rem;
   gap: 1.25rem;
   z-index: 100;
   overflow-y: auto;
