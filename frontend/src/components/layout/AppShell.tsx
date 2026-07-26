@@ -12,6 +12,7 @@ const AppShell: React.FC = () => {
   const location = useLocation();
 
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -66,15 +67,30 @@ const AppShell: React.FC = () => {
       {/* Mobile backdrop */}
       {mobileOpen && <div className="sidebar-backdrop" onClick={() => setMobileOpen(false)} />}
 
-      <aside className={`sidebar${mobileOpen ? ' sidebar--mobile-open' : ''}`}>
+      <aside className={`sidebar${mobileOpen ? ' sidebar--mobile-open' : ''}${sidebarCollapsed ? ' sidebar--collapsed' : ''}`}>
         <div className="sidebar-logo">
+          <svg className="sidebar-logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+            <rect x="14" y="14" width="7" height="7" rx="1" />
+          </svg>
           <span className="sidebar-logo-text">Dashboard Builder</span>
+          <button
+            className="sidebar-collapse-btn"
+            onClick={() => setSidebarCollapsed((c) => !c)}
+            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+            </svg>
+          </button>
         </div>
 
         <nav onClick={() => setMobileOpen(false)}>
           <ul className="sidebar-nav">
             <li>
-              <Link to="/" className={isActive('/')}>
+              <Link to="/" className={isActive('/')} title="Home">
                 <svg className="nav-icon" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7A1 1 0 003 11h1v6a1 1 0 001 1h4a1 1 0 001-1v-3h2v3a1 1 0 001 1h4a1 1 0 001-1v-6h1a1 1 0 00.707-1.707l-7-7z" />
                 </svg>
@@ -82,7 +98,7 @@ const AppShell: React.FC = () => {
               </Link>
             </li>
             <li>
-              <Link to="/datasources" className={isActive('/datasources')}>
+              <Link to="/datasources" className={isActive('/datasources')} title="Datasources">
                 <svg className="nav-icon" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 5a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V9zm0 5a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2z" />
                 </svg>
@@ -90,7 +106,7 @@ const AppShell: React.FC = () => {
               </Link>
             </li>
             <li>
-              <Link to="/queries" className={isActive('/queries')}>
+              <Link to="/queries" className={isActive('/queries')} title="Queries">
                 <svg className="nav-icon" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
                 </svg>
@@ -98,7 +114,7 @@ const AppShell: React.FC = () => {
               </Link>
             </li>
             <li>
-              <Link to="/dashboards" className={isActive('/dashboards')}>
+              <Link to="/dashboards" className={isActive('/dashboards')} title="Dashboards">
                 <svg className="nav-icon" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zm0 8a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zm6-6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zm0 8a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                 </svg>
@@ -114,13 +130,21 @@ const AppShell: React.FC = () => {
               className={`user-avatar${userMenuOpen ? ' user-avatar--open' : ''}`}
               onClick={() => setUserMenuOpen((o) => !o)}
               aria-label="User menu"
+              title={user.email}
             >
               {initals}
             </button>
             <span className="user-email">{user.email}</span>
             {userMenuOpen && (
               <div className="user-dropdown">
-                <div className="user-dropdown-email">{user.email}</div>
+                <div className="user-dropdown-header">
+                  <div className="user-dropdown-avatar">{initals}</div>
+                  <div className="user-dropdown-info">
+                    <div className="user-dropdown-name">{user.email.split('@')[0]}</div>
+                    <div className="user-dropdown-email">{user.email}</div>
+                  </div>
+                </div>
+                <div className="user-dropdown-divider" />
                 <button className="user-dropdown-logout" onClick={handleLogout}>
                   <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h5a1 1 0 100-2H4V5h4a1 1 0 100-2H3zm11.707 3.293a1 1 0 010 1.414L12.414 10l2.293 2.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clipRule="evenodd" />
