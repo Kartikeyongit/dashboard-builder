@@ -191,9 +191,14 @@
   transition: box-shadow var(--transition-fast);
 }
 
-.user-avatar:hover,
+.user-avatar:hover:not(:disabled),
 .user-avatar--open {
   box-shadow: 0 0 0 3px var(--color-primary-subtle);
+}
+
+.user-avatar:disabled {
+  cursor: default;
+  opacity: 0.5;
 }
 
 .user-email {
