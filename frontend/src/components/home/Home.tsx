@@ -305,7 +305,7 @@ const PublicLanding = () => {
                 transition={{ type: 'spring', stiffness: 300, damping: 20 }}
               >
                 <div className={`feature-icon ${f.iconClass}`}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     {f.icon}
                   </svg>
                 </div>
@@ -339,7 +339,7 @@ const PublicLanding = () => {
               >
                 <div className="step-card-number">{i + 1}</div>
                 <div className="step-card-icon">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     {step.icon}
                   </svg>
                 </div>
@@ -523,15 +523,15 @@ const AuthenticatedHome = () => {
       >
           {[
             { to: '/datasources', icon: <path d="M4 7c0 1.657 3.582 3 8 3s8-1.343 8-3M4 7v6c0 1.657 3.582 3 8 3s8-1.343 8-3V7M4 7c0 1.657 3.582 3 8 3s8-1.343 8-3" />, color: '#6366f1', bg: 'linear-gradient(135deg, #6366f1, #4f46e5)', value: datasources.length, label: 'Datasources' },
-            { to: '/queries', icon: <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" fill="currentColor" />, color: '#8b5cf6', bg: 'linear-gradient(135deg, #8b5cf6, #6d28d9)', value: queries.length, label: 'Queries' },
+            { to: '/queries', icon: <path d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" strokeLinecap="round" strokeLinejoin="round" />, color: '#8b5cf6', bg: 'linear-gradient(135deg, #8b5cf6, #6d28d9)', value: queries.length, label: 'Queries' },
             { to: '/dashboards', icon: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="4" rx="1" /><rect x="3" y="14" width="7" height="4" rx="1" /><rect x="14" y="11" width="7" height="7" rx="1" /></>, color: '#10b981', bg: 'linear-gradient(135deg, #10b981, #059669)', value: dashboards.length, label: 'Dashboards' },
-            { to: null, icon: <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" fill="currentColor" />, color: '#f59e0b', bg: 'linear-gradient(135deg, #f59e0b, #d97706)', value: user?.role || '—', label: 'Role' },
+            { to: null, icon: <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM4 21v-2a4 4 0 014-4h8a4 4 0 014 4v2" strokeLinecap="round" strokeLinejoin="round" />, color: '#f59e0b', bg: 'linear-gradient(135deg, #f59e0b, #d97706)', value: user?.role || '—', label: 'Role' },
         ].map((stat, i) => (
           <motion.div key={i} variants={fadeInUp}>
             {stat.to ? (
               <Link to={stat.to} className="stat-card">
                 <div className="stat-card-icon" style={{ background: stat.bg }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">{stat.icon}</svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{stat.icon}</svg>
                 </div>
                 <div className="stat-card-value" style={{ textTransform: 'capitalize' } as React.CSSProperties}>
                   {stat.value}
@@ -541,7 +541,7 @@ const AuthenticatedHome = () => {
             ) : (
               <div className="stat-card">
                 <div className="stat-card-icon" style={{ background: stat.bg }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">{stat.icon}</svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{stat.icon}</svg>
                 </div>
                 <div className="stat-card-value" style={{ textTransform: 'capitalize' } as React.CSSProperties}>
                   {String(stat.value)}
@@ -562,13 +562,13 @@ const AuthenticatedHome = () => {
       >
           {[
             { to: '/datasources/new', icon: <path d="M4 7c0 1.657 3.582 3 8 3s8-1.343 8-3M4 7v6c0 1.657 3.582 3 8 3s8-1.343 8-3V7M4 7c0 1.657 3.582 3 8 3s8-1.343 8-3" />, bg: 'linear-gradient(135deg, #6366f1, #4f46e5)', title: 'Add Datasource', desc: 'Connect a PostgreSQL or MySQL database' },
-            { to: '/queries/new', icon: <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" fill="currentColor" />, bg: 'linear-gradient(135deg, #8b5cf6, #6d28d9)', title: 'Write a Query', desc: 'Create SQL with schema auto-complete' },
+            { to: '/queries/new', icon: <path d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" strokeLinecap="round" strokeLinejoin="round" />, bg: 'linear-gradient(135deg, #8b5cf6, #6d28d9)', title: 'Write a Query', desc: 'Create SQL with schema auto-complete' },
             { to: '/dashboards', icon: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="4" rx="1" /><rect x="3" y="14" width="7" height="4" rx="1" /><rect x="14" y="11" width="7" height="7" rx="1" /></>, bg: 'linear-gradient(135deg, #10b981, #059669)', title: 'View Dashboards', desc: 'Explore, view and edit your dashboards' },
         ].map((action, i) => (
           <motion.div key={i} variants={fadeInUp}>
             <Link to={action.to} className="action-card">
                 <div className="action-card-icon" style={{ background: action.bg }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     {action.icon}
                   </svg>
                 </div>
