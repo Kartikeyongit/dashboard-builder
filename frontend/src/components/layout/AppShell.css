@@ -17,6 +17,8 @@
   gap: 1.25rem;
   z-index: 100;
   overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
   border-right: 1px solid var(--color-border);
   transition: width var(--transition-normal);
 }
@@ -57,25 +59,20 @@
 
 .sidebar-collapse-btn {
   position: absolute;
-  right: -0.5rem;
+  right: -0.75rem;
   top: 50%;
   transform: translateY(-50%);
   width: 22px;
   height: 22px;
   border-radius: 50%;
   border: 1px solid var(--color-border);
-  background: var(--color-sidebar);
-  color: var(--color-text-muted);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: transform var(--transition-fast), background var(--transition-fast);
-  opacity: 0;
-}
-
-.sidebar:hover .sidebar-collapse-btn {
-  opacity: 1;
 }
 
 .sidebar-collapse-btn:hover {
@@ -170,10 +167,6 @@
   gap: 0.65rem;
 }
 
-.sidebar--collapsed .sidebar-user {
-  justify-content: center;
-}
-
 .user-avatar {
   width: 34px;
   height: 34px;
@@ -207,11 +200,15 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  transition: opacity var(--transition-normal);
+  transition: opacity var(--transition-normal), width var(--transition-normal), margin var(--transition-normal), padding var(--transition-normal);
 }
 
 .sidebar--collapsed .user-email {
-  display: none;
+  opacity: 0;
+  width: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 .user-dropdown {
@@ -335,16 +332,18 @@
   }
 
   .sidebar--collapsed .sidebar-logo-text,
-  .sidebar--collapsed .nav-label,
-  .sidebar--collapsed .user-email {
+  .sidebar--collapsed .nav-label {
     opacity: 1;
     width: auto;
     overflow: visible;
-    display: revert;
   }
 
-  .sidebar--collapsed .sidebar-user {
-    justify-content: flex-start;
+  .sidebar--collapsed .user-email {
+    opacity: 1;
+    width: auto;
+    margin: revert;
+    padding: revert;
+    overflow: visible;
   }
 
   .sidebar-collapse-btn {
