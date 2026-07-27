@@ -14,7 +14,6 @@ const AppShell: React.FC = () => {
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const initals = user?.email
     ? user.email
@@ -113,25 +112,18 @@ const AppShell: React.FC = () => {
 
           <div className="sidebar-footer">
             <div className="sidebar-user">
-              <button
-                className={`user-avatar${userMenuOpen ? ' user-avatar--open' : ''}`}
-                onClick={() => setUserMenuOpen((o) => !o)}
-                aria-label="User menu"
-                title={user.email}
-              >
+              <div className="user-avatar" title={user.email}>
                 {initals}
-              </button>
+              </div>
               <span className="user-email">{user.email}</span>
             </div>
-            {userMenuOpen && (
-              <button className="user-signout" onClick={handleLogout}>
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h5a1 1 0 100-2H4V5h4a1 1 0 100-2H3zm11.707 3.293a1 1 0 010 1.414L12.414 10l2.293 2.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clipRule="evenodd" />
-                  <path d="M11 10a1 1 0 011-1h5a1 1 0 110 2h-5a1 1 0 01-1-1z" />
-                </svg>
-                Sign out
-              </button>
-            )}
+            <button className="user-signout" onClick={handleLogout}>
+              <svg className="user-signout-icon" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h5a1 1 0 100-2H4V5h4a1 1 0 100-2H3zm11.707 3.293a1 1 0 010 1.414L12.414 10l2.293 2.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clipRule="evenodd" />
+                <path d="M11 10a1 1 0 011-1h5a1 1 0 110 2h-5a1 1 0 01-1-1z" />
+              </svg>
+              <span className="user-signout-label">Sign out</span>
+            </button>
           </div>
       </aside>
 
