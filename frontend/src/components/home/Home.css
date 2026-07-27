@@ -325,10 +325,10 @@
   width: 44px;
   height: 44px;
   margin: 0 auto 1rem;
-  color: var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: var(--radius-md);
 }
 
 .step-card-icon svg {
