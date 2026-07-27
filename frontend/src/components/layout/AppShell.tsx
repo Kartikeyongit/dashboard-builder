@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppDispatch, useAppSelector } from '../../hooks';
@@ -15,7 +15,6 @@ const AppShell: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const userMenuRef = useRef<HTMLDivElement>(null);
 
   const initals = user?.email
     ? user.email
@@ -35,19 +34,6 @@ const AppShell: React.FC = () => {
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
   }, []);
-
-  const closeUserMenu = useCallback(() => setUserMenuOpen(false), []);
-
-  useEffect(() => {
-    if (!userMenuOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
-        closeUserMenu();
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [userMenuOpen, closeUserMenu]);
 
   const handleLogout = () => {
     dispatch(logoutUser());
@@ -125,38 +111,28 @@ const AppShell: React.FC = () => {
           </ul>
         </nav>
 
-        <div className="sidebar-footer">
-          <div className="sidebar-user" ref={userMenuRef}>
-            <button
-              className={`user-avatar${userMenuOpen ? ' user-avatar--open' : ''}`}
-              onClick={() => setUserMenuOpen((o) => !o)}
-              aria-label="User menu"
-              title={user.email}
-            >
-              {initals}
-            </button>
-            <span className="user-email">{user.email}</span>
+          <div className="sidebar-footer">
+            <div className="sidebar-user">
+              <button
+                className={`user-avatar${userMenuOpen ? ' user-avatar--open' : ''}`}
+                onClick={() => setUserMenuOpen((o) => !o)}
+                aria-label="User menu"
+                title={user.email}
+              >
+                {initals}
+              </button>
+              <span className="user-email">{user.email}</span>
+            </div>
             {userMenuOpen && (
-              <div className="user-dropdown">
-                <div className="user-dropdown-header">
-                  <div className="user-dropdown-avatar">{initals}</div>
-                  <div className="user-dropdown-info">
-                    <div className="user-dropdown-name">{user.email.split('@')[0]}</div>
-                    <div className="user-dropdown-email">{user.email}</div>
-                  </div>
-                </div>
-                <div className="user-dropdown-divider" />
-                <button className="user-dropdown-logout" onClick={handleLogout}>
-                  <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h5a1 1 0 100-2H4V5h4a1 1 0 100-2H3zm11.707 3.293a1 1 0 010 1.414L12.414 10l2.293 2.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clipRule="evenodd" />
-                    <path d="M11 10a1 1 0 011-1h5a1 1 0 110 2h-5a1 1 0 01-1-1z" />
-                  </svg>
-                  Sign out
-                </button>
-              </div>
+              <button className="user-signout" onClick={handleLogout}>
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h5a1 1 0 100-2H4V5h4a1 1 0 100-2H3zm11.707 3.293a1 1 0 010 1.414L12.414 10l2.293 2.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clipRule="evenodd" />
+                  <path d="M11 10a1 1 0 011-1h5a1 1 0 110 2h-5a1 1 0 01-1-1z" />
+                </svg>
+                Sign out
+              </button>
             )}
           </div>
-        </div>
       </aside>
 
       {/* Mobile hamburger + main */}
