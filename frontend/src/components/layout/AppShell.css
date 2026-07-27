@@ -40,13 +40,16 @@
   border-radius: var(--radius-lg);
 }
 
-.sidebar--collapsed .sidebar-nav a::after {
-  left: -0.5rem;
-}
 
 .sidebar--collapsed .sidebar-footer {
   padding-left: 0;
   padding-right: 0;
+}
+
+.sidebar--collapsed .user-avatar {
+  width: 38px;
+  height: 38px;
+  font-size: 0.85rem;
 }
 
 /* ──────── Logo ──────── */
@@ -177,7 +180,7 @@
 }
 
 .sidebar--collapsed .sidebar-nav a.active::after {
-  left: -0.25rem;
+  left: -0.5rem;
 }
 
 .nav-icon {
@@ -225,7 +228,7 @@
   width: 34px;
   height: 34px;
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
   color: white;
   font-size: 0.75rem;
   font-weight: 600;
@@ -302,7 +305,7 @@
   width: 38px;
   height: 38px;
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
   color: white;
   font-size: 0.8rem;
   font-weight: 600;
