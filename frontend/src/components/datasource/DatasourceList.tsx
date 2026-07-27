@@ -55,7 +55,7 @@ const DatasourceList: React.FC = () => {
               {items.map((ds) => (
                 <li key={ds.id} className="list-card">
                   <div className="card-header">
-                    <div className="card-icon card-icon--indigo">
+                    <div className="card-icon">
                       <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
                         <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 5a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V9zm0 5a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2z" />
                       </svg>
