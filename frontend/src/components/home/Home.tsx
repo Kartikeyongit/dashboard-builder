@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import { fetchDashboards } from '../../store/dashboardSlice';
 import { fetchDatasources } from '../../store/datasourceSlice';
@@ -35,6 +35,14 @@ const testimonials = [
   { name: 'Sarah Chen', role: 'Data Engineer at Acme', avatar: 'SC', quote: 'We replaced a complex BI stack with Dashboard Builder. Our team went from waiting days for reports to building their own dashboards in minutes.', color: '#6366f1' },
   { name: 'Marcus Johnson', role: 'CTO at Stackflow', avatar: 'MJ', quote: 'The SQL editor with schema auto-complete is a game changer. Our analysts can explore data without switching between tools.', color: '#8b5cf6' },
   { name: 'Elena Rodriguez', role: 'Product Manager at Nimbus', avatar: 'ER', quote: 'Sharing live dashboards with stakeholders used to be a headache. Now I just send a link and they see real-time data instantly.', color: '#10b981' },
+];
+
+const faqItems = [
+  { q: 'What databases can I connect?', a: 'Dashboard Builder supports PostgreSQL and MySQL out of the box. You can connect via SSL, use custom ports, test connections before saving, and manage multiple datasources from a single workspace.' },
+  { q: 'Do I need to install anything?', a: 'Not at all. Dashboard Builder runs entirely in your browser. Just sign up, connect your database, and start building dashboards immediately — no downloads, no CLI tools, no server setup required.' },
+  { q: 'Can I share dashboards without an account?', a: 'Yes. You can generate shareable links with live data that work for anyone, even without a login. Its perfect for stakeholders who just need to view near-time dashboards without creating an account.' },
+  { q: 'Is my data secure?', a: 'Data is encrypted in transit (TLS) and at rest. Query results are cached temporarily for performance but never persisted long-term. Viewer-only links grant read access to specific dashboards only.' },
+  { q: 'Can I export dashboard data?', a: 'Yes. Charts and tables support export to common formats like CSV and PNG. You can also share dashboards as live views or embed them in other applications.' },
 ];
 
 function SectionHeader({ label, title, desc }: { label: string; title: string; desc?: string }) {
@@ -221,6 +229,8 @@ const PublicLanding = () => {
       desc: 'Add charts, tables, and metrics to a grid layout. Share a live link with your team — no login required for viewers.',
     },
   ];
+
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   return (
     <div className="public-home">
@@ -427,6 +437,59 @@ const PublicLanding = () => {
           <SectionHeader label="Testimonials" title="Trusted by data teams" desc="See what our users say about Dashboard Builder." />
 
           <AutoScrollTestimonials testimonials={testimonials} />
+        </div>
+      </section>
+
+      {/* ──────── FAQ ──────── */}
+      <section className="section faq-section">
+        <div className="section-inner">
+          <SectionHeader label="FAQ" title="Frequently asked questions" />
+
+          <motion.div
+            className="faq-list"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+          >
+            {faqItems.map((item, i) => (
+              <motion.div key={i} className="faq-item" variants={fadeInUp}>
+                <button
+                  className="faq-question"
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                >
+                  {item.q}
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ transform: openFaq === i ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+                <AnimatePresence initial={false}>
+                  {openFaq === i && (
+                    <motion.div
+                      className="faq-answer"
+                      key="answer"
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.25, ease: 'easeInOut' }}
+                    >
+                      <p>{item.a}</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            ))}
+          </motion.div>
         </div>
       </section>
 
