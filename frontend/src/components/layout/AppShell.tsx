@@ -13,7 +13,7 @@ const AppShell: React.FC = () => {
   const location = useLocation();
 
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
   const initals = user?.email
     ? user.email
