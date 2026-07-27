@@ -28,7 +28,7 @@
 /* ──────── Collapsed ──────── */
 .sidebar--collapsed {
   scrollbar-gutter: auto;
-  width: 68px;
+  width: 72px;
   padding: 1rem 0.5rem;
 }
 
@@ -90,8 +90,8 @@
 
 .sidebar--collapsed .sidebar-logo {
   gap: 0;
-  justify-content: flex-start;
-  padding: 0 0 0 0.5rem;
+  justify-content: center;
+  padding: 0;
 }
 
 /* ──────── Collapse Toggle ──────── */
@@ -378,7 +378,7 @@
 }
 
 .sidebar--collapsed ~ .main-wrapper {
-  margin-left: 68px;
+  margin-left: 72px;
 }
 
 .main-content {
