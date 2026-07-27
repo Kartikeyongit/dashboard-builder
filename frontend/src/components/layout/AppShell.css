@@ -28,7 +28,7 @@
 /* ──────── Collapsed ──────── */
 .sidebar--collapsed {
   scrollbar-gutter: auto;
-  width: 72px;
+  width: 62px;
   padding: 1rem 0.5rem;
 }
 
@@ -44,7 +44,7 @@
 
 
 .sidebar--collapsed .sidebar-footer {
-  padding-left: 0.5rem;
+  padding-left: 0;
   padding-right: 0;
 }
 
