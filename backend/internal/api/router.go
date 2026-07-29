@@ -141,7 +141,11 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 	widgets.Delete("/:id", widgetHandler.Delete)
 
 	protected.Get("/me", func(c *fiber.Ctx) error {
-		orgID := c.Locals("orgID").(string)
-		return c.JSON(fiber.Map{"org_id": orgID})
+		userID := middleware.GetUserID(c)
+		user, err := userRepo.GetByID(userID)
+		if err != nil {
+			return fiber.NewError(fiber.StatusNotFound, "user not found")
+		}
+		return c.JSON(user)
 	})
 }

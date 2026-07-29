@@ -7,12 +7,14 @@ interface AuthState {
   user: User | null;
   isLoading: boolean;
   error: string | null;
+  isInitializing: boolean;
 }
 
 const initialState: AuthState = {
   user: null,
   isLoading: false,
   error: null,
+  isInitializing: true,
 };
 
 export const registerUser = createAsyncThunk(
@@ -46,6 +48,23 @@ export const loginUser = createAsyncThunk(
 export const logoutUser = createAsyncThunk('auth/logout', async () => {
   localStorage.removeItem('access_token');
   localStorage.removeItem('refresh_token');
+});
+
+export const restoreAuth = createAsyncThunk('auth/restore', async (_, { rejectWithValue }) => {
+  const token = localStorage.getItem('access_token');
+  if (!token) {
+    return null;
+  }
+  try {
+    const response = await authAPI.getMe();
+    return response.data;
+  } catch (err: any) {
+    if (err.response?.status === 401) {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+    }
+    return rejectWithValue('Session expired');
+  }
 });
 
 const authSlice = createSlice({
@@ -89,6 +108,18 @@ const authSlice = createSlice({
     // Logout
     builder.addCase(logoutUser.fulfilled, (state) => {
       state.user = null;
+    });
+    // Restore auth on startup
+    builder.addCase(restoreAuth.pending, (state) => {
+      state.isInitializing = true;
+    });
+    builder.addCase(restoreAuth.fulfilled, (state, action) => {
+      state.user = action.payload;
+      state.isInitializing = false;
+    });
+    builder.addCase(restoreAuth.rejected, (state) => {
+      state.user = null;
+      state.isInitializing = false;
     });
   },
 });

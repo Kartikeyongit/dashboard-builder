@@ -2,18 +2,23 @@ import React, { useEffect, useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppDispatch, useAppSelector } from '../../hooks';
-import { logoutUser } from '../../store/authSlice';
+import { logoutUser, restoreAuth } from '../../store/authSlice';
 import Toast from '../Toast';
 import './AppShell.css';
 
 const AppShell: React.FC = () => {
   const user = useAppSelector((state) => state.auth.user);
+  const isInitializing = useAppSelector((state) => state.auth.isInitializing);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const location = useLocation();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+
+  useEffect(() => {
+    dispatch(restoreAuth());
+  }, [dispatch]);
 
   const initals = user?.email
     ? user.email
@@ -38,6 +43,14 @@ const AppShell: React.FC = () => {
     dispatch(logoutUser());
     navigate('/login');
   };
+
+  if (isInitializing) {
+    return (
+      <div className="loading-screen">
+        <div className="loading-spinner" />
+      </div>
+    );
+  }
 
   if (!user) {
     return <Outlet />;
