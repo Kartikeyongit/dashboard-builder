@@ -4,6 +4,7 @@ import { useAppDispatch, useAppSelector } from '../../hooks';
 import { fetchQueries, deleteQuery } from '../../store/querySlice';
 import { queryAPI } from '../../api/query';
 import { addToast } from '../../store/toastSlice';
+import { canEditContent } from '../../utils/permissions';
 import EmptyState from '../ui/EmptyState';
 import '../ui/ListPage.css';
 import './QueryList.css';
@@ -11,6 +12,8 @@ import './QueryList.css';
 const QueryList: React.FC = () => {
   const dispatch = useAppDispatch();
   const { items, loading } = useAppSelector((state) => state.queries);
+  const user = useAppSelector((state) => state.auth.user);
+  const canEdit = canEditContent(user);
 
   useEffect(() => {
     dispatch(fetchQueries());
@@ -41,7 +44,7 @@ const QueryList: React.FC = () => {
             <h2>Saved SQL</h2>
             <p className="lede">Reusable queries you've built from connected datasources.</p>
           </div>
-          <Link to="/queries/new" className="add-btn">+ New Query</Link>
+          {canEdit && <Link to="/queries/new" className="add-btn">+ New Query</Link>}
         </div>
 
         <div className="list-grid-wrapper">
@@ -70,9 +73,11 @@ const QueryList: React.FC = () => {
                     {q.sql_text.length > 80 ? '…' : ''}
                   </div>
                   <div className="card-actions">
-                    <Link to={`/queries/${q.id}/edit`} className="edit-link">Edit</Link>
+                    {canEdit && <Link to={`/queries/${q.id}/edit`} className="edit-link">Edit</Link>}
                     <button className="edit-link" onClick={() => handleRun(q.id)}>Run</button>
-                    <button className="delete-btn" onClick={() => handleDelete(q.id)}>Delete</button>
+                    {canEdit && (
+                      <button className="delete-btn" onClick={() => handleDelete(q.id)}>Delete</button>
+                    )}
                   </div>
                 </li>
               ))}
@@ -82,7 +87,7 @@ const QueryList: React.FC = () => {
                     icon="query"
                     title="No queries saved yet"
                     description="Write your first SQL query to start exploring your data."
-                    action={{ label: 'New Query', to: '/queries/new' }}
+                    action={canEdit ? { label: 'New Query', to: '/queries/new' } : undefined}
                   />
                 </li>
               )}

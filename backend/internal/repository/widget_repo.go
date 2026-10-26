@@ -50,6 +50,41 @@ func (r *WidgetRepo) GetByID(id string) (*model.Widget, error) {
 	return w, err
 }
 
+// GetByIDForOrg returns a widget only if its dashboard belongs to the org.
+func (r *WidgetRepo) GetByIDForOrg(id, orgID string) (*model.Widget, error) {
+	w := &model.Widget{}
+	var configBytes []byte
+	err := r.db.QueryRow(
+		`SELECT w.id, w.dashboard_id, w.query_id, w.widget_type, w.config_json,
+		        w.position_x, w.position_y, w.width, w.height, w.refresh_interval_override,
+		        w.created_at, w.updated_at
+		 FROM widgets w
+		 JOIN dashboards d ON d.id = w.dashboard_id
+		 WHERE w.id=$1 AND d.org_id=$2`, id, orgID,
+	).Scan(&w.ID, &w.DashboardID, &w.QueryID, &w.WidgetType, &configBytes,
+		&w.PositionX, &w.PositionY, &w.Width, &w.Height, &w.RefreshIntervalOverride,
+		&w.CreatedAt, &w.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	w.Config = json.RawMessage(configBytes)
+	return w, nil
+}
+
+// DeleteForOrg deletes a widget only if it belongs to the given dashboard and org.
+func (r *WidgetRepo) DeleteForOrg(id, dashboardID, orgID string) error {
+	_, err := r.db.Exec(
+		`DELETE FROM widgets w
+		 USING dashboards d
+		 WHERE w.id=$1 AND w.dashboard_id=$2
+		   AND d.id=w.dashboard_id AND d.org_id=$3`,
+		id, dashboardID, orgID)
+	return err
+}
+
 func (r *WidgetRepo) ListByDashboard(dashboardID string) ([]*model.Widget, error) {
 	rows, err := r.db.Query(
 		`SELECT id, dashboard_id, query_id, widget_type, config_json, position_x, position_y, width, height, refresh_interval_override, created_at, updated_at

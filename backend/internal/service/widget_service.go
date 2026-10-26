@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/your-org/dashboard-builder/backend/internal/datasource"
 	"github.com/your-org/dashboard-builder/backend/internal/model"
@@ -39,7 +40,22 @@ func NewWidgetService(
 	}
 }
 
-func (s *WidgetService) Create(dashboardID, queryID, widgetType string, config json.RawMessage, x, y, w, h int) (*model.Widget, error) {
+func (s *WidgetService) Create(orgID, dashboardID, queryID, widgetType string, config json.RawMessage, x, y, w, h int) (*model.Widget, error) {
+	dash, err := s.dashboardRepo.GetByID(dashboardID, orgID)
+	if err != nil {
+		return nil, err
+	}
+	if dash == nil {
+		return nil, fmt.Errorf("dashboard not found")
+	}
+	query, err := s.queryService.GetByID(queryID, orgID)
+	if err != nil {
+		return nil, err
+	}
+	if query == nil {
+		return nil, fmt.Errorf("query not found")
+	}
+
 	widget := &model.Widget{
 		DashboardID: dashboardID,
 		QueryID:     queryID,
@@ -53,16 +69,36 @@ func (s *WidgetService) Create(dashboardID, queryID, widgetType string, config j
 	return s.widgetRepo.Create(widget)
 }
 
-func (s *WidgetService) GetByID(id string) (*model.Widget, error) {
-	return s.widgetRepo.GetByID(id)
+func (s *WidgetService) GetByIDForOrg(id, orgID string) (*model.Widget, error) {
+	return s.widgetRepo.GetByIDForOrg(id, orgID)
 }
 
-func (s *WidgetService) Update(id string, widget *model.Widget) error {
+// Update verifies that the widget belongs to the dashboard and org before
+// writing. It also rejects a query that belongs to another organization.
+func (s *WidgetService) Update(orgID, dashboardID string, widget *model.Widget) error {
+	existing, err := s.widgetRepo.GetByIDForOrg(widget.ID, orgID)
+	if err != nil {
+		return err
+	}
+	if existing == nil || existing.DashboardID != dashboardID {
+		return fmt.Errorf("widget not found")
+	}
+	if widget.QueryID != existing.QueryID {
+		query, err := s.queryService.GetByID(widget.QueryID, orgID)
+		if err != nil {
+			return err
+		}
+		if query == nil {
+			return fmt.Errorf("query not found")
+		}
+	}
+	// The dashboard must not be changed through a widget update.
+	widget.DashboardID = existing.DashboardID
 	return s.widgetRepo.Update(widget)
 }
 
-func (s *WidgetService) Delete(id string) error {
-	return s.widgetRepo.Delete(id)
+func (s *WidgetService) Delete(orgID, dashboardID, id string) error {
+	return s.widgetRepo.DeleteForOrg(id, dashboardID, orgID)
 }
 
 func (s *WidgetService) LoadDashboardWithData(ctx context.Context, orgID, dashboardID string) (*DashboardFull, error) {

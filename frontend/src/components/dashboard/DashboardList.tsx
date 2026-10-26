@@ -1,9 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import { fetchDashboards, createDashboard, deleteDashboard } from '../../store/dashboardSlice';
 import { addToast } from '../../store/toastSlice';
+import { canEditContent } from '../../utils/permissions';
 import EmptyState from '../ui/EmptyState';
+import '../ui/Modal.css';
 import '../ui/ListPage.css';
 import './DashboardList.css';
 
@@ -11,26 +13,42 @@ const DashboardList: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { list, loading } = useAppSelector((state) => state.dashboards);
+  const user = useAppSelector((state) => state.auth.user);
+  const canEdit = canEditContent(user);
+
+  const [showCreate, setShowCreate] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     dispatch(fetchDashboards());
   }, [dispatch]);
 
   const handleCreate = async () => {
-    const name = prompt('Dashboard name:');
-    if (name) {
-      const result = await dispatch(createDashboard({ name }));
-      if (createDashboard.fulfilled.match(result)) {
-        dispatch(addToast({ message: 'Dashboard created', type: 'success' }));
-        navigate(`/dashboards/${result.payload.id}/edit`);
-      }
+    const name = newName.trim();
+    if (!name || creating) return;
+    setCreating(true);
+    const result = await dispatch(createDashboard({ name }));
+    setCreating(false);
+    if (createDashboard.fulfilled.match(result)) {
+      setShowCreate(false);
+      setNewName('');
+      dispatch(addToast({ message: 'Dashboard created', type: 'success' }));
+      navigate(`/dashboards/${result.payload.id}/edit`);
+    } else {
+      dispatch(addToast({ message: 'Failed to create dashboard', type: 'error' }));
     }
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('Delete dashboard?')) {
-      dispatch(deleteDashboard(id));
+  const handleDelete = async () => {
+    if (!pendingDelete) return;
+    const result = await dispatch(deleteDashboard(pendingDelete.id));
+    setPendingDelete(null);
+    if (deleteDashboard.fulfilled.match(result)) {
       dispatch(addToast({ message: 'Dashboard deleted', type: 'success' }));
+    } else {
+      dispatch(addToast({ message: 'Failed to delete dashboard', type: 'error' }));
     }
   };
 
@@ -43,7 +61,9 @@ const DashboardList: React.FC = () => {
             <h2>Your Dashboards</h2>
             <p className="lede">Design and view live data dashboards.</p>
           </div>
-          <button className="add-btn" onClick={handleCreate}>+ New Dashboard</button>
+          {canEdit && (
+            <button className="add-btn" onClick={() => setShowCreate(true)}>+ New Dashboard</button>
+          )}
         </div>
 
         <div className="list-grid-wrapper">
@@ -66,8 +86,14 @@ const DashboardList: React.FC = () => {
                     <span className="card-title">{d.name}</span>
                   </div>
                   <div className="card-actions">
-                    <Link to={`/dashboards/${d.id}/edit`} className="edit-link">Edit</Link>
-                    <button className="delete-btn" onClick={() => handleDelete(d.id)}>Delete</button>
+                    <Link to={`/dashboards/${d.id}/edit`} className="edit-link">
+                      {canEdit ? 'Edit' : 'View'}
+                    </Link>
+                    {canEdit && (
+                      <button className="delete-btn" onClick={() => setPendingDelete({ id: d.id, name: d.name })}>
+                        Delete
+                      </button>
+                    )}
                   </div>
                 </li>
               ))}
@@ -76,8 +102,10 @@ const DashboardList: React.FC = () => {
                   <EmptyState
                     icon="dashboard"
                     title="No dashboards yet"
-                    description="Create your first dashboard to start visualizing your data."
-                    action={{ label: 'New Dashboard', onClick: handleCreate }}
+                    description={canEdit
+                      ? 'Create your first dashboard to start visualizing your data.'
+                      : 'No dashboards have been shared with you yet.'}
+                    action={canEdit ? { label: 'New Dashboard', onClick: () => setShowCreate(true) } : undefined}
                   />
                 </li>
               )}
@@ -85,6 +113,55 @@ const DashboardList: React.FC = () => {
           )}
         </div>
       </div>
+
+      {showCreate && (
+        <div className="modal-overlay" onClick={() => setShowCreate(false)}>
+          <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">New Dashboard</h3>
+            <div className="modal-field">
+              <label>Name</label>
+              <input
+                autoFocus
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="e.g. Weekly revenue"
+                onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+              />
+            </div>
+            <div className="modal-actions">
+              <button
+                className="modal-btn modal-btn--primary"
+                onClick={handleCreate}
+                disabled={!newName.trim() || creating}
+              >
+                {creating ? 'Creating...' : 'Create'}
+              </button>
+              <button className="modal-btn modal-btn--secondary" onClick={() => setShowCreate(false)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pendingDelete && (
+        <div className="modal-overlay" onClick={() => setPendingDelete(null)}>
+          <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">Delete dashboard?</h3>
+            <p className="modal-hint">
+              “{pendingDelete.name}” and its widgets will be permanently removed. Queries are not deleted.
+            </p>
+            <div className="modal-actions">
+              <button className="modal-btn modal-btn--primary" onClick={handleDelete}>
+                Delete
+              </button>
+              <button className="modal-btn modal-btn--secondary" onClick={() => setPendingDelete(null)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -6,6 +6,7 @@ import ChartWidget from '../dashboard/ChartWidget';
 import TableWidget from '../dashboard/TableWidget';
 import MetricWidget from '../dashboard/MetricWidget';
 import DashboardSocket from '../../api/websocket';
+import { normalizeLayout } from '../../utils/dashboard';
 import './SharedDashboardView.css';
 
 const SharedDashboardView: React.FC = () => {
@@ -43,8 +44,10 @@ const SharedDashboardView: React.FC = () => {
     loadDashboard();
   }, [token]);
 
+  const dashboardId = dashboard?.dashboard.id;
+
   useEffect(() => {
-    if (!dashboard || !token) return;
+    if (!dashboardId || !token) return;
     const socket = DashboardSocket;
     socket.connectForShare(token);
     const unsub = socket.onMessage((msg) => {
@@ -69,7 +72,10 @@ const SharedDashboardView: React.FC = () => {
       socket.disconnect();
       unsub();
     };
-  }, [dashboard, token]);
+    // Depend on the dashboard id, not the dashboard object: every incoming
+    // widget update replaces that object and would otherwise reconnect the
+    // socket in a loop.
+  }, [dashboardId, token]);
 
   if (passwordRequired) {
     return (
@@ -99,6 +105,12 @@ const SharedDashboardView: React.FC = () => {
   }
 
   const widgets = Array.isArray(dashboard.widgets) ? dashboard.widgets : [];
+  const orderedWidgets = [...widgets].sort((a, b) => {
+    if (a.widget.position_y !== b.widget.position_y) {
+      return a.widget.position_y - b.widget.position_y;
+    }
+    return a.widget.position_x - b.widget.position_x;
+  });
 
   return (
     <div className="shared-view">
@@ -107,14 +119,31 @@ const SharedDashboardView: React.FC = () => {
         <span className="shared-view-badge">Read-only</span>
       </header>
       <div className="shared-view-grid">
-        {widgets.map(wd => (
-          <div key={wd.widget.id} className="shared-view-widget">
-            {wd.widget.widget_type === 'chart' && <ChartWidget data={wd.data} config={wd.widget.config} />}
-            {wd.widget.widget_type === 'table' && <TableWidget data={wd.data} />}
-            {wd.widget.widget_type === 'metric' && <MetricWidget data={wd.data} config={wd.widget.config} />}
-            {wd.error && <div className="shared-view-widget-error">{wd.error}</div>}
-          </div>
-        ))}
+        {orderedWidgets.map(wd => {
+          const layout = normalizeLayout({
+            x: wd.widget.position_x,
+            y: wd.widget.position_y,
+            w: wd.widget.width,
+            h: wd.widget.height,
+          });
+          return (
+            <div
+              key={wd.widget.id}
+              className="shared-view-widget"
+              style={{
+                gridColumn: `${layout.x + 1} / span ${layout.w}`,
+                gridRow: `${layout.y + 1} / span ${layout.h}`,
+              }}
+            >
+              <div className="shared-view-widget-body">
+                {wd.widget.widget_type === 'chart' && <ChartWidget data={wd.data} config={wd.widget.config} />}
+                {wd.widget.widget_type === 'table' && <TableWidget data={wd.data} />}
+                {wd.widget.widget_type === 'metric' && <MetricWidget data={wd.data} config={wd.widget.config} />}
+                {wd.error && <div className="shared-view-widget-error">{wd.error}</div>}
+              </div>
+            </div>
+          );
+        })}
         {widgets.length === 0 && (
           <div className="shared-view-empty">No widgets are available for this dashboard.</div>
         )}

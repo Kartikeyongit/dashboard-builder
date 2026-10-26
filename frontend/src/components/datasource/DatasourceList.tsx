@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import { fetchDatasources, deleteDatasource, testDatasourceConnection } from '../../store/datasourceSlice';
 import { addToast } from '../../store/toastSlice';
+import { canEditContent } from '../../utils/permissions';
 import EmptyState from '../ui/EmptyState';
 import '../ui/ListPage.css';
 import './DatasourceList.css';
@@ -10,6 +11,8 @@ import './DatasourceList.css';
 const DatasourceList: React.FC = () => {
   const dispatch = useAppDispatch();
   const { items, loading } = useAppSelector((state) => state.datasources);
+  const user = useAppSelector((state) => state.auth.user);
+  const canEdit = canEditContent(user);
 
   useEffect(() => {
     dispatch(fetchDatasources());
@@ -40,7 +43,7 @@ const DatasourceList: React.FC = () => {
             <h2>Connected Databases</h2>
             <p className="lede">Manage your PostgreSQL and MySQL connections.</p>
           </div>
-          <Link to="/datasources/new" className="add-btn">+ Add Datasource</Link>
+          {canEdit && <Link to="/datasources/new" className="add-btn">+ Add Datasource</Link>}
         </div>
 
         <div className="list-grid-wrapper">
@@ -70,9 +73,13 @@ const DatasourceList: React.FC = () => {
                     <span>{ds.username}</span>
                   </div>
                   <div className="card-actions">
-                    <button className="edit-link" onClick={() => handleTest(ds.id)}>Test</button>
-                    <Link to={`/datasources/${ds.id}/edit`} className="edit-link">Edit</Link>
-                    <button className="delete-btn" onClick={() => handleDelete(ds.id)}>Delete</button>
+                    {canEdit && (
+                      <>
+                        <button className="edit-link" onClick={() => handleTest(ds.id)}>Test</button>
+                        <Link to={`/datasources/${ds.id}/edit`} className="edit-link">Edit</Link>
+                        <button className="delete-btn" onClick={() => handleDelete(ds.id)}>Delete</button>
+                      </>
+                    )}
                   </div>
                 </li>
               ))}
@@ -82,7 +89,7 @@ const DatasourceList: React.FC = () => {
                     icon="datasource"
                     title="No datasources yet"
                     description="Connect your first database to start building queries."
-                    action={{ label: 'Add Datasource', to: '/datasources/new' }}
+                    action={canEdit ? { label: 'Add Datasource', to: '/datasources/new' } : undefined}
                   />
                 </li>
               )}

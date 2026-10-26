@@ -122,16 +122,26 @@ This launches PostgreSQL (localhost:5432) and Redis (localhost:6379).
 
 ### 2. Configure environment
 
-Create `backend/.env`:
+Create `backend/.env` from the template:
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+Then fill in at least these values:
 
 ```env
 DB_URL=postgres://postgres:***REMOVED***@localhost:5432/dashboard_builder?sslmode=disable
-REDIS_URL=localhost:6379
-JWT_SECRET=***REMOVED***
+REDIS_URL=redis://localhost:6379
+JWT_SECRET=dev-only-secret-at-least-32-characters-long
 ENCRYPTION_KEY=***REMOVED***
 PORT=8080
 FRONTEND_URL=http://localhost:5173
 ```
+
+Generate production values with `openssl rand -base64 48` (JWT) and
+`openssl rand -hex 32` (encryption). The backend refuses to start if they are
+missing or too weak.
 
 ### 3. Run the backend
 
@@ -163,17 +173,20 @@ Visit http://localhost:5173 and log in with `admin@acme.com` / `password123`.
 
 ## 🚀 Deployment
 
-The project is deployable on Render (free tier) with Upstash Redis:
+A complete, zero-cost deployment guide is in **[DEPLOYMENT.md](./DEPLOYMENT.md)**.
+It covers Neon (PostgreSQL), Upstash (Redis), and Render (backend Docker
+service + static frontend), including environment variables, health checks,
+roles, and free-tier caveats.
 
-- **Backend** – Render Web Service (Dockerfile in backend/)
+Quick summary:
+
+- **Backend** – Render Web Service (Dockerfile in `backend/`)
   - Environment: `DB_URL`, `REDIS_URL`, `JWT_SECRET`, `ENCRYPTION_KEY`, `FRONTEND_URL`, `SEED_SECRET`
-
 - **Frontend** – Render Static Site (publish directory `dist`)
-  - Env vars: `VITE_API_URL`, `VITE_WS_URL`
-
-- **Redis** – Upstash free instance (copy `rediss://` URL)
-
-- **Seed** – Visit `https://api.<your-domain>/api/v1/seed?token=YOUR_SEED_SECRET` once.
+  - Env var: `VITE_API_URL`
+- **Database** – Neon free PostgreSQL (`?sslmode=require`)
+- **Redis** – Upstash free instance (use the `rediss://` URL)
+- **Seed** – Optional one-time call to `/api/v1/seed?token=YOUR_SEED_SECRET`
 
 ### Health & Monitoring Endpoints
 
@@ -182,8 +195,6 @@ The project is deployable on Render (free tier) with Upstash Redis:
 | `GET /healthz` | Health check (returns 200) |
 | `GET /readyz` | Readiness check (pings DB & Redis) |
 | `GET /metrics` | Prometheus metrics (fiberprometheus) |
-
-Full instructions are in the deployment section of the original documentation.
 
 ---
 
@@ -279,14 +290,17 @@ After local setup or deployment:
 |----------|-------------|---------|
 | `DB_URL` | PostgreSQL connection string | `postgres://user:pass@host/db` |
 | `REDIS_URL` | Redis connection string (supports `redis://` or `rediss://`) | `rediss://:pass@host:port` |
-| `JWT_SECRET` | Secret for signing JWTs | `a-random-string` |
-| `ENCRYPTION_KEY` | 32‑byte hex key for AES‑GCM (must be 64 hex chars) | `0123...def` |
+| `JWT_SECRET` | Secret for signing JWTs (32+ characters, required) | `a-long-random-string-at-least-32-chars` |
+| `ENCRYPTION_KEY` | 32‑byte hex key for AES‑GCM (must be 64 hex chars, required) | `0123...def` |
 | `PORT` | Backend server port (default `8080`) | `8080` |
 | `FRONTEND_URL` | Allowed CORS origin | `https://myfrontend.onrender.com` |
 | `SEED_SECRET` | Token to trigger database seeding via HTTP | `a1b2c3d4` (only needed once) |
 | `MIGRATIONS_DIR` | Path to SQL migration files | `/etc/dashboard/migrations` |
 | `VITE_API_URL` | Backend API URL (frontend build‑time) | `https://api.onrender.com/api/v1` |
-| `VITE_WS_URL` | WebSocket URL (frontend build‑time) | `wss://api.onrender.com/api/v1/ws` |
+| `VITE_WS_URL` | Optional WebSocket override; derived from `VITE_API_URL` by default | `wss://api.onrender.com/api/v1/ws` |
+
+`backend/.env` is gitignored. Start from `backend/.env.example` and never commit
+real credentials. See [DEPLOYMENT.md](./DEPLOYMENT.md) for the security checklist.
 
 ---
 

@@ -15,25 +15,27 @@ type ClientMessage struct {
 }
 
 type Client struct {
-	conn   *websocket.Conn       // use contrib's type
-	send   chan interface{}
-	hub    *Hub
-	userID string
-	orgID  string
+	conn               *websocket.Conn // use contrib's type
+	send               chan interface{}
+	hub                *Hub
+	userID             string
+	orgID              string
+	authorizeDashboard func(orgID, dashboardID string) bool
 }
 
-func HandleWebSocket(hub *Hub) fiber.Handler {
+func HandleWebSocket(hub *Hub, authorizeDashboard func(orgID, dashboardID string) bool) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		userID := middleware.GetUserID(c)
 		orgID := c.Locals("orgID").(string)
 
 		return websocket.New(func(conn *websocket.Conn) {
 			client := &Client{
-				conn:   conn,
-				send:   make(chan interface{}, 256),
-				hub:    hub,
-				userID: userID,
-				orgID:  orgID,
+				conn:               conn,
+				send:               make(chan interface{}, 256),
+				hub:                hub,
+				userID:             userID,
+				orgID:              orgID,
+				authorizeDashboard: authorizeDashboard,
 			}
 			hub.register <- client
 			go client.writePump()
@@ -64,6 +66,13 @@ func (c *Client) readPump() {
 		}
 		switch msg.Type {
 		case "subscribe":
+			if msg.DashboardID == "" {
+				continue
+			}
+			// Never let a client subscribe to another organization's dashboard.
+			if c.authorizeDashboard != nil && !c.authorizeDashboard(c.orgID, msg.DashboardID) {
+				continue
+			}
 			c.hub.subscribe <- &Subscription{DashboardID: msg.DashboardID, Client: c}
 		case "unsubscribe":
 			c.hub.unsubscribe <- &Subscription{DashboardID: msg.DashboardID, Client: c}

@@ -3,10 +3,41 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/your-org/dashboard-builder/backend/internal/datasource"
 	"github.com/your-org/dashboard-builder/backend/internal/model"
 	"github.com/your-org/dashboard-builder/backend/internal/repository"
 )
+
+const (
+	DefaultMaxRows      = 1000
+	MaxAllowedRows      = 10000
+	DefaultTimeoutMs    = 30000
+	MaxAllowedTimeoutMs = 60000
+	MinAllowedTimeoutMs = 1000
+)
+
+// NormalizeQueryLimits applies safe defaults and hard caps. Zero or negative
+// values must never reach the database driver.
+func NormalizeQueryLimits(maxRows, timeoutMs int) (int, int) {
+	if maxRows <= 0 {
+		maxRows = DefaultMaxRows
+	}
+	if maxRows > MaxAllowedRows {
+		maxRows = MaxAllowedRows
+	}
+	if timeoutMs <= 0 {
+		timeoutMs = DefaultTimeoutMs
+	}
+	if timeoutMs < MinAllowedTimeoutMs {
+		timeoutMs = MinAllowedTimeoutMs
+	}
+	if timeoutMs > MaxAllowedTimeoutMs {
+		timeoutMs = MaxAllowedTimeoutMs
+	}
+	return maxRows, timeoutMs
+}
 
 type QueryService struct {
 	queryRepo      *repository.QueryRepo
@@ -23,6 +54,27 @@ func NewQueryService(queryRepo *repository.QueryRepo, datasourceRepo *repository
 }
 
 func (s *QueryService) Create(orgID, datasourceID, name, sqlText string, maxRows, timeoutMs int, createdBy string) (*model.Query, error) {
+	name = strings.TrimSpace(name)
+	sqlText = strings.TrimSpace(sqlText)
+	if name == "" {
+		return nil, fmt.Errorf("query name is required")
+	}
+	if sqlText == "" {
+		return nil, fmt.Errorf("SQL text is required")
+	}
+	if datasourceID == "" {
+		return nil, fmt.Errorf("datasource is required")
+	}
+	// Reject a datasource from another organization.
+	ds, err := s.datasourceRepo.GetByID(datasourceID, orgID)
+	if err != nil {
+		return nil, err
+	}
+	if ds == nil {
+		return nil, fmt.Errorf("datasource not found")
+	}
+	maxRows, timeoutMs = NormalizeQueryLimits(maxRows, timeoutMs)
+
 	q := &model.Query{
 		OrgID:        orgID,
 		DatasourceID: datasourceID,
@@ -48,6 +100,33 @@ func (s *QueryService) Update(id, orgID, datasourceID, name, sqlText string, max
 	if err != nil || q == nil {
 		return fmt.Errorf("query not found")
 	}
+	name = strings.TrimSpace(name)
+	sqlText = strings.TrimSpace(sqlText)
+	if name == "" {
+		return fmt.Errorf("query name is required")
+	}
+	if sqlText == "" {
+		return fmt.Errorf("SQL text is required")
+	}
+	if datasourceID == "" {
+		datasourceID = q.DatasourceID
+	}
+	ds, err := s.datasourceRepo.GetByID(datasourceID, orgID)
+	if err != nil {
+		return err
+	}
+	if ds == nil {
+		return fmt.Errorf("datasource not found")
+	}
+	// Keep existing limits when the client omits them (common for older clients).
+	if maxRows <= 0 {
+		maxRows = q.MaxRows
+	}
+	if timeoutMs <= 0 {
+		timeoutMs = q.TimeoutMs
+	}
+	maxRows, timeoutMs = NormalizeQueryLimits(maxRows, timeoutMs)
+
 	q.DatasourceID = datasourceID
 	q.Name = name
 	q.SQLText = sqlText
@@ -70,7 +149,8 @@ func (s *QueryService) ExecuteSavedQuery(ctx context.Context, id, orgID string) 
 	if err != nil || ds == nil {
 		return nil, fmt.Errorf("datasource not found")
 	}
-	return s.poolManager.ExecuteQuery(ctx, ds, q.SQLText, q.MaxRows, q.TimeoutMs)
+	maxRows, timeoutMs := NormalizeQueryLimits(q.MaxRows, q.TimeoutMs)
+	return s.poolManager.ExecuteQuery(ctx, ds, q.SQLText, maxRows, timeoutMs)
 }
 
 // ExecuteAdHoc runs an ad‑hoc query (not saved) for preview.
@@ -79,5 +159,6 @@ func (s *QueryService) ExecuteAdHoc(ctx context.Context, orgID, datasourceID, sq
 	if err != nil || ds == nil {
 		return nil, fmt.Errorf("datasource not found")
 	}
+	maxRows, timeoutMs = NormalizeQueryLimits(maxRows, timeoutMs)
 	return s.poolManager.ExecuteQuery(ctx, ds, sqlText, maxRows, timeoutMs)
 }

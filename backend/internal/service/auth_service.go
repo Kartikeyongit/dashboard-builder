@@ -94,17 +94,23 @@ func (s *AuthService) RefreshToken(refreshToken string) (*TokenPair, error) {
 		return nil, errors.New("invalid token subject")
 	}
 
+	// Only refresh tokens may be exchanged for a new pair. Without this check a
+	// stolen access token could be used to keep refreshing itself indefinitely.
+	if typ, _ := claims["typ"].(string); typ != "refresh" {
+		return nil, errors.New("invalid refresh token")
+	}
+
 	// Ensure the user still exists
 	// (could also check in DB, but for simplicity we trust the token)
 	return s.generateTokens(userID)
 }
 
 func (s *AuthService) generateTokens(userID string) (*TokenPair, error) {
-	accessToken, err := s.createToken(userID, 15*time.Minute)
+	accessToken, err := s.createToken(userID, "access", 15*time.Minute)
 	if err != nil {
 		return nil, err
 	}
-	refreshToken, err := s.createToken(userID, 7*24*time.Hour)
+	refreshToken, err := s.createToken(userID, "refresh", 7*24*time.Hour)
 	if err != nil {
 		return nil, err
 	}
@@ -115,9 +121,10 @@ func (s *AuthService) generateTokens(userID string) (*TokenPair, error) {
 	}, nil
 }
 
-func (s *AuthService) createToken(userID string, expiry time.Duration) (string, error) {
+func (s *AuthService) createToken(userID, tokenType string, expiry time.Duration) (string, error) {
 	claims := jwt.MapClaims{
 		"sub": userID,
+		"typ": tokenType,
 		"exp": time.Now().Add(expiry).Unix(),
 		"iat": time.Now().Unix(),
 	}

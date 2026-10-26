@@ -139,8 +139,8 @@ func (h *DatasourceHandler) GetSchema(c *fiber.Ctx) error {
 }
 
 type TableSchema struct {
-	TableName string        `json:"table_name"`
-	Columns   []ColumnInfo  `json:"columns"`
+	TableName string       `json:"table_name"`
+	Columns   []ColumnInfo `json:"columns"`
 }
 
 type ColumnInfo struct {

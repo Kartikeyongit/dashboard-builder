@@ -26,19 +26,25 @@ type CreateWidgetRequest struct {
 }
 
 func (h *WidgetHandler) Create(c *fiber.Ctx) error {
+	orgID := c.Locals("orgID").(string)
 	dashboardID := c.Params("dashboardId")
 	var req CreateWidgetRequest
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid body")
 	}
-	widget, err := h.widgetService.Create(dashboardID, req.QueryID, req.WidgetType, req.Config, req.PositionX, req.PositionY, req.Width, req.Height)
+	if req.QueryID == "" || req.WidgetType == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "query_id and widget_type are required")
+	}
+	widget, err := h.widgetService.Create(orgID, dashboardID, req.QueryID, req.WidgetType, req.Config, req.PositionX, req.PositionY, req.Width, req.Height)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 	return c.Status(fiber.StatusCreated).JSON(widget)
 }
 
 func (h *WidgetHandler) Update(c *fiber.Ctx) error {
+	orgID := c.Locals("orgID").(string)
+	dashboardID := c.Params("dashboardId")
 	id := c.Params("id")
 	var req struct {
 		QueryID    *string         `json:"query_id,omitempty"`
@@ -52,8 +58,8 @@ func (h *WidgetHandler) Update(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid body")
 	}
-	widget, err := h.widgetService.GetByID(id)
-	if err != nil || widget == nil {
+	widget, err := h.widgetService.GetByIDForOrg(id, orgID)
+	if err != nil || widget == nil || widget.DashboardID != dashboardID {
 		return fiber.NewError(fiber.StatusNotFound, "widget not found")
 	}
 	if req.QueryID != nil {
@@ -77,16 +83,18 @@ func (h *WidgetHandler) Update(c *fiber.Ctx) error {
 	if req.Height != nil {
 		widget.Height = *req.Height
 	}
-	if err := h.widgetService.Update(id, widget); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	if err := h.widgetService.Update(orgID, dashboardID, widget); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 	return c.JSON(widget)
 }
 
 func (h *WidgetHandler) Delete(c *fiber.Ctx) error {
+	orgID := c.Locals("orgID").(string)
+	dashboardID := c.Params("dashboardId")
 	id := c.Params("id")
-	if err := h.widgetService.Delete(id); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	if err := h.widgetService.Delete(orgID, dashboardID, id); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 	return c.SendStatus(fiber.StatusNoContent)
 }

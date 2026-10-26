@@ -10,10 +10,10 @@ import (
 )
 
 type WidgetPayload struct {
-	Type     string                 `json:"type"`
-	WidgetID string                 `json:"widget_id"`
+	Type     string                  `json:"type"`
+	WidgetID string                  `json:"widget_id"`
 	Data     *datasource.QueryResult `json:"data,omitempty"`
-	Error    string                 `json:"error,omitempty"`
+	Error    string                  `json:"error,omitempty"`
 }
 
 func StartRedisSubscriber(hub *Hub) {

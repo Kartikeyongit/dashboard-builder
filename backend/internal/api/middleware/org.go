@@ -14,5 +14,6 @@ func AttachOrgID(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusUnauthorized, "user not found")
 	}
 	c.Locals("orgID", user.OrgID)
+	c.Locals("role", user.Role)
 	return c.Next()
 }

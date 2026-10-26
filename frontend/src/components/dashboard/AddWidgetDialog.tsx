@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useAppSelector } from '../../hooks';
+import { useAppDispatch, useAppSelector } from '../../hooks';
+import { fetchQueries } from '../../store/querySlice';
 import type { CreateWidgetPayload } from '../../api/dashboard';
 import Dropdown from '../ui/Dropdown';
 import '../ui/Modal.css';
@@ -7,17 +8,24 @@ import '../ui/Modal.css';
 interface Props {
   onClose: () => void;
   onAdd: (payload: CreateWidgetPayload) => void;
+  /** Row where the new widget should be placed so it never overlaps existing ones. */
+  nextY?: number;
 }
 
-const AddWidgetDialog: React.FC<Props> = ({ onClose, onAdd }) => {
+const AddWidgetDialog: React.FC<Props> = ({ onClose, onAdd, nextY = 0 }) => {
+  const dispatch = useAppDispatch();
   const queries = useAppSelector((state) => state.queries.items);
+  const queriesLoading = useAppSelector((state) => state.queries.loading);
   const [selectedQueryId, setSelectedQueryId] = useState('');
   const [widgetType, setWidgetType] = useState<'chart' | 'table' | 'metric'>('chart');
   const [chartType, setChartType] = useState('bar');
 
   useEffect(() => {
-    // queries are loaded by the parent (DashboardEditor)
-  }, []);
+    // The editor does not load queries, so the dialog must do it itself.
+    if (queries.length === 0) {
+      dispatch(fetchQueries());
+    }
+  }, [dispatch, queries.length]);
 
   const handleSubmit = () => {
     if (!selectedQueryId) return;
@@ -30,7 +38,7 @@ const AddWidgetDialog: React.FC<Props> = ({ onClose, onAdd }) => {
       widget_type: widgetType,
       config,
       position_x: 0,
-      position_y: Infinity,
+      position_y: nextY,
       width: 4,
       height: 4,
     });
@@ -53,11 +61,16 @@ const AddWidgetDialog: React.FC<Props> = ({ onClose, onAdd }) => {
             value={selectedQueryId}
             onChange={setSelectedQueryId}
             options={[
-              { value: '', label: 'Select a query' },
+              { value: '', label: queriesLoading ? 'Loading queries...' : 'Select a query' },
               ...queries.map(q => ({ value: q.id, label: q.name })),
             ]}
             placeholder="Select a query"
           />
+          {!queriesLoading && queries.length === 0 && (
+            <p className="modal-hint">
+              No queries yet. Create a query first, then add it as a widget.
+            </p>
+          )}
         </div>
 
         <div className="modal-field">
@@ -89,7 +102,11 @@ const AddWidgetDialog: React.FC<Props> = ({ onClose, onAdd }) => {
         )}
 
         <div className="modal-actions">
-          <button className="modal-btn modal-btn--primary" onClick={handleSubmit}>
+          <button
+            className="modal-btn modal-btn--primary"
+            onClick={handleSubmit}
+            disabled={!selectedQueryId}
+          >
             Add Widget
           </button>
           <button className="modal-btn modal-btn--secondary" onClick={onClose}>

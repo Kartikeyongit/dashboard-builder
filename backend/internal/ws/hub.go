@@ -76,6 +76,15 @@ func (h *Hub) removeClient(client *Client) {
 	}
 }
 
+// HasSubscribers reports whether at least one client is currently listening
+// to a dashboard. The scheduler uses this to avoid refreshing dashboards that
+// nobody is viewing.
+func (h *Hub) HasSubscribers(dashboardID string) bool {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return len(h.dashboards[dashboardID]) > 0
+}
+
 func (h *Hub) BroadcastToDashboard(dashboardID string, message interface{}) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()

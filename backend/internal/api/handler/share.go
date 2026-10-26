@@ -1,7 +1,8 @@
 package handler
 
 import (
-	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -48,8 +49,27 @@ func (h *ShareHandler) CreateShareLink(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"token": token,
-		"url":   fmt.Sprintf("http://localhost:5173/view/%s", token),
+		"url":   shareURL(c, token),
 	})
+}
+
+// shareURL builds an absolute link to the public viewer. It prefers the
+// configured FRONTEND_URL so links are correct behind a proxy, then falls back
+// to the request origin, and finally to local development.
+func shareURL(c *fiber.Ctx, token string) string {
+	base := strings.TrimSpace(os.Getenv("FRONTEND_URL"))
+	if base == "" {
+		base = strings.TrimSpace(c.Get("Origin"))
+	}
+	if base == "" {
+		scheme := "http"
+		if c.Protocol() == "https" {
+			scheme = "https"
+		}
+		base = scheme + "://" + c.Hostname()
+	}
+	base = strings.TrimRight(base, "/")
+	return base + "/view/" + token
 }
 
 type VerifyPasswordRequest struct {

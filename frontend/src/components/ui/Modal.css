@@ -125,6 +125,20 @@
   transform: scale(0.97);
 }
 
+.modal-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.modal-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+
 .error-message {
   background: var(--color-danger-subtle);
   color: var(--color-danger);

@@ -11,6 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
 	"github.com/your-org/dashboard-builder/backend/internal/api"
+	"github.com/your-org/dashboard-builder/backend/internal/config"
 	"github.com/your-org/dashboard-builder/backend/internal/db"
 	"github.com/your-org/dashboard-builder/backend/pkg/logger"
 )
@@ -31,6 +32,16 @@ func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
+	}
+
+	if err := config.RequireEnv("DB_URL", dbURL); err != nil {
+		log.Fatalf("Configuration error: %v", err)
+	}
+	if err := config.RequireEnv("REDIS_URL", redisURL); err != nil {
+		log.Fatalf("Configuration error: %v", err)
+	}
+	if err := config.Validate(jwtSecret, encryptionKey); err != nil {
+		log.Fatalf("Configuration error: %v", err)
 	}
 
 	// Connect to PostgreSQL

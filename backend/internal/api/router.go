@@ -75,10 +75,11 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 	go wsHub.Run()
 	ws.StartRedisSubscriber(wsHub)
 
-	sched := scheduler.NewScheduler(queryService, widgetRepo, dashboardRepo, poolManager)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	sched.Start(ctx)
+	sched := scheduler.NewScheduler(queryService, widgetRepo, dashboardRepo, poolManager, wsHub)
+	// The scheduler lives for the process lifetime. Do not create a cancellable
+	// context with a deferred cancel here: SetupRoutes returns immediately and
+	// would stop the scheduler before its first tick.
+	sched.Start(context.Background())
 
 	authHandler := handler.NewAuthHandler(authService)
 	datasourceHandler := handler.NewDatasourceHandler(datasourceService)
@@ -88,11 +89,23 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 	dashboardFullHandler := handler.NewDashboardFullHandler(widgetService)
 	shareHandler := handler.NewShareHandler(shareService)
 
+	// Stricter limiter for credential endpoints to slow brute-force attempts.
+	authLimiter := limiter.New(limiter.Config{
+		Max:        10,
+		Expiration: 1 * time.Minute,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP()
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(429).JSON(fiber.Map{"error": "too many authentication attempts, try again later"})
+		},
+	})
+
 	// Public auth routes
 	auth := api.Group("/auth")
-	auth.Post("/register", authHandler.Register)
-	auth.Post("/login", authHandler.Login)
-	auth.Post("/refresh", authHandler.Refresh)
+	auth.Post("/register", authLimiter, authHandler.Register)
+	auth.Post("/login", authLimiter, authHandler.Login)
+	auth.Post("/refresh", authLimiter, authHandler.Refresh)
 
 	// Public share routes
 	public := api.Group("/share")
@@ -100,45 +113,51 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 	public.Post("/:token/verify", shareHandler.VerifyPassword)
 
 	// ✅ Protected WebSocket for dashboard editor – FULL PATH, outside rate limiter
-	app.Get("/api/v1/ws", middleware.AuthRequiredWS(jwtSecret), middleware.AttachOrgID, ws.HandleWebSocket(wsHub))
+	app.Get("/api/v1/ws", middleware.AuthRequiredWS(jwtSecret), middleware.RequireAccessToken, middleware.AttachOrgID, ws.HandleWebSocket(wsHub, func(orgID, dashboardID string) bool {
+		dash, err := dashboardRepo.GetByID(dashboardID, orgID)
+		return err == nil && dash != nil
+	}))
 
 	// ✅ Public WebSocket for shared dashboards – also outside rate limiter
 	app.Get("/api/v1/ws/share", ws.HandleShareWebSocket(wsHub, shareService))
 
 	// Protected routes
-	protected := api.Group("", middleware.AuthRequired(jwtSecret), middleware.AttachOrgID)
+	protected := api.Group("", middleware.AuthRequired(jwtSecret), middleware.RequireAccessToken, middleware.AttachOrgID)
+
+	// Viewers can read. Only admins and editors can change content.
+	editorOnly := middleware.RequireRole("admin", "editor")
 
 	datasources := protected.Group("/datasources")
-	datasources.Post("/", datasourceHandler.Create)
+	datasources.Post("/", editorOnly, datasourceHandler.Create)
 	datasources.Get("/", datasourceHandler.List)
 	datasources.Get("/:id", datasourceHandler.Get)
-	datasources.Put("/:id", datasourceHandler.Update)
-	datasources.Delete("/:id", datasourceHandler.Delete)
-	datasources.Post("/:id/test", datasourceHandler.TestConnection)
-	datasources.Get("/:id/schema", datasourceHandler.GetSchema)
+	datasources.Put("/:id", editorOnly, datasourceHandler.Update)
+	datasources.Delete("/:id", editorOnly, datasourceHandler.Delete)
+	datasources.Post("/:id/test", editorOnly, datasourceHandler.TestConnection)
+	datasources.Get("/:id/schema", editorOnly, datasourceHandler.GetSchema)
 
 	queries := protected.Group("/queries")
-	queries.Post("/", queryHandler.Create)
+	queries.Post("/", editorOnly, queryHandler.Create)
 	queries.Get("/", queryHandler.List)
 	queries.Get("/:id", queryHandler.Get)
-	queries.Put("/:id", queryHandler.Update)
-	queries.Delete("/:id", queryHandler.Delete)
+	queries.Put("/:id", editorOnly, queryHandler.Update)
+	queries.Delete("/:id", editorOnly, queryHandler.Delete)
 	queries.Post("/:id/execute", queryHandler.ExecuteSaved)
-	queries.Post("/execute", queryHandler.ExecuteAdHoc)
+	queries.Post("/execute", editorOnly, queryHandler.ExecuteAdHoc)
 
 	dashboards := protected.Group("/dashboards")
-	dashboards.Post("/", dashboardHandler.Create)
+	dashboards.Post("/", editorOnly, dashboardHandler.Create)
 	dashboards.Get("/", dashboardHandler.List)
 	dashboards.Get("/:id", dashboardHandler.Get)
-	dashboards.Put("/:id", dashboardHandler.Update)
-	dashboards.Delete("/:id", dashboardHandler.Delete)
+	dashboards.Put("/:id", editorOnly, dashboardHandler.Update)
+	dashboards.Delete("/:id", editorOnly, dashboardHandler.Delete)
 	dashboards.Get("/:id/full", dashboardFullHandler.GetFull)
-	dashboards.Post("/:id/share", shareHandler.CreateShareLink)
+	dashboards.Post("/:id/share", editorOnly, shareHandler.CreateShareLink)
 
 	widgets := dashboards.Group("/:dashboardId/widgets")
-	widgets.Post("/", widgetHandler.Create)
-	widgets.Put("/:id", widgetHandler.Update)
-	widgets.Delete("/:id", widgetHandler.Delete)
+	widgets.Post("/", editorOnly, widgetHandler.Create)
+	widgets.Put("/:id", editorOnly, widgetHandler.Update)
+	widgets.Delete("/:id", editorOnly, widgetHandler.Delete)
 
 	protected.Get("/me", func(c *fiber.Ctx) error {
 		userID := middleware.GetUserID(c)

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"time"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/your-org/dashboard-builder/backend/internal/model"
 )
@@ -17,13 +18,14 @@ type QueryResult struct {
 
 // ExecuteQuery runs a user query against a datasource within a sandboxed context.
 func (pm *PoolManager) ExecuteQuery(ctx context.Context, ds *model.Datasource, sqlText string, maxRows, timeoutMs int) (*QueryResult, error) {
-	// Validate and enforce row limit
-	safeSQL, err := ValidateSQL(sqlText, maxRows)
+	safeSQL, err := ValidateSQL(sqlText)
 	if err != nil {
 		return nil, err
 	}
 
-	// Apply timeout
+	maxRows = clampMaxRows(maxRows)
+	timeoutMs = clampTimeout(timeoutMs)
+
 	execCtx, cancel := context.WithTimeout(ctx, time.Duration(timeoutMs)*time.Millisecond)
 	defer cancel()
 
@@ -34,99 +36,124 @@ func (pm *PoolManager) ExecuteQuery(ctx context.Context, ds *model.Datasource, s
 
 	switch p := pool.(type) {
 	case *pgxpool.Pool:
-		return executeOnPostgres(execCtx, p, safeSQL)
+		return executeOnPostgres(execCtx, p, safeSQL, maxRows, timeoutMs)
 	case *sql.DB:
-		return executeOnMySQL(execCtx, p, safeSQL)
+		return executeOnMySQL(execCtx, p, safeSQL, maxRows)
 	default:
 		return nil, fmt.Errorf("unsupported datasource type")
 	}
 }
 
-func executeOnPostgres(ctx context.Context, pool *pgxpool.Pool, sql string) (*QueryResult, error) {
-	// Use a read-only transaction
+// clampMaxRows keeps a caller-supplied limit inside a safe range. The service
+// layer also normalizes limits, but the executor must not trust its callers.
+func clampMaxRows(maxRows int) int {
+	if maxRows <= 0 {
+		return 1000
+	}
+	if maxRows > 10000 {
+		return 10000
+	}
+	return maxRows
+}
+
+func clampTimeout(timeoutMs int) int {
+	if timeoutMs < 1000 {
+		return 30000
+	}
+	if timeoutMs > 60000 {
+		return 60000
+	}
+	return timeoutMs
+}
+
+func executeOnPostgres(ctx context.Context, pool *pgxpool.Pool, sqlText string, maxRows, timeoutMs int) (*QueryResult, error) {
 	tx, err := pool.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
+	// Rollback is a no-op after a successful commit, so this is safe either way.
 	defer tx.Rollback(ctx)
 
-	// Set transaction to READ ONLY
-	_, err = tx.Exec(ctx, "SET TRANSACTION READ ONLY")
-	if err != nil {
-		return nil, err
+	// Read-only plus a server-side timeout protects the target database even if
+	// the client disappears or the Go context is not honoured promptly.
+	if _, err := tx.Exec(ctx, "SET TRANSACTION READ ONLY"); err != nil {
+		return nil, fmt.Errorf("set read-only transaction: %w", err)
+	}
+	if _, err := tx.Exec(ctx, fmt.Sprintf("SET LOCAL statement_timeout = %d", timeoutMs)); err != nil {
+		return nil, fmt.Errorf("set statement timeout: %w", err)
 	}
 
-	rows, err := tx.Query(ctx, sql)
+	rows, err := tx.Query(ctx, sqlText)
 	if err != nil {
 		return nil, fmt.Errorf("query execution: %w", err)
 	}
 	defer rows.Close()
 
-	// Read column descriptions
 	fields := rows.FieldDescriptions()
 	columns := make([]string, len(fields))
 	for i, fd := range fields {
 		columns[i] = string(fd.Name)
 	}
 
-	resultRows := make([][]interface{}, 0)
+	resultRows := make([][]interface{}, 0, minInt(maxRows, 256))
 	for rows.Next() {
+		if len(resultRows) >= maxRows {
+			break
+		}
 		values, err := rows.Values()
 		if err != nil {
 			return nil, fmt.Errorf("row scan: %w", err)
 		}
-		// Convert values to JSON-friendly types
 		row := make([]interface{}, len(values))
 		for i, v := range values {
 			row[i] = sanitizeValue(v)
 		}
 		resultRows = append(resultRows, row)
 	}
+	// Close before committing: an unread result set keeps the connection busy
+	// and makes COMMIT fail (especially on MySQL).
+	rows.Close()
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
-	// Commit the read-only transaction (just to release locks, not necessary but clean)
-	tx.Commit(ctx)
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
 	return &QueryResult{Columns: columns, Rows: resultRows}, nil
 }
 
-func executeOnMySQL(ctx context.Context, db *sql.DB, sqlText string) (*QueryResult, error) {
-	// Try a read‑only transaction
-	tx, err := db.BeginTx(ctx, nil)
+func executeOnMySQL(ctx context.Context, db *sql.DB, sqlText string, maxRows int) (*QueryResult, error) {
+	// ReadOnly makes the server reject writes. There is deliberately no
+	// non-read-only fallback: failing closed is the whole point.
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
-		// Fallback to simple query
-		return executeMySQLSimple(ctx, db, sqlText)
+		return nil, fmt.Errorf("begin read-only transaction: %w", err)
 	}
-
-	_, err = tx.ExecContext(ctx, "SET TRANSACTION READ ONLY")
-	if err != nil {
-		tx.Rollback()
-		return executeMySQLSimple(ctx, db, sqlText)
-	}
+	defer tx.Rollback()
 
 	rows, err := tx.QueryContext(ctx, sqlText)
 	if err != nil {
-		tx.Rollback()
-		return executeMySQLSimple(ctx, db, sqlText)
+		return nil, fmt.Errorf("query execution: %w", err)
 	}
 	defer rows.Close()
 
 	columns, err := rows.Columns()
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
-	resultRows := make([][]interface{}, 0)
+	resultRows := make([][]interface{}, 0, minInt(maxRows, 256))
 	for rows.Next() {
+		if len(resultRows) >= maxRows {
+			break
+		}
 		values := make([]interface{}, len(columns))
 		valuePtrs := make([]interface{}, len(columns))
 		for i := range values {
 			valuePtrs[i] = &values[i]
 		}
 		if err := rows.Scan(valuePtrs...); err != nil {
-			tx.Rollback()
 			return nil, err
 		}
 		row := make([]interface{}, len(columns))
@@ -135,48 +162,22 @@ func executeOnMySQL(ctx context.Context, db *sql.DB, sqlText string) (*QueryResu
 		}
 		resultRows = append(resultRows, row)
 	}
+	rows.Close()
 	if err := rows.Err(); err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
-	// Commit the read‑only transaction (releases resources)
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
 	return &QueryResult{Columns: columns, Rows: resultRows}, nil
 }
 
-// Fallback when MySQL doesn't support transactions or the driver is limited
-func executeMySQLSimple(ctx context.Context, db *sql.DB, sqlText string) (*QueryResult, error) {
-	rows, err := db.QueryContext(ctx, sqlText)
-	if err != nil {
-		return nil, err
+func minInt(a, b int) int {
+	if a < b {
+		return a
 	}
-	defer rows.Close()
-
-	columns, err := rows.Columns()
-	if err != nil {
-		return nil, err
-	}
-
-	resultRows := make([][]interface{}, 0)
-	for rows.Next() {
-		values := make([]interface{}, len(columns))
-		valuePtrs := make([]interface{}, len(columns))
-		for i := range values {
-			valuePtrs[i] = &values[i]
-		}
-		if err := rows.Scan(valuePtrs...); err != nil {
-			return nil, err
-		}
-		row := make([]interface{}, len(columns))
-		for i, v := range values {
-			row[i] = sanitizeValue(v)
-		}
-		resultRows = append(resultRows, row)
-	}
-	return &QueryResult{Columns: columns, Rows: resultRows}, rows.Err()
+	return b
 }
 
 func sanitizeValue(v interface{}) interface{} {

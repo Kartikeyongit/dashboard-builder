@@ -14,6 +14,8 @@ import { widgetAPI } from '../../api/dashboard';
 import type { CreateWidgetPayload } from '../../api/dashboard';
 import { addToast } from '../../store/toastSlice';
 import { useDashboardSocket } from '../../hooks/useDashboardSocket';
+import { canEditContent } from '../../utils/permissions';
+import { getNextWidgetY, widgetToLayout } from '../../utils/dashboard';
 import ChartWidget from './ChartWidget';
 import TableWidget from './TableWidget';
 import MetricWidget from './MetricWidget';
@@ -53,10 +55,15 @@ const DashboardEditor: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { currentFull, loading } = useAppSelector((state) => state.dashboards);
+  const user = useAppSelector((state) => state.auth.user);
+  const canEdit = canEditContent(user);
+
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [gridWidth, setGridWidth] = useState(1200);
   const pendingLayoutUpdates = useRef(new Map<string, Partial<CreateWidgetPayload>>());
+  const gridContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (dashboardId) dispatch(loadDashboardFull(dashboardId));
@@ -64,6 +71,30 @@ const DashboardEditor: React.FC = () => {
   }, [dashboardId, dispatch]);
 
   useDashboardSocket(dashboardId);
+
+  // Measure the real container instead of assuming a fixed 1200px width.
+  useEffect(() => {
+    const el = gridContainerRef.current;
+    if (!el) return;
+
+    const updateWidth = () => {
+      const styles = window.getComputedStyle(el);
+      const padding =
+        (parseFloat(styles.paddingLeft) || 0) + (parseFloat(styles.paddingRight) || 0);
+      const width = el.clientWidth - padding;
+      if (width > 0) setGridWidth(width);
+    };
+    updateWidth();
+
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', updateWidth);
+      return () => window.removeEventListener('resize', updateWidth);
+    }
+
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loading, dashboardId]);
 
   const debouncedSaveLayout = useMemo(
     () => debounce(async (dashId: string) => {
@@ -76,16 +107,16 @@ const DashboardEditor: React.FC = () => {
         await Promise.all(
           updates.map(([widgetId, layout]) => widgetAPI.update(dashId, widgetId, layout))
         );
-      setSaveStatus('saved');
-      dispatch(addToast({ message: 'Layout saved', type: 'success' }));
-    } catch (error) {
-      updates.forEach(([widgetId, layout]) => {
-        pendingLayoutUpdates.current.set(widgetId, layout);
-      });
-      console.error(error);
-      setSaveStatus('error');
-      dispatch(addToast({ message: 'Failed to save layout', type: 'error' }));
-    }
+        setSaveStatus('saved');
+        dispatch(addToast({ message: 'Layout saved', type: 'success' }));
+      } catch (error) {
+        updates.forEach(([widgetId, layout]) => {
+          pendingLayoutUpdates.current.set(widgetId, layout);
+        });
+        console.error(error);
+        setSaveStatus('error');
+        dispatch(addToast({ message: 'Failed to save layout', type: 'error' }));
+      }
     }, 500),
     []
   );
@@ -98,7 +129,7 @@ const DashboardEditor: React.FC = () => {
   }, [debouncedSaveLayout]);
 
   const handleLayoutChange = (layout: Layout) => {
-    if (!currentFull || !dashboardId) return;
+    if (!canEdit || !currentFull || !dashboardId) return;
     const widgets = Array.isArray(currentFull.widgets) ? currentFull.widgets : [];
     layout.forEach((l) => {
       const wd = widgets.find(w => w.widget.id === l.i);
@@ -149,13 +180,8 @@ const DashboardEditor: React.FC = () => {
   }
 
   const widgets = Array.isArray(currentFull.widgets) ? currentFull.widgets : [];
-  const layout: Layout = widgets.map(w => ({
-    i: w.widget.id,
-    x: w.widget.position_x,
-    y: w.widget.position_y,
-    w: w.widget.width,
-    h: w.widget.height,
-  }));
+  const layout: Layout = widgets.map(wd => widgetToLayout(wd.widget));
+  const nextWidgetY = getNextWidgetY(widgets.map(w => w.widget));
 
   return (
     <div className="editor-page">
@@ -169,25 +195,29 @@ const DashboardEditor: React.FC = () => {
       <div className="editor-toolbar">
         <h2>{currentFull.dashboard.name}</h2>
         <div className="toolbar-actions">
-          {saveStatus !== 'idle' && (
+          {canEdit && saveStatus !== 'idle' && (
             <span className={`save-status save-status--${saveStatus}`}>
               {saveStatus === 'saving' && 'Saving...'}
               {saveStatus === 'saved' && 'Saved'}
               {saveStatus === 'error' && 'Save failed'}
             </span>
           )}
-          <button onClick={() => setShowAddDialog(true)}>
-            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
-            Add Widget
-          </button>
-          <button className="secondary" onClick={() => setShowShare(true)}>
-            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M15 8a3 3 0 10-2.977-2.633l-4.94 2.47a3 3 0 100 4.326l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.748l4.94-2.47A3 3 0 0015 8z" />
-            </svg>
-            Share
-          </button>
+          {canEdit && (
+            <>
+              <button onClick={() => setShowAddDialog(true)}>
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+                Add Widget
+              </button>
+              <button className="secondary" onClick={() => setShowShare(true)}>
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M15 8a3 3 0 10-2.977-2.633l-4.94 2.47a3 3 0 100 4.326l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.748l4.94-2.47A3 3 0 0015 8z" />
+                </svg>
+                Share
+              </button>
+            </>
+          )}
           <button className="secondary" onClick={() => dispatch(loadDashboardFull(dashboardId!))}>
             <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
@@ -197,27 +227,30 @@ const DashboardEditor: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid-container">
+      <div className="grid-container" ref={gridContainerRef}>
         <GridLayout
           className="layout"
           layout={layout}
           gridConfig={{ cols: 12, rowHeight: 30 }}
-          width={1200}
+          width={gridWidth}
           onLayoutChange={handleLayoutChange}
-          dragConfig={{ handle: '.widget-drag-handle' }}
+          dragConfig={{ handle: '.widget-drag-handle', enabled: canEdit }}
+          resizeConfig={{ enabled: canEdit }}
         >
           {widgets.map(wd => (
             <div key={wd.widget.id} className="widget-box">
-              <div className="widget-header widget-drag-handle">
+              <div className={`widget-header${canEdit ? ' widget-drag-handle' : ''}`}>
                 <div className="widget-header-left">
                   <span className="widget-type-icon">{WIDGET_ICONS[wd.widget.widget_type]}</span>
                   <span>{WIDGET_LABELS[wd.widget.widget_type] || wd.widget.widget_type}</span>
                 </div>
-                <button className="widget-remove-btn" onClick={() => handleDeleteWidget(wd.widget.id)} title="Remove widget">
-                  <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </button>
+                {canEdit && (
+                  <button className="widget-remove-btn" onClick={() => handleDeleteWidget(wd.widget.id)} title="Remove widget">
+                    <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                )}
               </div>
               <div className="widget-content">
                 {wd.widget.widget_type === 'chart' && <ChartWidget data={wd.data} config={wd.widget.config} />}
@@ -233,14 +266,24 @@ const DashboardEditor: React.FC = () => {
           <EmptyState
             icon="widget"
             title="No widgets yet"
-            description="Add a chart, table, or metric to start building your dashboard."
-            action={{ label: 'Add Widget', onClick: () => setShowAddDialog(true) }}
+            description={canEdit
+              ? 'Add a chart, table, or metric to start building your dashboard.'
+              : 'This dashboard does not have any widgets yet.'}
+            action={canEdit ? { label: 'Add Widget', onClick: () => setShowAddDialog(true) } : undefined}
           />
         )}
       </div>
 
-      {showAddDialog && <AddWidgetDialog onClose={() => setShowAddDialog(false)} onAdd={handleAddWidget} />}
-      {showShare && dashboardId && <ShareDialog dashboardId={dashboardId} onClose={() => setShowShare(false)} />}
+      {canEdit && showAddDialog && (
+        <AddWidgetDialog
+          onClose={() => setShowAddDialog(false)}
+          onAdd={handleAddWidget}
+          nextY={nextWidgetY}
+        />
+      )}
+      {canEdit && showShare && dashboardId && (
+        <ShareDialog dashboardId={dashboardId} onClose={() => setShowShare(false)} />
+      )}
     </div>
   );
 };

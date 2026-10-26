@@ -15,8 +15,8 @@ func NewDashboardHandler(dashboardService *service.DashboardService) *DashboardH
 }
 
 type CreateDashboardRequest struct {
-	Name                string `json:"name"`
-	RefreshIntervalSec  int    `json:"refresh_interval_seconds"`
+	Name               string `json:"name"`
+	RefreshIntervalSec int    `json:"refresh_interval_seconds"`
 }
 
 func (h *DashboardHandler) Create(c *fiber.Ctx) error {

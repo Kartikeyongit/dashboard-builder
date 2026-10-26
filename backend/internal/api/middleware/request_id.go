@@ -7,10 +7,10 @@ import (
 )
 
 func RequestID() fiber.Handler {
-    return func(c *fiber.Ctx) error {
-        id := uuid.New().String()
-        c.Locals("requestID", id)
-        c.Set("X-Request-ID", id)
-        return c.Next()
-    }
+	return func(c *fiber.Ctx) error {
+		id := uuid.New().String()
+		c.Locals("requestID", id)
+		c.Set("X-Request-ID", id)
+		return c.Next()
+	}
 }

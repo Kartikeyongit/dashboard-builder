@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/your-org/dashboard-builder/backend/internal/model"
 	"github.com/your-org/dashboard-builder/backend/pkg/crypto"
 )

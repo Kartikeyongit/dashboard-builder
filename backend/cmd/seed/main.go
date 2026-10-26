@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-	"github.com/your-org/dashboard-builder/backend/internal/seed"
 	_ "github.com/lib/pq"
+	"github.com/your-org/dashboard-builder/backend/internal/seed"
 )
 
 func main() {
