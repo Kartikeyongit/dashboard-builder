@@ -13,7 +13,7 @@ Connect databases, write SQL, and design live dashboards with drag‑and‑drop 
 - 🔗 **Connect databases** – PostgreSQL and MySQL via a UI; credentials encrypted at rest.
 - 🧩 **Drag‑&‑drop builder** – Arrange charts, tables, and metric cards on a grid; auto‑saving layout.
 - ✍️ **SQL editor** – Monaco editor with schema autocomplete, query execution, and sandboxed validation.
-- 🔄 **Real‑time updates** – WebSocket + Redis pub/sub; dashboards refresh automatically on a schedule.
+- 🔄 **Real‑time updates** – WebSocket push with in-process pub/sub (optional Redis for multi-instance deployments); dashboards refresh automatically on a schedule.
 - 🔗 **Shareable links** – Read‑only public URLs with optional password protection and expiry.
 - 👥 **Multi‑tenant** – Organizations, users, and role‑based access (admin/editor/viewer).
 - 🛡️ **Secure** – JWT authentication, rate limiting, SQL sandbox (read‑only, row limits, timeouts).
@@ -26,9 +26,9 @@ Connect databases, write SQL, and design live dashboards with drag‑and‑drop 
 | Layer       | Technology |
 |-------------|------------|
 | **Frontend** | React 19, Vite, TypeScript, Redux Toolkit, React Router, Monaco Editor, ECharts, AG Grid, react‑grid‑layout, framer‑motion, react‑loading‑skeleton, react‑error‑boundary |
-| **Backend**  | Go 1.25, Fiber (HTTP framework), gorilla/websocket, Redis pub/sub, pgxpool, Prometheus metrics, godotenv, zap (structured logger) |
-| **Database** | PostgreSQL (app data), Redis (caching / pub‑sub) |
-| **Infra**    | Docker, Render (backend + static site), Upstash (Redis), Neon/Aiven (optional DB) |
+| **Backend**  | Go 1.25, Fiber (HTTP framework), gorilla/websocket, in-process pub/sub (optional Redis), pgxpool, Prometheus metrics, godotenv, zap (structured logger) |
+| **Database** | PostgreSQL (app data); Redis only if you scale to multiple instances |
+| **Infra**    | Docker, Render (backend + static site), Neon (PostgreSQL) |
 | **Testing**  | Vitest, Cypress, React Testing Library |
 
 ---
@@ -45,12 +45,12 @@ Client (React) ←→ Nginx / Render Proxy ←→ Go API Server (Fiber)
                             │
                ┌────────────┴────────────┐
                │  PostgreSQL             │
-               │  Redis                  │
+               │  (Redis optional)       │
                └─────────────────────────┘
 ```
 
 - The **API** handles REST and WebSocket connections.
-- The **scheduler** polls dashboards with a refresh interval and pushes results via Redis to all connected clients.
+- The **scheduler** polls dashboards with a refresh interval and pushes results to connected clients through the in-process hub. If `REDIS_URL` is set, it uses Redis pub/sub instead so multiple instances share updates.
 - The **frontend** subscribes to live updates for each dashboard using WebSockets.
 
 ---
@@ -108,7 +108,7 @@ dashboard-builder/
 
 - Go 1.25+ (or 1.22 with toolchain)
 - Node.js 18+
-- Docker (for PostgreSQL & Redis)
+- Docker (for PostgreSQL; Redis is optional)
 - [Docker Compose](https://docs.docker.com/compose/) (v2+)
 
 ### 1. Start infrastructure
@@ -118,7 +118,12 @@ cd dashboard-builder
 docker compose up -d
 ```
 
-This launches PostgreSQL (localhost:5432) and Redis (localhost:6379).
+This launches PostgreSQL (localhost:5432). Redis is optional and only needed if
+you want to simulate multiple backend instances:
+
+```bash
+docker compose --profile redis up -d
+```
 
 ### 2. Configure environment
 
@@ -132,7 +137,8 @@ Then fill in at least these values:
 
 ```env
 DB_URL=postgres://postgres:***REMOVED***@localhost:5432/dashboard_builder?sslmode=disable
-REDIS_URL=redis://localhost:6379
+# Optional. Leave empty for single-instance mode (recommended).
+REDIS_URL=
 JWT_SECRET=dev-only-secret-at-least-32-characters-long
 ENCRYPTION_KEY=***REMOVED***
 PORT=8080
@@ -174,18 +180,23 @@ Visit http://localhost:5173 and log in with `admin@acme.com` / `password123`.
 ## 🚀 Deployment
 
 A complete, zero-cost deployment guide is in **[DEPLOYMENT.md](./DEPLOYMENT.md)**.
-It covers Neon (PostgreSQL), Upstash (Redis), and Render (backend Docker
-service + static frontend), including environment variables, health checks,
-roles, and free-tier caveats.
+It covers Neon (PostgreSQL) and Render (backend Docker service + static
+frontend), including environment variables, health checks, roles, and free-tier
+caveats. Redis is not required.
+
+The fastest path is the included Render Blueprint (`render.yaml`): in Render
+choose **New → Blueprint**, connect the repo, and provide the three secrets.
+The Blueprint creates both services and wires `FRONTEND_URL` and
+`VITE_API_URL` automatically.
 
 Quick summary:
 
 - **Backend** – Render Web Service (Dockerfile in `backend/`)
-  - Environment: `DB_URL`, `REDIS_URL`, `JWT_SECRET`, `ENCRYPTION_KEY`, `FRONTEND_URL`, `SEED_SECRET`
+  - Environment: `DB_URL`, `JWT_SECRET`, `ENCRYPTION_KEY`, `FRONTEND_URL`, `SEED_SECRET`
+  - Leave `REDIS_URL` empty (single-instance mode)
 - **Frontend** – Render Static Site (publish directory `dist`)
   - Env var: `VITE_API_URL`
 - **Database** – Neon free PostgreSQL (`?sslmode=require`)
-- **Redis** – Upstash free instance (use the `rediss://` URL)
 - **Seed** – Optional one-time call to `/api/v1/seed?token=YOUR_SEED_SECRET`
 
 ### Health & Monitoring Endpoints
@@ -193,7 +204,7 @@ Quick summary:
 | Endpoint | Description |
 |----------|-------------|
 | `GET /healthz` | Health check (returns 200) |
-| `GET /readyz` | Readiness check (pings DB & Redis) |
+| `GET /readyz` | Readiness check (pings DB, and Redis only if configured) |
 | `GET /metrics` | Prometheus metrics (fiberprometheus) |
 
 ---
@@ -289,7 +300,7 @@ After local setup or deployment:
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `DB_URL` | PostgreSQL connection string | `postgres://user:pass@host/db` |
-| `REDIS_URL` | Redis connection string (supports `redis://` or `rediss://`) | `rediss://:pass@host:port` |
+| `REDIS_URL` | Optional. Leave empty for single-instance in-process pub/sub; set only for multiple backend instances | *(empty)* |
 | `JWT_SECRET` | Secret for signing JWTs (32+ characters, required) | `a-long-random-string-at-least-32-chars` |
 | `ENCRYPTION_KEY` | 32‑byte hex key for AES‑GCM (must be 64 hex chars, required) | `0123...def` |
 | `PORT` | Backend server port (default `8080`) | `8080` |

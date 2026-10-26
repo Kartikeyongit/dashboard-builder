@@ -37,9 +37,6 @@ func main() {
 	if err := config.RequireEnv("DB_URL", dbURL); err != nil {
 		log.Fatalf("Configuration error: %v", err)
 	}
-	if err := config.RequireEnv("REDIS_URL", redisURL); err != nil {
-		log.Fatalf("Configuration error: %v", err)
-	}
 	if err := config.Validate(jwtSecret, encryptionKey); err != nil {
 		log.Fatalf("Configuration error: %v", err)
 	}
@@ -53,7 +50,8 @@ func main() {
 		log.Fatalf("Migration failed: %v", err)
 	}
 
-	// Connect to Redis
+	// Connect to Redis. This is optional: without it the app runs in
+	// single-instance mode using in-process pub/sub.
 	if err := db.ConnectRedis(redisURL); err != nil {
 		log.Fatalf("Redis connection failed: %v", err)
 	}
@@ -70,8 +68,10 @@ func main() {
 		if err := db.DB.Ping(); err != nil {
 			return c.Status(fiber.StatusServiceUnavailable).SendString("db not reachable")
 		}
-		if err := db.RedisClient.Ping(context.Background()).Err(); err != nil {
-			return c.Status(fiber.StatusServiceUnavailable).SendString("redis not reachable")
+		if db.RedisEnabled() {
+			if err := db.RedisClient.Ping(context.Background()).Err(); err != nil {
+				return c.Status(fiber.StatusServiceUnavailable).SendString("redis not reachable")
+			}
 		}
 		return c.SendStatus(fiber.StatusOK)
 	})
@@ -100,5 +100,5 @@ func main() {
 	// Here we assume the pool manager is accessible; in production you'd refactor to return it.
 	// For now, we'll skip explicit pool manager shutdown (will be closed with app shutdown).
 	db.DB.Close()
-	db.RedisClient.Close()
+	db.CloseRedis()
 }

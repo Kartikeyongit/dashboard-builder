@@ -10,6 +10,9 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
   redis:
+    # Optional: only needed for multi-instance mode.
+    # Start with: docker compose --profile redis up -d
+    profiles: ["redis"]
     image: redis:7-alpine
     ports:
       - "6379:6379"

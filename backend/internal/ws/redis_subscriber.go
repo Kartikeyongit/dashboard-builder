@@ -17,6 +17,10 @@ type WidgetPayload struct {
 }
 
 func StartRedisSubscriber(hub *Hub) {
+	if db.RedisClient == nil {
+		log.Println("Redis subscriber skipped: Redis is not configured")
+		return
+	}
 	go func() {
 		ctx := context.Background()
 		pubsub := db.RedisClient.PSubscribe(ctx, "dashboard:*")

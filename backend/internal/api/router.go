@@ -73,7 +73,10 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 
 	wsHub := ws.NewHub()
 	go wsHub.Run()
-	ws.StartRedisSubscriber(wsHub)
+	if db.RedisEnabled() {
+		// Multi-instance mode: fan out scheduler updates through Redis.
+		ws.StartRedisSubscriber(wsHub)
+	}
 
 	sched := scheduler.NewScheduler(queryService, widgetRepo, dashboardRepo, poolManager, wsHub)
 	// The scheduler lives for the process lifetime. Do not create a cancellable

@@ -86,8 +86,9 @@ func (h *Hub) HasSubscribers(dashboardID string) bool {
 }
 
 func (h *Hub) BroadcastToDashboard(dashboardID string, message interface{}) {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
+	// Full lock: the slow-client branch deletes from the map.
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	if clients, ok := h.dashboards[dashboardID]; ok {
 		for client := range clients {
 			select {
@@ -96,6 +97,9 @@ func (h *Hub) BroadcastToDashboard(dashboardID string, message interface{}) {
 				close(client.send)
 				delete(clients, client)
 			}
+		}
+		if len(clients) == 0 {
+			delete(h.dashboards, dashboardID)
 		}
 	}
 }

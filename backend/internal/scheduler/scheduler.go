@@ -24,6 +24,7 @@ type Scheduler struct {
 	hub           *ws.Hub
 	interval      time.Duration
 	runningJobs   map[string]time.Time
+	inFlight      map[string]bool
 	mu            sync.Mutex
 }
 
@@ -36,6 +37,7 @@ func NewScheduler(queryService *service.QueryService, widgetRepo *repository.Wid
 		hub:           hub,
 		interval:      5 * time.Second,
 		runningJobs:   make(map[string]time.Time),
+		inFlight:      make(map[string]bool),
 	}
 }
 
@@ -69,16 +71,27 @@ func (s *Scheduler) tick(ctx context.Context) {
 
 		s.mu.Lock()
 		lastRun, exists := s.runningJobs[dash.ID]
-		s.mu.Unlock()
-		if exists && time.Since(lastRun) < time.Duration(dash.RefreshIntervalSec)*time.Second {
+		busy := s.inFlight[dash.ID]
+		if busy || (exists && time.Since(lastRun) < time.Duration(dash.RefreshIntervalSec)*time.Second) {
+			s.mu.Unlock()
 			continue
 		}
+		// Mark before spawning so overlapping ticks cannot start duplicate work.
+		s.runningJobs[dash.ID] = time.Now()
+		s.inFlight[dash.ID] = true
+		s.mu.Unlock()
 
 		go s.runDashboardQueries(ctx, dash)
 	}
 }
 
 func (s *Scheduler) runDashboardQueries(ctx context.Context, dash *model.Dashboard) {
+	defer func() {
+		s.mu.Lock()
+		delete(s.inFlight, dash.ID)
+		s.mu.Unlock()
+	}()
+
 	// Small jitter prevents every dashboard from hitting the database at once.
 	if dash.RefreshIntervalSec > 1 {
 		select {
@@ -88,23 +101,21 @@ func (s *Scheduler) runDashboardQueries(ctx context.Context, dash *model.Dashboa
 		}
 	}
 
-	// One worker per dashboard across all instances. If Redis is unavailable,
-	// fall back to the in-process guard below.
-	lockKey := "scheduler:lock:" + dash.ID
-	lockTTL := time.Duration(dash.RefreshIntervalSec+60) * time.Second
-	locked, lockErr := db.RedisClient.SetNX(ctx, lockKey, "1", lockTTL).Result()
-	if lockErr != nil {
-		log.Printf("Scheduler: lock error for dashboard %s: %v", dash.ID, lockErr)
-	} else if !locked {
-		return
+	// With Redis configured, one worker per dashboard across all instances.
+	// Without it, the in-process inFlight guard above is the lock.
+	if db.RedisEnabled() {
+		lockKey := "scheduler:lock:" + dash.ID
+		lockTTL := time.Duration(dash.RefreshIntervalSec+60) * time.Second
+		locked, lockErr := db.RedisClient.SetNX(ctx, lockKey, "1", lockTTL).Result()
+		if lockErr != nil {
+			log.Printf("Scheduler: lock error for dashboard %s: %v", dash.ID, lockErr)
+		} else if !locked {
+			return
+		}
+		if lockErr == nil && locked {
+			defer db.RedisClient.Del(context.Background(), lockKey)
+		}
 	}
-	if lockErr == nil && locked {
-		defer db.RedisClient.Del(context.Background(), lockKey)
-	}
-
-	s.mu.Lock()
-	s.runningJobs[dash.ID] = time.Now()
-	s.mu.Unlock()
 
 	widgets, err := s.widgetRepo.ListByDashboard(dash.ID)
 	if err != nil {
@@ -123,9 +134,18 @@ func (s *Scheduler) runDashboardQueries(ctx context.Context, dash *model.Dashboa
 			update.Data = result
 		}
 		update.Type = "widget_data"
-		payload, _ := json.Marshal(update)
-		if err := db.RedisClient.Publish(ctx, "dashboard:"+dash.ID, payload).Err(); err != nil {
-			log.Printf("Scheduler: publish error for dashboard %s: %v", dash.ID, err)
+
+		if db.RedisEnabled() {
+			payload, _ := json.Marshal(update)
+			if err := db.RedisClient.Publish(ctx, "dashboard:"+dash.ID, payload).Err(); err != nil {
+				log.Printf("Scheduler: publish error for dashboard %s: %v", dash.ID, err)
+			}
+			continue
+		}
+
+		// Single-instance mode: deliver straight to connected clients.
+		if s.hub != nil {
+			s.hub.BroadcastToDashboard(dash.ID, update)
 		}
 	}
 }

@@ -1,6 +1,8 @@
 import axios from 'axios';
+import { normalizeApiBase } from '../utils/apiUrl';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
+// Accepts either an origin or a full /api/v1 URL.
+const API_BASE = normalizeApiBase(import.meta.env.VITE_API_URL);
 
 const client = axios.create({
   baseURL: API_BASE,

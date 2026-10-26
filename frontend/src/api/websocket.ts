@@ -1,12 +1,12 @@
 // frontend/src/api/websocket.ts
+import { apiBaseToWsBase, normalizeApiBase } from '../utils/apiUrl';
 
 type MessageHandler = (data: any) => void;
 
-// Derive WebSocket base from the API URL
+// Derive WebSocket base from the API URL.
 // e.g. https://api.example.com/api/v1 → wss://api.example.com
 function getWsBase(): string {
-  const api = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
-  return api.replace(/^http/, 'ws').replace(/\/api\/v1$/, '');
+  return apiBaseToWsBase(normalizeApiBase(import.meta.env.VITE_API_URL));
 }
 
 class DashboardSocket {
