@@ -11,6 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/your-org/dashboard-builder/backend/internal/api/handler"
 	"github.com/your-org/dashboard-builder/backend/internal/api/middleware"
+	"github.com/your-org/dashboard-builder/backend/internal/config"
 	"github.com/your-org/dashboard-builder/backend/internal/datasource"
 	"github.com/your-org/dashboard-builder/backend/internal/db"
 	"github.com/your-org/dashboard-builder/backend/internal/repository"
@@ -64,11 +65,16 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 
 	poolManager := datasource.NewPoolManager(encryptionKey)
 
+	// A short-lived, per-instance result cache removes duplicate work between
+	// dashboard refreshes and scheduler pushes. Zero disables it.
+	resultCache := service.NewResultCache(config.SecondsFromEnv("DASHBOARD_CACHE_TTL_SECONDS", 15*time.Second))
+	queryConcurrency := config.IntFromEnv("DASHBOARD_QUERY_CONCURRENCY", 6)
+
 	authService := service.NewAuthService(userRepo, jwtSecret)
-	datasourceService := service.NewDatasourceService(datasourceRepo, poolManager, encryptionKey)
-	queryService := service.NewQueryService(queryRepo, datasourceRepo, poolManager)
+	datasourceService := service.NewDatasourceService(datasourceRepo, poolManager, encryptionKey, resultCache)
+	queryService := service.NewQueryService(queryRepo, datasourceRepo, poolManager, resultCache)
 	dashboardService := service.NewDashboardService(dashboardRepo, widgetRepo)
-	widgetService := service.NewWidgetService(widgetRepo, dashboardRepo, queryService)
+	widgetService := service.NewWidgetService(widgetRepo, dashboardRepo, queryService, queryConcurrency)
 	shareService := service.NewShareService(shareLinkRepo, dashboardRepo, widgetService)
 
 	wsHub := ws.NewHub()

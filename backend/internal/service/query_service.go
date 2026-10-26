@@ -43,13 +43,15 @@ type QueryService struct {
 	queryRepo      *repository.QueryRepo
 	datasourceRepo *repository.DatasourceRepo
 	poolManager    *datasource.PoolManager
+	cache          *ResultCache
 }
 
-func NewQueryService(queryRepo *repository.QueryRepo, datasourceRepo *repository.DatasourceRepo, poolManager *datasource.PoolManager) *QueryService {
+func NewQueryService(queryRepo *repository.QueryRepo, datasourceRepo *repository.DatasourceRepo, poolManager *datasource.PoolManager, cache *ResultCache) *QueryService {
 	return &QueryService{
 		queryRepo:      queryRepo,
 		datasourceRepo: datasourceRepo,
 		poolManager:    poolManager,
+		cache:          cache,
 	}
 }
 
@@ -132,11 +134,19 @@ func (s *QueryService) Update(id, orgID, datasourceID, name, sqlText string, max
 	q.SQLText = sqlText
 	q.MaxRows = maxRows
 	q.TimeoutMs = timeoutMs
-	return s.queryRepo.Update(q)
+	if err := s.queryRepo.Update(q); err != nil {
+		return err
+	}
+	s.cache.InvalidateQuery(id)
+	return nil
 }
 
 func (s *QueryService) Delete(id, orgID string) error {
-	return s.queryRepo.Delete(id, orgID)
+	if err := s.queryRepo.Delete(id, orgID); err != nil {
+		return err
+	}
+	s.cache.InvalidateQuery(id)
+	return nil
 }
 
 // ExecuteSavedQuery runs a saved query by ID using its default filter values
@@ -146,8 +156,16 @@ func (s *QueryService) ExecuteSavedQuery(ctx context.Context, id, orgID string) 
 }
 
 // ExecuteSavedQueryWithParams runs a saved query after substituting any
-// {{filter}} placeholders with bound parameters.
+// {{filter}} placeholders with bound parameters. Successful results are kept
+// in the in-process cache for a short time.
 func (s *QueryService) ExecuteSavedQueryWithParams(ctx context.Context, id, orgID string, values map[string]interface{}) (*datasource.QueryResult, error) {
+	key, cacheable := resultCacheKey(orgID, id, values)
+	if cacheable {
+		if result, ok := s.cache.Get(key); ok {
+			return result, nil
+		}
+	}
+
 	q, err := s.queryRepo.GetByID(id, orgID)
 	if err != nil || q == nil {
 		return nil, fmt.Errorf("query not found")
@@ -162,7 +180,14 @@ func (s *QueryService) ExecuteSavedQueryWithParams(ctx context.Context, id, orgI
 	if err != nil {
 		return nil, err
 	}
-	return s.poolManager.ExecuteQuery(ctx, ds, sqlText, maxRows, timeoutMs, args...)
+	result, err := s.poolManager.ExecuteQuery(ctx, ds, sqlText, maxRows, timeoutMs, args...)
+	if err != nil {
+		return nil, err
+	}
+	if cacheable {
+		s.cache.Set(key, q.ID, ds.ID, result)
+	}
+	return result, nil
 }
 
 // ExecuteAdHoc runs an ad‑hoc query (not saved) for preview.

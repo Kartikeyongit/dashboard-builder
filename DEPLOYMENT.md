@@ -133,6 +133,8 @@ Use this only if you do not want a Blueprint. Create the two services by hand.
    | `SEED_SECRET` | optional; leave empty to disable `/api/v1/seed` |
    | `SEED_DEMO_PASSWORD` | required if `SEED_SECRET` is set on a hosted database (8+ chars) |
    | `PORT` | `8080` (the image already sets this) |
+   | `DASHBOARD_CACHE_TTL_SECONDS` | optional; per‑instance query cache TTL, `0` disables it (default `15`) |
+   | `DASHBOARD_QUERY_CONCURRENCY` | optional; widget queries run in parallel up to this limit (default `6`) |
 
    Do **not** set `REDIS_URL`. Leaving it empty is the supported free setup.
    The image already sets `MIGRATIONS_DIR`, so do not set that either.

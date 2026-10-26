@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	"github.com/your-org/dashboard-builder/backend/internal/datasource"
 	"github.com/your-org/dashboard-builder/backend/internal/model"
@@ -23,20 +24,29 @@ type DashboardFull struct {
 }
 
 type WidgetService struct {
-	widgetRepo    *repository.WidgetRepo
-	dashboardRepo *repository.DashboardRepo
-	queryService  *QueryService
+	widgetRepo       *repository.WidgetRepo
+	dashboardRepo    *repository.DashboardRepo
+	queryService     *QueryService
+	queryConcurrency int
 }
 
 func NewWidgetService(
 	widgetRepo *repository.WidgetRepo,
 	dashboardRepo *repository.DashboardRepo,
 	queryService *QueryService,
+	queryConcurrency int,
 ) *WidgetService {
+	if queryConcurrency < 1 {
+		queryConcurrency = 1
+	}
+	if queryConcurrency > 16 {
+		queryConcurrency = 16
+	}
 	return &WidgetService{
-		widgetRepo:    widgetRepo,
-		dashboardRepo: dashboardRepo,
-		queryService:  queryService,
+		widgetRepo:       widgetRepo,
+		dashboardRepo:    dashboardRepo,
+		queryService:     queryService,
+		queryConcurrency: queryConcurrency,
 	}
 }
 
@@ -101,6 +111,81 @@ func (s *WidgetService) Delete(orgID, dashboardID, id string) error {
 	return s.widgetRepo.DeleteForOrg(id, dashboardID, orgID)
 }
 
+// savedQueryExecutor is the part of QueryService that dashboard loading needs.
+// Keeping it as an interface makes the parallel execution logic testable.
+type savedQueryExecutor interface {
+	ExecuteSavedQueryWithParams(ctx context.Context, id, orgID string, values map[string]interface{}) (*datasource.QueryResult, error)
+}
+
+type queryOutcome struct {
+	result *datasource.QueryResult
+	err    error
+}
+
+// executeUniqueQueries runs each distinct query once, with bounded
+// concurrency. Widgets that share a saved query share its result, so a
+// dashboard pays for the slowest distinct query instead of the sum of every
+// widget. Individual query failures are reported per query and never abort the
+// rest of the dashboard.
+func executeUniqueQueries(
+	ctx context.Context,
+	exec savedQueryExecutor,
+	orgID string,
+	queryIDs []string,
+	values map[string]interface{},
+	concurrency int,
+) map[string]queryOutcome {
+	outcomes := make(map[string]queryOutcome, len(queryIDs))
+	if len(queryIDs) == 0 {
+		return outcomes
+	}
+
+	unique := make([]string, 0, len(queryIDs))
+	seen := make(map[string]struct{}, len(queryIDs))
+	for _, id := range queryIDs {
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		unique = append(unique, id)
+	}
+
+	if concurrency < 1 {
+		concurrency = 1
+	}
+	if concurrency > len(unique) {
+		concurrency = len(unique)
+	}
+
+	results := make([]queryOutcome, len(unique))
+	sem := make(chan struct{}, concurrency)
+	var wg sync.WaitGroup
+
+	for i, id := range unique {
+		wg.Add(1)
+		go func(i int, id string) {
+			defer wg.Done()
+
+			select {
+			case sem <- struct{}{}:
+				defer func() { <-sem }()
+			case <-ctx.Done():
+				results[i].err = ctx.Err()
+				return
+			}
+
+			result, err := exec.ExecuteSavedQueryWithParams(ctx, id, orgID, values)
+			results[i] = queryOutcome{result: result, err: err}
+		}(i, id)
+	}
+
+	wg.Wait()
+	for i, id := range unique {
+		outcomes[id] = results[i]
+	}
+	return outcomes
+}
+
 // LoadDashboardWithData loads a dashboard and executes every widget query.
 // overrides supplies filter values from the request; filters without an
 // override fall back to their configured default.
@@ -117,14 +202,21 @@ func (s *WidgetService) LoadDashboardWithData(ctx context.Context, orgID, dashbo
 
 	filterValues := dash.ResolveFilterValues(overrides)
 
-	var widgetDataList []WidgetData
+	queryIDs := make([]string, 0, len(widgetList))
+	for _, w := range widgetList {
+		queryIDs = append(queryIDs, w.QueryID)
+	}
+	outcomes := executeUniqueQueries(ctx, s.queryService, orgID, queryIDs, filterValues, s.queryConcurrency)
+
+	widgetDataList := make([]WidgetData, 0, len(widgetList))
 	for _, w := range widgetList {
 		wd := WidgetData{Widget: w}
-		result, err := s.queryService.ExecuteSavedQueryWithParams(ctx, w.QueryID, orgID, filterValues)
-		if err != nil {
-			wd.Error = err.Error()
-		} else {
-			wd.Data = result
+		if outcome, ok := outcomes[w.QueryID]; ok {
+			if outcome.err != nil {
+				wd.Error = outcome.err.Error()
+			} else {
+				wd.Data = outcome.result
+			}
 		}
 		widgetDataList = append(widgetDataList, wd)
 	}

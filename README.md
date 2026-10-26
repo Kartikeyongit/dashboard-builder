@@ -18,6 +18,8 @@ Connect databases, write SQL, and design live dashboards with drag‑and‑drop 
 - 📑 **Duplicate dashboards** – Copy a dashboard and all of its widgets in one click; saved queries are shared.
 - ✍️ **SQL editor** – Monaco editor with schema autocomplete, query execution, and sandboxed validation.
 - 🔄 **Real‑time updates** – WebSocket push with in-process pub/sub (optional Redis for multi-instance deployments); dashboards refresh automatically on a schedule.
+- ⚡ **Fast dashboards** – Widget queries run in parallel with bounded concurrency, identical queries are deduplicated, and a short‑lived in‑process cache absorbs repeated refreshes.
+- 🧳 **Small initial bundle** – Routes are lazy‑loaded; Monaco, AG Grid, and ECharts load only on the pages that need them.
 - 🔗 **Shareable links** – Read‑only public URLs with optional password protection and expiry.
 - 👥 **Multi‑tenant** – Organizations, users, and role‑based access (admin/editor/viewer).
 - 🛡️ **Secure** – JWT authentication, rate limiting, SQL sandbox (read‑only, row limits, timeouts).
@@ -336,6 +338,8 @@ After local setup or deployment:
 | `JWT_SECRET` | Secret for signing JWTs (32+ characters, required) | `a-long-random-string-at-least-32-chars` |
 | `ENCRYPTION_KEY` | 32‑byte hex key for AES‑GCM (must be 64 hex chars, required) | `0123...def` |
 | `PORT` | Backend server port (default `8080`) | `8080` |
+| `DASHBOARD_CACHE_TTL_SECONDS` | In‑process saved‑query cache TTL in seconds; `0` disables it | `15` |
+| `DASHBOARD_QUERY_CONCURRENCY` | Maximum widget queries executed at once per dashboard load | `6` |
 | `FRONTEND_URL` | Allowed CORS origin | `https://myfrontend.onrender.com` |
 | `SEED_SECRET` | Token to trigger database seeding via HTTP | `a1b2c3d4` (only needed once) |
 | `SEED_DEMO_PASSWORD` | Password for seeded demo users (8+ chars). Required when seeding a hosted database; the local default is refused there | `a-strong-unique-password` |

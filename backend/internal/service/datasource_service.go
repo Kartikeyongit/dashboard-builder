@@ -14,14 +14,15 @@ type DatasourceService struct {
 	repo        *repository.DatasourceRepo
 	poolManager *datasource.PoolManager
 	encKey      string
+	cache       *ResultCache
 }
 
 func (s *DatasourceService) PoolManager() *datasource.PoolManager {
 	return s.poolManager
 }
 
-func NewDatasourceService(repo *repository.DatasourceRepo, poolManager *datasource.PoolManager, encKey string) *DatasourceService {
-	return &DatasourceService{repo: repo, poolManager: poolManager, encKey: encKey}
+func NewDatasourceService(repo *repository.DatasourceRepo, poolManager *datasource.PoolManager, encKey string, cache *ResultCache) *DatasourceService {
+	return &DatasourceService{repo: repo, poolManager: poolManager, encKey: encKey, cache: cache}
 }
 
 func (s *DatasourceService) Create(orgID, name, dsType, host string, port int, dbName, username, password, sslMode string) (*model.Datasource, error) {
@@ -72,7 +73,11 @@ func (s *DatasourceService) Update(id, orgID, name, host string, port int, dbNam
 	ds.SSLMode = sslMode
 	// Reset existing pool so it gets recreated with new credentials
 	s.poolManager.RemovePool(ds.ID, ds.Type)
-	return s.repo.Update(ds)
+	if err := s.repo.Update(ds); err != nil {
+		return err
+	}
+	s.cache.InvalidateDatasource(id)
+	return nil
 }
 
 func (s *DatasourceService) Delete(id, orgID string) error {
@@ -81,7 +86,11 @@ func (s *DatasourceService) Delete(id, orgID string) error {
 		return fmt.Errorf("datasource not found")
 	}
 	s.poolManager.RemovePool(ds.ID, ds.Type)
-	return s.repo.Delete(id, orgID)
+	if err := s.repo.Delete(id, orgID); err != nil {
+		return err
+	}
+	s.cache.InvalidateDatasource(id)
+	return nil
 }
 
 func (s *DatasourceService) TestConnection(id, orgID string) error {

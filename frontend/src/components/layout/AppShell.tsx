@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import { logoutUser, restoreAuth } from '../../store/authSlice';
 import Toast from '../Toast';
+import RouteFallback from '../ui/RouteFallback';
 import './AppShell.css';
 
 const AppShell: React.FC = () => {
@@ -52,8 +53,14 @@ const AppShell: React.FC = () => {
     );
   }
 
+  const routedPage = (
+    <Suspense fallback={<RouteFallback />}>
+      <Outlet />
+    </Suspense>
+  );
+
   if (!user) {
-    return <Outlet />;
+    return routedPage;
   }
 
   const isActive = (path: string) => {
@@ -160,7 +167,7 @@ const AppShell: React.FC = () => {
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
             >
-              <Outlet />
+              {routedPage}
             </motion.div>
           </AnimatePresence>
         </main>
