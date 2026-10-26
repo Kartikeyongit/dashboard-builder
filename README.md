@@ -141,11 +141,11 @@ cp backend/.env.example backend/.env
 Then fill in at least these values:
 
 ```env
-DB_URL=postgres://postgres:***REMOVED***@localhost:5432/dashboard_builder?sslmode=disable
+DB_URL=postgres://postgres:YOUR_PASSWORD@localhost:5432/dashboard_builder?sslmode=disable
 # Optional. Leave empty for single-instance mode (recommended).
 REDIS_URL=
-JWT_SECRET=dev-only-secret-at-least-32-characters-long
-ENCRYPTION_KEY=***REMOVED***
+JWT_SECRET=replace-with-at-least-32-random-characters
+ENCRYPTION_KEY=replace-with-64-hex-characters
 PORT=8080
 FRONTEND_URL=http://localhost:5173
 ```

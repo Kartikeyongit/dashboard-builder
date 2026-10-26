@@ -3,7 +3,8 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: dashboard_dev_password
+      # Local development only. Override with POSTGRES_PASSWORD if needed.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dashboard_dev_password}
       POSTGRES_DB: dashboard_builder
     ports:
       - "5432:5432"
