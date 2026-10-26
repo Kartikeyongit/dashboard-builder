@@ -3,8 +3,8 @@
 A production‑ready, real‑time dashboard builder inspired by Retool and Grafana.  
 Connect databases, write SQL, and design live dashboards with drag‑and‑drop widgets – all through a modern UI.
 
-> **Note** · The public demo has been retired. Run it locally or deploy your own
-> instance with [DEPLOYMENT.md](./DEPLOYMENT.md).
+> **Note** · This project no longer publishes a public demo. Run it locally or
+> deploy your own instance with [DEPLOYMENT.md](./DEPLOYMENT.md).
 
 ---
 
