@@ -1,6 +1,23 @@
 import React from 'react';
-import ReactECharts from 'echarts-for-react';
+import ReactEChartsCore from 'echarts-for-react/lib/core';
+import * as echarts from 'echarts/core';
+import { BarChart, LineChart, PieChart } from 'echarts/charts';
+import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components';
+import { CanvasRenderer } from 'echarts/renderers';
 import type { QueryResult } from '../../types';
+
+// Register only the pieces the dashboard charts use. Importing all of ECharts
+// pulls in every chart type, component, and renderer, which triples the size of
+// this lazy chunk.
+echarts.use([
+  BarChart,
+  LineChart,
+  PieChart,
+  GridComponent,
+  LegendComponent,
+  TooltipComponent,
+  CanvasRenderer,
+]);
 
 interface Props {
   data?: QueryResult;
@@ -13,7 +30,8 @@ const ChartWidget: React.FC<Props> = ({ data, config }) => {
   const option = buildEChartsOption(chartType, data);
 
   return (
-    <ReactECharts
+    <ReactEChartsCore
+      echarts={echarts}
       option={option}
       style={{ height: '100%', width: '100%' }}
       notMerge={true}
