@@ -338,6 +338,7 @@ After local setup or deployment:
 | `PORT` | Backend server port (default `8080`) | `8080` |
 | `FRONTEND_URL` | Allowed CORS origin | `https://myfrontend.onrender.com` |
 | `SEED_SECRET` | Token to trigger database seeding via HTTP | `a1b2c3d4` (only needed once) |
+| `SEED_DEMO_PASSWORD` | Password for seeded demo users (8+ chars). Required when seeding a hosted database; the local default is refused there | `a-strong-unique-password` |
 | `MIGRATIONS_DIR` | Path to SQL migration files | `/etc/dashboard/migrations` |
 | `VITE_API_URL` | Backend API URL (frontend build‑time) | `https://api.onrender.com/api/v1` |
 | `VITE_WS_URL` | Optional WebSocket override; derived from `VITE_API_URL` by default | `wss://api.onrender.com/api/v1/ws` |

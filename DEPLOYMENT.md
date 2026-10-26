@@ -131,6 +131,7 @@ Use this only if you do not want a Blueprint. Create the two services by hand.
    | `ENCRYPTION_KEY` | exactly 64 hex characters (`openssl rand -hex 32`) |
    | `FRONTEND_URL` | your static site URL (set after creating it) |
    | `SEED_SECRET` | optional; leave empty to disable `/api/v1/seed` |
+   | `SEED_DEMO_PASSWORD` | required if `SEED_SECRET` is set on a hosted database (8+ chars) |
    | `PORT` | `8080` (the image already sets this) |
 
    Do **not** set `REDIS_URL`. Leaving it empty is the supported free setup.
