@@ -3,8 +3,8 @@
 A production‑ready, real‑time dashboard builder inspired by Retool and Grafana.  
 Connect databases, write SQL, and design live dashboards with drag‑and‑drop widgets – all through a modern UI.
 
-> **Live Demo** · `admin@acme.com` / `password123`  
-> https://dashboard-frontend-kms5.onrender.com
+> **Note** · The public demo has been retired. Run it locally or deploy your own
+> instance with [DEPLOYMENT.md](./DEPLOYMENT.md).
 
 ---
 

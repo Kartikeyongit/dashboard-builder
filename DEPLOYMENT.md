@@ -79,12 +79,34 @@ empty), set it manually in the service's **Environment** tab and redeploy:
 ### Optional: demo data
 
 The Blueprint does not set `SEED_SECRET`, so `/api/v1/seed` stays disabled. To
-load demo data, add `SEED_SECRET` to the backend service in the Render dashboard,
-redeploy, then call once:
+load demo data, add both `SEED_SECRET` and `SEED_DEMO_PASSWORD` to the backend
+service in the Render dashboard, redeploy, then call once:
 ```
 https://<your-backend>.onrender.com/api/v1/seed?token=YOUR_SEED_SECRET
 ```
+`SEED_DEMO_PASSWORD` (8+ characters) becomes the password for the seeded
+`admin@acme.com` and `editor@acme.com` users. For a hosted database the seed
+command refuses to run without it, because the local default is a well-known
+value and the app has no password-change endpoint. Only seed a deployment you
+intend to keep private, or use a unique password you do not reuse elsewhere.
 Then log in with the seeded demo credentials printed in the README.
+
+#### Rotating a seeded password
+
+The app has no password-change endpoint yet. If a seeded password was ever
+public (for example on a demo instance), rotate it directly in the database.
+Neon includes `pgcrypto`, which produces bcrypt hashes the app can verify:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+UPDATE users
+SET password_hash = crypt('YOUR_NEW_STRONG_PASSWORD', gen_salt('bf', 10))
+WHERE email = 'admin@acme.com';
+```
+
+Do this for every seeded account, then remove the instance's URL from public
+documentation. For a permanent fix, retire the demo deployment or redeploy it
+against a fresh database.
 
 ---
 
@@ -233,6 +255,8 @@ rules with `RequireRole("admin", "editor")`. Never rely on the UI alone.
 - Use a read-only database user for datasource connections whenever possible.
   The app also opens read-only transactions and rejects non-read-only SQL.
 - Restrict the Neon credentials to this project only.
+- Never publish demo credentials for a reachable instance. Seeded users include
+  an admin; rotate the password or retire the deployment before sharing its URL.
 
 ---
 

@@ -71,3 +71,50 @@ func TestParsePostgresURL(t *testing.T) {
 		})
 	}
 }
+
+func TestResolveDemoPassword(t *testing.T) {
+	localURL := "postgres://app:secret@localhost:5432/dashboard?sslmode=disable"
+	hostedURL := "postgres://app:secret@db.example.neon.tech/dashboard?sslmode=require"
+
+	t.Run("local database uses default", func(t *testing.T) {
+		got, err := resolveDemoPassword(localURL, "")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got != defaultDemoPassword {
+			t.Fatalf("got %q, want %q", got, defaultDemoPassword)
+		}
+	})
+
+	t.Run("hosted database rejects default", func(t *testing.T) {
+		if _, err := resolveDemoPassword(hostedURL, ""); err == nil {
+			t.Fatal("expected an error for a hosted database without SEED_DEMO_PASSWORD")
+		}
+	})
+
+	t.Run("hosted database accepts override", func(t *testing.T) {
+		got, err := resolveDemoPassword(hostedURL, "a-strong-demo-password")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got != "a-strong-demo-password" {
+			t.Fatalf("got %q, want the override", got)
+		}
+	})
+
+	t.Run("short override is rejected", func(t *testing.T) {
+		if _, err := resolveDemoPassword(localURL, "short"); err == nil {
+			t.Fatal("expected an error for a short SEED_DEMO_PASSWORD")
+		}
+	})
+
+	t.Run("local database accepts override", func(t *testing.T) {
+		got, err := resolveDemoPassword(localURL, "local-demo-password")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got != "local-demo-password" {
+			t.Fatalf("got %q, want the override", got)
+		}
+	})
+}

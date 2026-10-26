@@ -48,11 +48,43 @@ func parsePostgresURL(rawURL string) (host string, port int, dbName, user, passw
 	return
 }
 
+const defaultDemoPassword = "password123"
+
+// resolveDemoPassword returns the password for the seeded demo users. The
+// well-known default is only allowed for local databases: a hosted deployment
+// must set SEED_DEMO_PASSWORD so a public instance never exposes a known admin
+// login (the app has no password-change endpoint).
+func resolveDemoPassword(dbURL, override string) (string, error) {
+	if override != "" {
+		if len(override) < 8 {
+			return "", fmt.Errorf("SEED_DEMO_PASSWORD must be at least 8 characters")
+		}
+		return override, nil
+	}
+
+	host, _, _, _, _, _, err := parsePostgresURL(dbURL)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse DB_URL: %w", err)
+	}
+	switch host {
+	case "localhost", "127.0.0.1", "::1":
+		return defaultDemoPassword, nil
+	default:
+		return "", fmt.Errorf("refusing to seed demo users with the default password on hosted database %q: set SEED_DEMO_PASSWORD", host)
+	}
+}
+
 func RunSeed(db *sql.DB, encKey string) error {
 	rand.Seed(time.Now().UnixNano())
 
+	dbURL := os.Getenv("DB_URL")
+	demoPassword, err := resolveDemoPassword(dbURL, os.Getenv("SEED_DEMO_PASSWORD"))
+	if err != nil {
+		return err
+	}
+
 	// Password hash
-	hash, err := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(demoPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return fmt.Errorf("bcrypt: %w", err)
 	}
@@ -75,8 +107,7 @@ func RunSeed(db *sql.DB, encKey string) error {
 		('00000000-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000001', 'admin@acme.com', '%s', 'admin'),
 		('00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000000001', 'editor@acme.com', '%s', 'editor')
 		ON CONFLICT (id) DO UPDATE SET password_hash = EXCLUDED.password_hash`, pwHash, pwHash))
-	// Use the actual Render PostgreSQL credentials from DB_URL
-	dbURL := os.Getenv("DB_URL")
+	// Use the actual database credentials from DB_URL
 	host, port, dbName, user, pass, sslMode, err := parsePostgresURL(dbURL)
 	if err != nil {
 		return fmt.Errorf("failed to parse DB_URL: %w", err)
