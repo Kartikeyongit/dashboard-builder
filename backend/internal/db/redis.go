@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -13,11 +14,15 @@ import (
 // for a single backend instance (including the free Render tier).
 var RedisClient *redis.Client
 
-// RedisEnabled reports whether a Redis connection is configured.
+// RedisEnabled reports whether a working Redis connection is configured.
 func RedisEnabled() bool {
 	return RedisClient != nil
 }
 
+// ConnectRedis connects to Redis if redisURL is non-empty. Redis is optional:
+// an empty value means single-instance mode. If the URL is present but Redis
+// cannot be reached, the client is discarded and an error is returned so the
+// caller can log it and continue without Redis.
 func ConnectRedis(redisURL string) error {
 	redisURL = strings.TrimSpace(redisURL)
 	if redisURL == "" {
@@ -35,8 +40,20 @@ func ConnectRedis(redisURL string) error {
 	if err != nil {
 		return err
 	}
-	RedisClient = redis.NewClient(opts)
-	return RedisClient.Ping(context.Background()).Err()
+
+	client := redis.NewClient(opts)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	if err := client.Ping(ctx).Err(); err != nil {
+		// Do not leave a broken client behind: RedisEnabled() must stay false
+		// so the rest of the app uses the in-process fallbacks.
+		_ = client.Close()
+		RedisClient = nil
+		return err
+	}
+
+	RedisClient = client
+	return nil
 }
 
 // CloseRedis closes the client if one is configured.

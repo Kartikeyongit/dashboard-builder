@@ -31,6 +31,10 @@ services:
       # Match the port the Docker image exposes and the app listens on.
       - key: PORT
         value: "8080"
+      # Explicitly clear any stale value (for example an old Upstash URL).
+      # Empty means single-instance mode; the backend never requires Redis.
+      - key: REDIS_URL
+        value: ""
       # Public URL of the static site, used for CORS and share links.
       # RENDER_EXTERNAL_URL is a built-in Render variable, so this stays
       # correct even if the service is renamed.

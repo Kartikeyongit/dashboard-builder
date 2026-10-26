@@ -51,9 +51,11 @@ func main() {
 	}
 
 	// Connect to Redis. This is optional: without it the app runs in
-	// single-instance mode using in-process pub/sub.
+	// single-instance mode using in-process pub/sub. A configured but
+	// unreachable Redis (for example a stale Upstash URL on Render) must not
+	// prevent the service from starting.
 	if err := db.ConnectRedis(redisURL); err != nil {
-		log.Fatalf("Redis connection failed: %v", err)
+		log.Printf("Redis unavailable (%v); continuing in single-instance mode", err)
 	}
 
 	// Setup Fiber app

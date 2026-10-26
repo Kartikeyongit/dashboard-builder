@@ -156,6 +156,21 @@ instead. Use one combination consistently:
 - Do not set `REDIS_URL` to an expired or sleeping Redis instance. Leave it
   empty; the backend does not require Redis.
 
+#### Logs still mention `upstash.io` or `Redis connection failed`
+
+Render keeps environment variables that are not listed in `render.yaml`, so an
+old `REDIS_URL` from a previous setup survives even after you remove it from the
+file. Fix it in the dashboard:
+
+1. Open the backend service → **Environment**.
+2. Delete the `REDIS_URL` variable (or set it to an empty value).
+3. Save and redeploy.
+
+If you use the Blueprint, re-sync it: `render.yaml` now sets `REDIS_URL` to an
+empty string explicitly, which clears the stale value. The backend also falls
+back to single-instance mode if a configured Redis is unreachable, so a stale
+URL can no longer prevent startup.
+
 ---
 
 ## 4. Create the first account
