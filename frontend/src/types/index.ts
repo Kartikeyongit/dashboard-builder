@@ -84,11 +84,24 @@ export interface TableSchema {
   columns: { name: string; data_type: string }[];
 }
 
+export type DashboardFilterType = 'text' | 'number' | 'date' | 'select';
+
+export interface DashboardFilter {
+  id: string;
+  label: string;
+  type: DashboardFilterType;
+  default?: string;
+  options?: string[];
+}
+
+export type DashboardFilterValues = Record<string, string>;
+
 export interface Dashboard {
   id: string;
   org_id: string;
   name: string;
   refresh_interval_seconds: number;
+  filters?: DashboardFilter[];
   created_by: string;
   created_at: string;
   updated_at: string;

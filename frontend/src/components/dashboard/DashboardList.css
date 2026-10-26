@@ -1,1 +1,25 @@
 /* Dashboard-specific list overrides */
+
+.list-page .card-actions {
+  flex-wrap: wrap;
+}
+
+.list-page .duplicate-btn {
+  font-family: inherit;
+}
+
+.list-page .duplicate-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.card-filter-badge {
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--radius-xs);
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+  white-space: nowrap;
+}

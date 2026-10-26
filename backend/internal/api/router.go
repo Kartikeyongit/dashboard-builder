@@ -155,6 +155,7 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 	dashboards.Put("/:id", editorOnly, dashboardHandler.Update)
 	dashboards.Delete("/:id", editorOnly, dashboardHandler.Delete)
 	dashboards.Get("/:id/full", dashboardFullHandler.GetFull)
+	dashboards.Post("/:id/duplicate", editorOnly, dashboardHandler.Duplicate)
 	dashboards.Post("/:id/share", editorOnly, shareHandler.CreateShareLink)
 
 	widgets := dashboards.Group("/:dashboardId/widgets")

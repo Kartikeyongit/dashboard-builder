@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../hooks';
-import { fetchDashboards, createDashboard, deleteDashboard } from '../../store/dashboardSlice';
+import { fetchDashboards, createDashboard, duplicateDashboard, deleteDashboard } from '../../store/dashboardSlice';
 import { addToast } from '../../store/toastSlice';
 import { canEditContent } from '../../utils/permissions';
 import EmptyState from '../ui/EmptyState';
@@ -20,6 +20,7 @@ const DashboardList: React.FC = () => {
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
   useEffect(() => {
     dispatch(fetchDashboards());
@@ -49,6 +50,18 @@ const DashboardList: React.FC = () => {
       dispatch(addToast({ message: 'Dashboard deleted', type: 'success' }));
     } else {
       dispatch(addToast({ message: 'Failed to delete dashboard', type: 'error' }));
+    }
+  };
+
+  const handleDuplicate = async (id: string) => {
+    if (duplicatingId) return;
+    setDuplicatingId(id);
+    const result = await dispatch(duplicateDashboard(id));
+    setDuplicatingId(null);
+    if (duplicateDashboard.fulfilled.match(result)) {
+      dispatch(addToast({ message: 'Dashboard duplicated', type: 'success' }));
+    } else {
+      dispatch(addToast({ message: 'Failed to duplicate dashboard', type: 'error' }));
     }
   };
 
@@ -84,11 +97,28 @@ const DashboardList: React.FC = () => {
                       </svg>
                     </div>
                     <span className="card-title">{d.name}</span>
+                    {(d.filters?.length ?? 0) > 0 && (
+                      <span className="card-filter-badge">{d.filters!.length} filter{d.filters!.length > 1 ? 's' : ''}</span>
+                    )}
                   </div>
                   <div className="card-actions">
-                    <Link to={`/dashboards/${d.id}/edit`} className="edit-link">
-                      {canEdit ? 'Edit' : 'View'}
+                    <Link to={`/dashboards/${d.id}`} className="edit-link">
+                      View
                     </Link>
+                    {canEdit && (
+                      <Link to={`/dashboards/${d.id}/edit`} className="edit-link">
+                        Edit
+                      </Link>
+                    )}
+                    {canEdit && (
+                      <button
+                        className="edit-link duplicate-btn"
+                        onClick={() => handleDuplicate(d.id)}
+                        disabled={duplicatingId === d.id}
+                      >
+                        {duplicatingId === d.id ? 'Copying...' : 'Duplicate'}
+                      </button>
+                    )}
                     {canEdit && (
                       <button className="delete-btn" onClick={() => setPendingDelete({ id: d.id, name: d.name })}>
                         Delete

@@ -3,6 +3,7 @@ package handler
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/your-org/dashboard-builder/backend/internal/api/middleware"
+	"github.com/your-org/dashboard-builder/backend/internal/model"
 	"github.com/your-org/dashboard-builder/backend/internal/service"
 )
 
@@ -15,8 +16,9 @@ func NewDashboardHandler(dashboardService *service.DashboardService) *DashboardH
 }
 
 type CreateDashboardRequest struct {
-	Name               string `json:"name"`
-	RefreshIntervalSec int    `json:"refresh_interval_seconds"`
+	Name               string                   `json:"name"`
+	RefreshIntervalSec int                      `json:"refresh_interval_seconds"`
+	Filters            *[]model.DashboardFilter `json:"filters"`
 }
 
 func (h *DashboardHandler) Create(c *fiber.Ctx) error {
@@ -26,9 +28,13 @@ func (h *DashboardHandler) Create(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid body")
 	}
-	dash, err := h.dashboardService.Create(orgID, req.Name, req.RefreshIntervalSec, userID)
+	filters := []model.DashboardFilter{}
+	if req.Filters != nil {
+		filters = *req.Filters
+	}
+	dash, err := h.dashboardService.Create(orgID, req.Name, req.RefreshIntervalSec, filters, userID)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 	return c.Status(fiber.StatusCreated).JSON(dash)
 }
@@ -59,8 +65,8 @@ func (h *DashboardHandler) Update(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid body")
 	}
-	if err := h.dashboardService.Update(id, orgID, req.Name, req.RefreshIntervalSec); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	if err := h.dashboardService.Update(id, orgID, req.Name, req.RefreshIntervalSec, req.Filters); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 	return c.SendStatus(fiber.StatusOK)
 }
@@ -72,4 +78,14 @@ func (h *DashboardHandler) Delete(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 	return c.SendStatus(fiber.StatusNoContent)
+}
+
+func (h *DashboardHandler) Duplicate(c *fiber.Ctx) error {
+	orgID := c.Locals("orgID").(string)
+	userID := middleware.GetUserID(c)
+	dup, err := h.dashboardService.Duplicate(c.Params("id"), orgID, userID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	return c.Status(fiber.StatusCreated).JSON(dup)
 }

@@ -12,6 +12,10 @@ Connect databases, write SQL, and design live dashboards with drag‑and‑drop 
 
 - 🔗 **Connect databases** – PostgreSQL and MySQL via a UI; credentials encrypted at rest.
 - 🧩 **Drag‑&‑drop builder** – Arrange charts, tables, and metric cards on a grid; auto‑saving layout.
+- 👁️ **Read‑only view mode** – Open any dashboard at `/dashboards/:id` for a clean, distraction‑free view with fullscreen and refresh controls.
+- 🎛️ **Dashboard filters** – Add date, number, text, or dropdown filters and reference them in SQL as `{{filter_id}}`; values are bound as real SQL parameters, never interpolated.
+- 📤 **CSV export** – Download table and metric widgets as CSV, including the active filter values.
+- 📑 **Duplicate dashboards** – Copy a dashboard and all of its widgets in one click; saved queries are shared.
 - ✍️ **SQL editor** – Monaco editor with schema autocomplete, query execution, and sandboxed validation.
 - 🔄 **Real‑time updates** – WebSocket push with in-process pub/sub (optional Redis for multi-instance deployments); dashboards refresh automatically on a schedule.
 - 🔗 **Shareable links** – Read‑only public URLs with optional password protection and expiry.
@@ -83,7 +87,7 @@ dashboard-builder/
 │   │   ├── assets/            # Images, icons
 │   │   ├── components/
 │   │   │   ├── auth/          # Login, Register
-│   │   │   ├── dashboard/     # DashboardEditor, DashboardList
+│   │   │   ├── dashboard/     # DashboardView, DashboardEditor, DashboardList, filters, widgets
 │   │   │   ├── datasource/    # DatasourceList, DatasourceForm
 │   │   │   ├── home/          # Home page
 │   │   │   ├── layout/        # AppShell
@@ -92,6 +96,7 @@ dashboard-builder/
 │   │   ├── hooks/             # Custom hooks (useDashboardSocket)
 │   │   ├── store/             # Redux slices (auth, datasource, query, dashboard, toast)
 │   │   ├── types/             # TypeScript interfaces
+│   │   ├── utils/             # CSV, filter URL, layout, permission helpers
 │   │   ├── animations.ts      # Framer motion variants
 │   │   ├── hooks.ts           # Shared hooks
 │   │   └── theme.ts           # MUI theme config
@@ -254,7 +259,8 @@ All API routes are prefixed with `/api/v1`.
 | `GET` | `/dashboards/:id` | Get dashboard details |
 | `PUT` | `/dashboards/:id` | Update a dashboard |
 | `DELETE` | `/dashboards/:id` | Delete a dashboard |
-| `GET` | `/dashboards/:id/full` | Get dashboard with all widgets |
+| `POST` | `/dashboards/:id/duplicate` | Duplicate a dashboard and its widgets |
+| `GET` | `/dashboards/:id/full` | Get dashboard with all widgets (accepts `f_<filter>` query params) |
 | `POST` | `/dashboards/:dashboardId/widgets` | Add widget to dashboard |
 | `PUT` | `/dashboards/:dashboardId/widgets/:id` | Update widget |
 | `DELETE` | `/dashboards/:dashboardId/widgets/:id` | Delete widget |
@@ -282,6 +288,30 @@ All API routes are prefixed with `/api/v1`.
 
 ---
 
+### Dashboard filters
+
+Filters are defined per dashboard (open a dashboard → **Filters**) and referenced in any widget query with a named placeholder:
+
+```sql
+SELECT date_trunc('day', created_at) AS day, SUM(total) AS revenue
+FROM orders
+WHERE created_at >= {{start_date}}
+  AND created_at < {{end_date}}
+  AND status = {{status}}
+GROUP BY 1
+ORDER BY 1;
+```
+
+Supported types are `text`, `number`, `date`, and `select`. Each filter can define a default value; `select` filters also need a comma-separated list of options.
+
+- Values are bound as real SQL parameters (`$1`, `$2`, … for PostgreSQL; `?` for MySQL), never concatenated into the statement.
+- Placeholders inside strings, quoted identifiers, and comments are left untouched.
+- Active values are stored in the URL as `f_<filter_id>` (for example `?f_start_date=2026-01-01&f_status=paid`), so filtered views can be bookmarked or shared.
+- Clearing a filter sends an explicit empty value, which overrides its default; the widget query then runs without that parameter.
+- If a query references a filter that has no value and no default, that widget shows an error instead of running with a missing parameter.
+
+---
+
 ## 🧪 Quick Start (Demo)
 
 After local setup or deployment:
@@ -289,9 +319,11 @@ After local setup or deployment:
 1. Register or log in.
 2. **Datasources** → The internal PostgreSQL is already connected.
 3. **Queries** → Browse 30+ pre‑built SQL queries.
-4. **Dashboards** → Open "Sales Overview" or any of the six dashboards.
-5. **Add Widgets** → Drag charts/tables onto the grid and resize them.
-6. **Share** → Generate a read‑only link for any dashboard.
+4. **Dashboards** → Open "Sales Overview" or any of the six dashboards in **View** mode.
+5. **Add Widgets** → Open the editor and drag charts/tables onto the grid and resize them.
+6. **Filters** → Add a date or dropdown filter and reference it as `{{filter_id}}` in a widget query.
+7. **Export** → Use the **CSV** button on any table or metric widget.
+8. **Share** → Generate a read‑only link for any dashboard.
 
 ---
 

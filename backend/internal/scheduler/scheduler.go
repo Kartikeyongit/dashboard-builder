@@ -123,8 +123,10 @@ func (s *Scheduler) runDashboardQueries(ctx context.Context, dash *model.Dashboa
 		return
 	}
 
+	filterValues := dash.ResolveFilterValues(nil)
+
 	for _, widget := range widgets {
-		result, err := s.queryService.ExecuteSavedQuery(ctx, widget.QueryID, dash.OrgID)
+		result, err := s.queryService.ExecuteSavedQueryWithParams(ctx, widget.QueryID, dash.OrgID, filterValues)
 		update := WidgetPayload{
 			WidgetID: widget.ID,
 		}

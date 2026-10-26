@@ -139,6 +139,8 @@ const QueryEditor: React.FC = () => {
     }
   };
 
+  const hasFilterPlaceholders = /\{\{\s*[A-Za-z_][A-Za-z0-9_]*\s*\}\}/.test(sqlText);
+
   return (
     <div className="query-editor-page">
       <button type="button" className="back-btn" onClick={() => navigate('/queries')}>
@@ -201,6 +203,14 @@ const QueryEditor: React.FC = () => {
           options={{ minimap: { enabled: false }, fontSize: 14 }}
         />
       </div>
+
+      {hasFilterPlaceholders && (
+        <div className="query-hint">
+          This query uses dashboard filter placeholders like <code>{'{{filter_id}}'}</code>. Ad-hoc
+          Run does not substitute them; open the dashboard in <strong>View</strong> mode to run it
+          with filter values.
+        </div>
+      )}
 
       {error && <div className="query-error">{error}</div>}
 

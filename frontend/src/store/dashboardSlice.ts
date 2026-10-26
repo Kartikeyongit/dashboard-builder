@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { dashboardAPI } from '../api/dashboard';
-import type { Dashboard, DashboardFull, WidgetData } from '../types';
+import type { Dashboard, DashboardFilterValues, DashboardFull, WidgetData } from '../types';
 
 interface DashboardState {
   list: Dashboard[];
@@ -32,15 +32,30 @@ export const createDashboard = createAsyncThunk('dashboards/create', async (data
   return res.data;
 });
 
+export const duplicateDashboard = createAsyncThunk('dashboards/duplicate', async (id: string) => {
+  const res = await dashboardAPI.duplicate(id);
+  return res.data;
+});
+
 export const deleteDashboard = createAsyncThunk('dashboards/delete', async (id: string) => {
   await dashboardAPI.delete(id);
   return id;
 });
 
-export const loadDashboardFull = createAsyncThunk('dashboards/loadFull', async (id: string) => {
-  const res = await dashboardAPI.getFull(id);
-  return normalizeDashboardFull(res.data);
-});
+export interface LoadDashboardFullArg {
+  id: string;
+  filters?: DashboardFilterValues;
+}
+
+export const loadDashboardFull = createAsyncThunk(
+  'dashboards/loadFull',
+  async (arg: string | LoadDashboardFullArg) => {
+    const id = typeof arg === 'string' ? arg : arg.id;
+    const filters = typeof arg === 'string' ? undefined : arg.filters;
+    const res = await dashboardAPI.getFull(id, filters);
+    return normalizeDashboardFull(res.data);
+  }
+);
 
 const dashboardSlice = createSlice({
   name: 'dashboards',
@@ -93,6 +108,7 @@ const dashboardSlice = createSlice({
       .addCase(loadDashboardFull.fulfilled, (state, action) => { state.loading = false; state.currentFull = action.payload; })
       .addCase(loadDashboardFull.rejected, (state, action) => { state.loading = false; state.error = action.error.message ?? null; })
       .addCase(createDashboard.fulfilled, (state, action) => { state.list.push(action.payload); })
+      .addCase(duplicateDashboard.fulfilled, (state, action) => { state.list.unshift(action.payload); })
       .addCase(deleteDashboard.fulfilled, (state, action) => {
         state.list = state.list.filter(d => d.id !== action.payload);
       });

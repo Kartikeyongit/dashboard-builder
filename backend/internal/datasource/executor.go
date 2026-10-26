@@ -17,7 +17,8 @@ type QueryResult struct {
 }
 
 // ExecuteQuery runs a user query against a datasource within a sandboxed context.
-func (pm *PoolManager) ExecuteQuery(ctx context.Context, ds *model.Datasource, sqlText string, maxRows, timeoutMs int) (*QueryResult, error) {
+// args are bound parameters (never interpolated SQL).
+func (pm *PoolManager) ExecuteQuery(ctx context.Context, ds *model.Datasource, sqlText string, maxRows, timeoutMs int, args ...interface{}) (*QueryResult, error) {
 	safeSQL, err := ValidateSQL(sqlText)
 	if err != nil {
 		return nil, err
@@ -36,9 +37,9 @@ func (pm *PoolManager) ExecuteQuery(ctx context.Context, ds *model.Datasource, s
 
 	switch p := pool.(type) {
 	case *pgxpool.Pool:
-		return executeOnPostgres(execCtx, p, safeSQL, maxRows, timeoutMs)
+		return executeOnPostgres(execCtx, p, safeSQL, maxRows, timeoutMs, args...)
 	case *sql.DB:
-		return executeOnMySQL(execCtx, p, safeSQL, maxRows)
+		return executeOnMySQL(execCtx, p, safeSQL, maxRows, args...)
 	default:
 		return nil, fmt.Errorf("unsupported datasource type")
 	}
@@ -66,7 +67,7 @@ func clampTimeout(timeoutMs int) int {
 	return timeoutMs
 }
 
-func executeOnPostgres(ctx context.Context, pool *pgxpool.Pool, sqlText string, maxRows, timeoutMs int) (*QueryResult, error) {
+func executeOnPostgres(ctx context.Context, pool *pgxpool.Pool, sqlText string, maxRows, timeoutMs int, args ...interface{}) (*QueryResult, error) {
 	tx, err := pool.Begin(ctx)
 	if err != nil {
 		return nil, err
@@ -83,7 +84,7 @@ func executeOnPostgres(ctx context.Context, pool *pgxpool.Pool, sqlText string, 
 		return nil, fmt.Errorf("set statement timeout: %w", err)
 	}
 
-	rows, err := tx.Query(ctx, sqlText)
+	rows, err := tx.Query(ctx, sqlText, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query execution: %w", err)
 	}
@@ -123,7 +124,7 @@ func executeOnPostgres(ctx context.Context, pool *pgxpool.Pool, sqlText string, 
 	return &QueryResult{Columns: columns, Rows: resultRows}, nil
 }
 
-func executeOnMySQL(ctx context.Context, db *sql.DB, sqlText string, maxRows int) (*QueryResult, error) {
+func executeOnMySQL(ctx context.Context, db *sql.DB, sqlText string, maxRows int, args ...interface{}) (*QueryResult, error) {
 	// ReadOnly makes the server reject writes. There is deliberately no
 	// non-read-only fallback: failing closed is the whole point.
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
@@ -132,7 +133,7 @@ func executeOnMySQL(ctx context.Context, db *sql.DB, sqlText string, maxRows int
 	}
 	defer tx.Rollback()
 
-	rows, err := tx.QueryContext(ctx, sqlText)
+	rows, err := tx.QueryContext(ctx, sqlText, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query execution: %w", err)
 	}

@@ -88,7 +88,7 @@ func (s *ShareService) loadSharedDashboard(dashboardID string) (*DashboardFull, 
 	if err != nil || dash == nil {
 		return nil, errors.New("dashboard not found")
 	}
-	return s.widgetService.LoadDashboardWithData(context.Background(), dash.OrgID, dashboardID)
+	return s.widgetService.LoadDashboardWithData(context.Background(), dash.OrgID, dashboardID, nil)
 }
 
 var ErrPasswordRequired = errors.New("password required")

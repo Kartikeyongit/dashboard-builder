@@ -30,6 +30,9 @@ the free tiers at the time of writing, but check each provider's current terms.
    postgresql://USER:PASSWORD@ep-xxx-pooler.REGION.aws.neon.tech/neondb?sslmode=require
    ```
 4. Keep this as `DB_URL`. Migrations run automatically on backend startup.
+   The first deploy after upgrading also applies
+   `000007_add_dashboard_filters`, which adds `dashboards.filters_json`; existing
+   dashboards keep working with an empty filter list.
 
 > Neon's free plan has a storage and compute-hour limit. A demo dashboard uses
 > very little of either.

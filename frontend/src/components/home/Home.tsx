@@ -687,7 +687,7 @@ const AuthenticatedHome = () => {
               <motion.div
                 key={d.id}
                 className="home-dashboard-item"
-                onClick={() => navigate(`/dashboards/${d.id}/edit`)}
+                onClick={() => navigate(`/dashboards/${d.id}`)}
                 initial={{ opacity: 0, x: -8 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4 + i * 0.05, duration: 0.3 }}

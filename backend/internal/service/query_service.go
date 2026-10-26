@@ -139,8 +139,15 @@ func (s *QueryService) Delete(id, orgID string) error {
 	return s.queryRepo.Delete(id, orgID)
 }
 
-// ExecuteSavedQuery runs a saved query by ID.
+// ExecuteSavedQuery runs a saved query by ID using its default filter values
+// (which are none unless the caller supplies them).
 func (s *QueryService) ExecuteSavedQuery(ctx context.Context, id, orgID string) (*datasource.QueryResult, error) {
+	return s.ExecuteSavedQueryWithParams(ctx, id, orgID, nil)
+}
+
+// ExecuteSavedQueryWithParams runs a saved query after substituting any
+// {{filter}} placeholders with bound parameters.
+func (s *QueryService) ExecuteSavedQueryWithParams(ctx context.Context, id, orgID string, values map[string]interface{}) (*datasource.QueryResult, error) {
 	q, err := s.queryRepo.GetByID(id, orgID)
 	if err != nil || q == nil {
 		return nil, fmt.Errorf("query not found")
@@ -150,7 +157,12 @@ func (s *QueryService) ExecuteSavedQuery(ctx context.Context, id, orgID string) 
 		return nil, fmt.Errorf("datasource not found")
 	}
 	maxRows, timeoutMs := NormalizeQueryLimits(q.MaxRows, q.TimeoutMs)
-	return s.poolManager.ExecuteQuery(ctx, ds, q.SQLText, maxRows, timeoutMs)
+
+	sqlText, args, err := datasource.SubstituteFilterParams(q.SQLText, values, ds.Type)
+	if err != nil {
+		return nil, err
+	}
+	return s.poolManager.ExecuteQuery(ctx, ds, sqlText, maxRows, timeoutMs, args...)
 }
 
 // ExecuteAdHoc runs an ad‑hoc query (not saved) for preview.

@@ -8,6 +8,7 @@ import QueryList from './components/query/QueryList';
 import QueryEditor from './components/query/QueryEditor';
 import DashboardList from './components/dashboard/DashboardList';
 import DashboardEditor from './components/dashboard/DashboardEditor';
+import DashboardView from './components/dashboard/DashboardView';
 import SharedDashboardView from './components/viewer/SharedDashboardView';
 import Home from './components/home/Home';
 
@@ -30,6 +31,7 @@ const router = createBrowserRouter([
       { path: 'queries/new', element: <QueryEditor /> },
       { path: 'queries/:queryId/edit', element: <QueryEditor /> },
       { path: 'dashboards', element: <DashboardList /> },
+      { path: 'dashboards/:dashboardId', element: <DashboardView /> },
       { path: 'dashboards/:dashboardId/edit', element: <DashboardEditor /> },
     ],
   },

@@ -101,7 +101,10 @@ func (s *WidgetService) Delete(orgID, dashboardID, id string) error {
 	return s.widgetRepo.DeleteForOrg(id, dashboardID, orgID)
 }
 
-func (s *WidgetService) LoadDashboardWithData(ctx context.Context, orgID, dashboardID string) (*DashboardFull, error) {
+// LoadDashboardWithData loads a dashboard and executes every widget query.
+// overrides supplies filter values from the request; filters without an
+// override fall back to their configured default.
+func (s *WidgetService) LoadDashboardWithData(ctx context.Context, orgID, dashboardID string, overrides map[string]string) (*DashboardFull, error) {
 	dash, err := s.dashboardRepo.GetByID(dashboardID, orgID)
 	if err != nil || dash == nil {
 		return nil, err
@@ -112,10 +115,12 @@ func (s *WidgetService) LoadDashboardWithData(ctx context.Context, orgID, dashbo
 		return nil, err
 	}
 
+	filterValues := dash.ResolveFilterValues(overrides)
+
 	var widgetDataList []WidgetData
 	for _, w := range widgetList {
 		wd := WidgetData{Widget: w}
-		result, err := s.queryService.ExecuteSavedQuery(ctx, w.QueryID, orgID)
+		result, err := s.queryService.ExecuteSavedQueryWithParams(ctx, w.QueryID, orgID, filterValues)
 		if err != nil {
 			wd.Error = err.Error()
 		} else {

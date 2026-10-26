@@ -175,6 +175,26 @@
   border: 1px solid var(--color-danger-border);
 }
 
+.query-hint {
+  background: var(--color-primary-subtle);
+  color: var(--color-text-secondary);
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius-sm);
+  margin: 0.75rem 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 22%, var(--color-border));
+}
+
+.query-hint code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: var(--radius-xs);
+  background: var(--color-bg);
+  color: var(--color-primary);
+}
+
 .results-panel {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
