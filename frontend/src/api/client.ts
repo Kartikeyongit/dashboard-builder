@@ -18,12 +18,22 @@ client.interceptors.request.use((config) => {
   return config;
 });
 
+// Public share endpoints use 401 to mean "password required", not "token
+// expired". Refreshing the viewer's session would retry the request and hide
+// that signal, so let those responses reach the caller unchanged.
+const isPublicShareRequest = (url?: string) =>
+  typeof url === 'string' && url.includes('/share/');
+
 // Handle 401 and refresh token logic (simplified)
 client.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !isPublicShareRequest(originalRequest.url)
+    ) {
       originalRequest._retry = true;
       const refreshToken = localStorage.getItem('refresh_token');
       if (refreshToken) {

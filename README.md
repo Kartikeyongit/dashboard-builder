@@ -209,6 +209,23 @@ To run the same flow against a deployed site, pass its URL:
 npm run test:e2e -- --config baseUrl=https://your-frontend.onrender.com
 ```
 
+The feature spec covers filters and URL persistence, CSV export, duplicate, and
+password-protected share links. It creates its own query, dashboard, and widget
+through the API and deletes them afterwards, so it needs a seeded database and a
+writable API (not a shared demo deployment):
+
+```bash
+npm run test:e2e:features
+```
+
+Both specs read the API base from `apiUrl` (default
+`http://127.0.0.1:8099/api/v1`) and the login from `demoEmail` /
+`demoPassword`:
+
+```bash
+npm run test:e2e:features -- --env apiUrl=https://your-api.onrender.com/api/v1
+```
+
 ---
 
 ## 🚀 Deployment

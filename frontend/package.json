@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:e2e": "cypress run --spec cypress/e2e/dashboard-smoke.cy.ts",
+    "test:e2e:features": "cypress run --spec cypress/e2e/dashboard-features.cy.ts",
     "preview": "vite preview"
   },
   "dependencies": {

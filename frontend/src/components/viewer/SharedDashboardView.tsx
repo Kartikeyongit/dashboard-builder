@@ -25,17 +25,20 @@ const SharedDashboardView: React.FC = () => {
       } else {
         res = await shareAPI.getShared(token!);
       }
-      if ('password_required' in res.data) {
-        setPasswordRequired(true);
-      } else {
-        const dashboardFull = res.data as DashboardFull;
-        setDashboard({
-          ...dashboardFull,
-          widgets: Array.isArray(dashboardFull.widgets) ? dashboardFull.widgets : [],
-        });
-        setPasswordRequired(false);
-      }
+      const dashboardFull = res.data as DashboardFull;
+      setError('');
+      setDashboard({
+        ...dashboardFull,
+        widgets: Array.isArray(dashboardFull.widgets) ? dashboardFull.widgets : [],
+      });
+      setPasswordRequired(false);
     } catch (err: any) {
+      // A protected link answers 401 with password_required. That is a prompt,
+      // not a failure: show the password form instead of an error.
+      if (err.response?.data?.password_required) {
+        setPasswordRequired(true);
+        return;
+      }
       setError(err.response?.data?.message || 'Failed to load');
     }
   };
@@ -99,7 +102,9 @@ const SharedDashboardView: React.FC = () => {
   if (!dashboard) {
     return (
       <div className="shared-view-loading">
-        <div className="shared-view-card">Loading dashboard...</div>
+        <div className="shared-view-card">
+          {error ? <p className="shared-view-error">{error}</p> : 'Loading dashboard...'}
+        </div>
       </div>
     );
   }
