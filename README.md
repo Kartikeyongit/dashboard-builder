@@ -183,6 +183,26 @@ npm run dev
 
 Visit http://localhost:5173 and log in with `admin@acme.com` / `password123`.
 
+### 5. Run the tests
+
+```bash
+cd frontend
+npm test                 # unit tests (Vitest)
+npm run build            # type-check + production bundle
+```
+
+The production smoke test renders a seeded dashboard and its editor in a real
+browser. It catches bundler-only failures (such as a CommonJS/ESM interop issue
+that does not reproduce in the dev server). With the backend on `:8099`, a
+seeded local database, and a production build pointed at that API:
+
+```bash
+cd frontend
+VITE_API_URL=http://127.0.0.1:8099/api/v1 npm run build
+npm run preview -- --port 4173
+npm run test:e2e         # in another terminal
+```
+
 ---
 
 ## 🚀 Deployment

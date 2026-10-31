@@ -1,5 +1,8 @@
 import React from 'react';
-import ReactEChartsCore from 'echarts-for-react/lib/core';
+// Use the package's ESM build. Its `lib/core` CommonJS build resolves to the
+// module object under Rolldown's production interop, which triggers React
+// error #130 (invalid element type) even though the dev server works.
+import ReactEChartsCore from 'echarts-for-react/esm/core';
 import * as echarts from 'echarts/core';
 import { BarChart, LineChart, PieChart } from 'echarts/charts';
 import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components';
