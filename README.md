@@ -203,6 +203,12 @@ npm run preview -- --port 4173
 npm run test:e2e         # in another terminal
 ```
 
+To run the same flow against a deployed site, pass its URL:
+
+```bash
+npm run test:e2e -- --config baseUrl=https://your-frontend.onrender.com
+```
+
 ---
 
 ## 🚀 Deployment
