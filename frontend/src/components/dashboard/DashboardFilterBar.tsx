@@ -33,6 +33,10 @@ const DashboardFilterBar: React.FC<Props> = ({
       {filters.map((filter) => {
         const value = values[filter.id] ?? '';
         const inputId = `filter-${filter.id}`;
+        const options = filter.options ?? [];
+        // A cross-filter or shared link can carry a value that is not in the
+        // configured option list. Show it instead of rendering a blank select.
+        const hasUnlistedValue = value !== '' && !options.includes(value);
         return (
           <div className="dashboard-filter" key={filter.id}>
             <label htmlFor={inputId}>{filter.label || filter.id}</label>
@@ -43,7 +47,8 @@ const DashboardFilterBar: React.FC<Props> = ({
                 onChange={(event) => onChange(filter.id, event.target.value)}
               >
                 <option value="">All</option>
-                {(filter.options ?? []).map((option) => (
+                {hasUnlistedValue && <option value={value}>{value}</option>}
+                {options.map((option) => (
                   <option key={option} value={option}>{option}</option>
                 ))}
               </select>

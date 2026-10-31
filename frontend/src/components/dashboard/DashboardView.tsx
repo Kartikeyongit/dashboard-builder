@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { dashboardAPI } from '../../api/dashboard';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import { addToast } from '../../store/toastSlice';
-import type { DashboardFilterValues, DashboardFull, WidgetData } from '../../types';
+import type { DashboardFilter, DashboardFilterValues, DashboardFull, WidgetData } from '../../types';
 import { canEditContent } from '../../utils/permissions';
 import { normalizeLayout } from '../../utils/dashboard';
 import {
@@ -12,6 +12,7 @@ import {
   initialFilterValues,
   searchFromFilterValues,
 } from '../../utils/filters';
+import { findCrossFilter, normalizeDimensionName, toggledFilterValue } from '../../utils/crossFilter';
 import { downloadCSV, safeFilename, toCSV } from '../../utils/csv';
 import ChartWidget from './ChartWidget';
 import TableWidget from './TableWidget';
@@ -48,9 +49,11 @@ const DashboardView: React.FC = () => {
   const [error, setError] = useState('');
   const [showShare, setShowShare] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [crossFilterSource, setCrossFilterSource] = useState<{ widgetId: string; filterId: string } | null>(null);
 
   const initializedFor = useRef<string | null>(null);
   const loadedDashboardId = useRef<string | null>(null);
+  const warnedColumns = useRef<Set<string>>(new Set());
   const pageRef = useRef<HTMLDivElement>(null);
   const requestSeq = useRef(0);
   const searchKey = searchParams.toString();
@@ -81,6 +84,8 @@ const DashboardView: React.FC = () => {
     if (loadedDashboardId.current !== dashboardId) {
       loadedDashboardId.current = dashboardId;
       setFull(null);
+      setCrossFilterSource(null);
+      warnedColumns.current = new Set();
     }
     // The URL is the source of truth for applied filters, which keeps copied
     // links working and makes the current filter state explicit.
@@ -129,19 +134,57 @@ const DashboardView: React.FC = () => {
     }
   };
 
+  const applyFilterValues = useCallback(
+    (values: DashboardFilterValues) => {
+      setDraftFilters(values);
+      setAppliedFilters(values);
+      const query = searchFromFilterValues(values);
+      setSearchParams(query ? new URLSearchParams(query) : {}, { replace: true });
+      // The URL effect reloads when the query changes. Re-applying the same
+      // values still needs an explicit reload.
+      if (query === searchKey) load(values);
+    },
+    [load, searchKey, setSearchParams]
+  );
+
   const handleApplyFilters = () => {
-    const query = searchFromFilterValues(draftFilters);
-    setSearchParams(query ? new URLSearchParams(query) : {}, { replace: true });
-    // The URL effect reloads when the query changes. Pressing Apply with an
-    // unchanged query should still refresh, so load here in that case.
-    if (query === searchKey) load(draftFilters);
+    setCrossFilterSource(null);
+    applyFilterValues(draftFilters);
   };
 
   const handleResetFilters = () => {
     const defaults = initialFilterValues(full?.dashboard.filters, {});
+    setCrossFilterSource(null);
     setDraftFilters(defaults);
     setSearchParams({}, { replace: true });
     if (searchKey === '') load(defaults);
+  };
+
+  // A chart click drives an existing dashboard filter. The filter is applied
+  // through the same URL/state path as the filter bar, so the value still
+  // travels to SQL as a bound parameter.
+  const handleChartSelect = (widgetId: string, column: string, value: string) => {
+    const filter = findCrossFilter(full?.dashboard.filters, column);
+    if (!filter) {
+      const normalized = normalizeDimensionName(column);
+      if (normalized && !warnedColumns.current.has(normalized)) {
+        warnedColumns.current.add(normalized);
+        dispatch(addToast({
+          message: `No dashboard filter matches "${column}". Add a filter with id "${normalized}" to cross-filter from this chart.`,
+          type: 'info',
+        }));
+      }
+      return;
+    }
+
+    const next = toggledFilterValue(filter, appliedFilters[filter.id], value);
+    setCrossFilterSource(next === (filter.default ?? '') ? null : { widgetId, filterId: filter.id });
+    applyFilterValues({ ...appliedFilters, [filter.id]: next });
+  };
+
+  const handleClearCrossFilter = (filter: DashboardFilter) => {
+    setCrossFilterSource(null);
+    applyFilterValues({ ...appliedFilters, [filter.id]: filter.default ?? '' });
   };
 
   const handleExportWidget = (widgetData: WidgetData, index: number) => {
@@ -177,6 +220,12 @@ const DashboardView: React.FC = () => {
   if (!full) return null;
 
   const filters = full.dashboard.filters ?? [];
+  const activeCrossFilter = crossFilterSource
+    ? filters.find((filter) => filter.id === crossFilterSource.filterId)
+    : undefined;
+  const activeCrossFilterValue = activeCrossFilter
+    ? appliedFilters[activeCrossFilter.id] ?? ''
+    : '';
   const widgets = [...full.widgets].sort((a, b) => {
     if (a.widget.position_y !== b.widget.position_y) {
       return a.widget.position_y - b.widget.position_y;
@@ -233,6 +282,22 @@ const DashboardView: React.FC = () => {
         onReset={handleResetFilters}
       />
 
+      {activeCrossFilter && activeCrossFilterValue && (
+        <div className="dashboard-cross-filter">
+          <span>
+            Cross-filter: <strong>{activeCrossFilter.label || activeCrossFilter.id}</strong> = {activeCrossFilterValue}
+          </span>
+          <button
+            type="button"
+            onClick={() => handleClearCrossFilter(activeCrossFilter)}
+            title="Clear cross-filter"
+            aria-label="Clear cross-filter"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {error && <div className="dashboard-view-inline-error">{error}</div>}
 
       <div className="dashboard-view-grid">
@@ -249,7 +314,11 @@ const DashboardView: React.FC = () => {
           return (
             <div
               key={widgetData.widget.id}
-              className="dashboard-view-widget"
+              className={`dashboard-view-widget${
+                crossFilterSource?.widgetId === widgetData.widget.id
+                  ? ' dashboard-view-widget--cross-filter-source'
+                  : ''
+              }`}
               style={{
                 gridColumn: `${layout.x + 1} / span ${layout.w}`,
                 gridRow: `${layout.y + 1} / span ${layout.h}`,
@@ -269,7 +338,11 @@ const DashboardView: React.FC = () => {
               </div>
               <div className="dashboard-view-widget-body">
                 {widgetData.widget.widget_type === 'chart' && (
-                  <ChartWidget data={widgetData.data} config={widgetData.widget.config} />
+                  <ChartWidget
+                    data={widgetData.data}
+                    config={widgetData.widget.config}
+                    onSelect={(column, value) => handleChartSelect(widgetData.widget.id, column, value)}
+                  />
                 )}
                 {widgetData.widget.widget_type === 'table' && <TableWidget data={widgetData.data} />}
                 {widgetData.widget.widget_type === 'metric' && (

@@ -14,6 +14,7 @@ Connect databases, write SQL, and design live dashboards with drag‑and‑drop 
 - 🧩 **Drag‑&‑drop builder** – Arrange charts, tables, and metric cards on a grid; auto‑saving layout.
 - 👁️ **Read‑only view mode** – Open any dashboard at `/dashboards/:id` for a clean, distraction‑free view with fullscreen and refresh controls.
 - 🎛️ **Dashboard filters** – Add date, number, text, or dropdown filters and reference them in SQL as `{{filter_id}}`; values are bound as real SQL parameters, never interpolated.
+- 🖱️ **Cross‑filtering** – Click a bar or pie slice to set the dashboard filter for that dimension; every widget using the filter reloads, and the URL updates so the view stays shareable.
 - 📤 **CSV export** – Download table and metric widgets as CSV, including the active filter values.
 - 📑 **Duplicate dashboards** – Copy a dashboard and all of its widgets in one click; saved queries are shared.
 - ✍️ **SQL editor** – Monaco editor with schema autocomplete, query execution, and sandboxed validation.
@@ -311,6 +312,15 @@ Supported types are `text`, `number`, `date`, and `select`. Each filter can defi
 - Active values are stored in the URL as `f_<filter_id>` (for example `?f_start_date=2026-01-01&f_status=paid`), so filtered views can be bookmarked or shared.
 - Clearing a filter sends an explicit empty value, which overrides its default; the widget query then runs without that parameter.
 - If a query references a filter that has no value and no default, that widget shows an error instead of running with a missing parameter.
+
+#### Cross-filtering
+
+Clicking a bar or pie slice sets the dashboard filter whose id (or label) matches the chart's first result column. A chart returning `country, COUNT(*)` drives a filter with id `country` or label `Country`; every widget that references `{{country}}` then reloads with the clicked value.
+
+- Clicking the same value again clears the filter back to its configured default.
+- Charts whose first column has no matching filter show a one-time hint instead of changing the dashboard.
+- Cross-filtering is available in the authenticated dashboard view. Public share links continue to use the dashboard's default filter values.
+- The URL is updated with the normal `f_<filter_id>` parameter, so a cross-filtered view can be bookmarked or shared.
 
 ---
 

@@ -19,22 +19,47 @@ echarts.use([
   CanvasRenderer,
 ]);
 
+type ChartClickParams = {
+  componentType?: string;
+  name?: string | number;
+};
+
 interface Props {
   data?: QueryResult;
   config: any;
+  /**
+   * Called when a data point is clicked. `column` is the chart's first result
+   * column and `value` is the clicked category/slice name. DashboardView maps
+   * that pair onto an existing dashboard filter.
+   */
+  onSelect?: (column: string, value: string) => void;
 }
 
-const ChartWidget: React.FC<Props> = ({ data, config }) => {
+const ChartWidget: React.FC<Props> = ({ data, config, onSelect }) => {
   const chartType = config?.chartType || 'bar';
+  const dimensionColumn = data?.columns?.[0];
+  const interactive = Boolean(onSelect && dimensionColumn);
 
   const option = buildEChartsOption(chartType, data);
+
+  const onEvents = interactive
+    ? {
+        click: (params: ChartClickParams) => {
+          // Ignore legend/title clicks; only data points carry a category.
+          if (params?.componentType !== 'series') return;
+          if (params.name === undefined || params.name === null || params.name === '') return;
+          onSelect?.(String(dimensionColumn), String(params.name));
+        },
+      }
+    : undefined;
 
   return (
     <ReactEChartsCore
       echarts={echarts}
       option={option}
-      style={{ height: '100%', width: '100%' }}
+      style={{ height: '100%', width: '100%', cursor: interactive ? 'pointer' : 'default' }}
       notMerge={true}
+      onEvents={onEvents}
     />
   );
 };

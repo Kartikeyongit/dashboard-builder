@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- route modules hold lazy component references, not hot-reloadable components */
 import { lazy, Suspense } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import AppShell from './components/layout/AppShell';

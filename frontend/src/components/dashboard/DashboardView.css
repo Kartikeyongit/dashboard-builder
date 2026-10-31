@@ -230,6 +230,47 @@
   cursor: not-allowed;
 }
 
+/* ──────── Cross-filter ──────── */
+.dashboard-cross-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  align-self: flex-start;
+  padding: 0.35rem 0.6rem 0.35rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+  border-radius: 999px;
+  background: var(--color-primary-subtle);
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  flex-shrink: 0;
+}
+
+.dashboard-cross-filter strong {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.dashboard-cross-filter button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dashboard-cross-filter button:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
 /* ──────── Grid ──────── */
 .dashboard-view-grid {
   flex: 1;
@@ -262,6 +303,13 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xs);
   overflow: hidden;
+}
+
+.dashboard-view-widget--cross-filter-source {
+  border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-border));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-primary) 25%, transparent),
+    var(--shadow-xs);
 }
 
 .dashboard-view-widget-header {
