@@ -92,21 +92,61 @@ dashboard-builder/
 │   │   │   ├── auth/          # Login, Register
 │   │   │   ├── dashboard/     # DashboardView, DashboardEditor, DashboardList, filters, widgets
 │   │   │   ├── datasource/    # DatasourceList, DatasourceForm
+│   │   │   ├── errors/        # RouteError, NotFound, WidgetBoundary
 │   │   │   ├── home/          # Home page
 │   │   │   ├── layout/        # AppShell
 │   │   │   ├── query/         # QueryEditor, QueryList
 │   │   │   └── viewer/        # SharedDashboardView
 │   │   ├── hooks/             # Custom hooks (useDashboardSocket)
 │   │   ├── store/             # Redux slices (auth, datasource, query, dashboard, toast)
+│   │   ├── styles/            # tokens.css (design tokens), base.css (reset + a11y)
+│   │   ├── theme/             # ThemeProvider (light/dark/system)
 │   │   ├── types/             # TypeScript interfaces
+│   │   ├── ui/                # Shared primitives (Button, Dialog, Field, Tooltip, ErrorState)
 │   │   ├── utils/             # CSV, filter URL, layout, permission helpers
 │   │   ├── animations.ts      # Framer motion variants
 │   │   ├── hooks.ts           # Shared hooks
-│   │   └── theme.ts           # MUI theme config
+│   │   └── theme.ts           # Pre-mount theme bootstrap (no flash of the wrong theme)
 │   ├── Dockerfile             # Frontend container (Nginx)
 │   └── nginx-frontend.conf    # Nginx config for SPA
 └── docker-compose.yml         # Local development environment
 ```
+
+---
+
+## 🎨 UI conventions
+
+The UI is plain CSS driven by design tokens. There is no CSS framework and no
+CSS-in-JS: keep it that way so the bundle stays small and pages stay easy to
+read.
+
+- **Tokens first.** Colors, spacing, radii, shadows, motion, and z-index come
+  from `src/styles/tokens.css`. Do not hard-code hex colors or pixel shadows in
+  component CSS; add a token instead. Dark mode is the same token set under
+  `:root[data-theme='dark']`, so anything token-based adapts automatically.
+- **Primitives second.** Reusable controls live in `src/ui/`: `Button` /
+  `IconButton`, `Dialog` / `ConfirmDialog`, `Field` (`Input`, `Select`,
+  `Textarea`), `Tooltip`, and `ErrorState`. Prefer them over page-local markup.
+  New primitives use a `ui-` class prefix so they never collide with page CSS.
+- **Page CSS third.** Page-specific rules stay in the component's own
+  `*.css` file. Never restyle a primitive from a page file; pass a `className`
+  or add a variant instead.
+- **Behavior comes from Radix.** Dialogs use `@radix-ui/react-dialog` (focus
+  trap, Escape, focus restoration) and tooltips use
+  `@radix-ui/react-tooltip`. Do not hand-roll a modal overlay.
+- **Icons come from `lucide-react`.** Size them with the `size` prop and mark
+  them `aria-hidden` unless they are the only label; icon-only buttons need an
+  `aria-label`.
+- **Accessibility is part of done.** Every form control has a label tied to its
+  id, focus is always visible (`:focus-visible` in `base.css`), and motion
+  respects `prefers-reduced-motion`.
+- **Theme and layout state persist.** The theme is stored under
+  `dashboard-builder-theme` (`light`, `dark`, or `system`) and applied before
+  React mounts. The sidebar collapse state is stored under
+  `dashboard-builder-sidebar-collapsed`.
+- **Failures are contained.** Routes use `RouteError` as their `errorElement`
+  and each dashboard widget is wrapped in `WidgetBoundary`, so one bad query or
+  config shows an inline retry instead of a blank page.
 
 ---
 
@@ -225,6 +265,12 @@ Both specs read the API base from `apiUrl` (default
 ```bash
 npm run test:e2e:features -- --env apiUrl=https://your-api.onrender.com/api/v1
 ```
+
+Run both specs at once with `npx cypress run --spec 'cypress/e2e/*.cy.ts'`.
+CI does exactly that in the `e2e` job: it starts a throwaway PostgreSQL
+service, applies migrations, seeds, boots the API on `:8099`, builds the
+frontend against that API, serves it with `vite preview`, and runs the suite in
+Electron. No external services or secrets are involved.
 
 ---
 
