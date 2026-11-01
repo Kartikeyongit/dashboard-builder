@@ -17,6 +17,13 @@ func Validate(jwtSecret, encryptionKey string) error {
 		return errors.New("JWT_SECRET must be at least 32 characters")
 	}
 
+	return ValidateEncryptionKey(encryptionKey)
+}
+
+// ValidateEncryptionKey checks that the AES key is 32 bytes of hex. Callers
+// that need the key but not the JWT settings (for example the seed command)
+// use this directly so a malformed key fails with a clear message.
+func ValidateEncryptionKey(encryptionKey string) error {
 	if strings.TrimSpace(encryptionKey) == "" {
 		return errors.New("ENCRYPTION_KEY is required")
 	}

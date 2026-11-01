@@ -38,3 +38,32 @@ func TestValidate(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateEncryptionKey(t *testing.T) {
+	tests := []struct {
+		name     string
+		key      string
+		wantErr  bool
+		errMatch string
+	}{
+		{name: "valid", key: strings.Repeat("ab", 32)},
+		{name: "empty", key: "", wantErr: true, errMatch: "ENCRYPTION_KEY is required"},
+		{name: "invalid hex", key: "zz", wantErr: true, errMatch: "valid hex"},
+		{name: "short", key: "abcd", wantErr: true, errMatch: "64 hex"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateEncryptionKey(tt.key)
+			if tt.wantErr && err == nil {
+				t.Fatal("expected an error")
+			}
+			if !tt.wantErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if tt.errMatch != "" && (err == nil || !strings.Contains(err.Error(), tt.errMatch)) {
+				t.Fatalf("expected error containing %q, got %v", tt.errMatch, err)
+			}
+		})
+	}
+}

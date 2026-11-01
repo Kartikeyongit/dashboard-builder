@@ -111,8 +111,10 @@ jobs:
           --health-retries 10
     env:
       DB_URL: postgres://postgres:postgres@localhost:5432/dashboard_builder_e2e?sslmode=disable
-      JWT_SECRET: ci-e2e-jwt-secret-that-is-at-least-32-chars
-      ENCRYPTION_KEY: 0000000000000000000000000000000000000000000000000000000000000001
+      JWT_SECRET: 'ci-e2e-jwt-secret-that-is-at-least-32-chars'
+      # Quote this and keep letters in it: an all-digit value such as
+      # 0000...0001 can be parsed as a number, which mangles the key.
+      ENCRYPTION_KEY: 'a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90'
       REDIS_URL: ''
       PORT: '8099'
       FRONTEND_URL: http://localhost:4173
