@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Database, Save } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../hooks';
-import { createDatasource, updateDatasource } from '../../store/datasourceSlice';
+import { createDatasource, fetchDatasources, updateDatasource } from '../../store/datasourceSlice';
 import type { CreateDatasourcePayload } from '../../types';
 import { addToast } from '../../store/toastSlice';
 import Button from '../../ui/Button';
@@ -28,6 +28,21 @@ const DatasourceForm: React.FC = () => {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  // A direct visit to /datasources/:id/edit has an empty store, so the record
+  // must be fetched before the form can be populated.
+  const [resolving, setResolving] = useState(Boolean(id));
+  const requestedExisting = useRef(false);
+
+  useEffect(() => {
+    if (!id) return;
+    if (existing) {
+      setResolving(false);
+      return;
+    }
+    if (requestedExisting.current) return;
+    requestedExisting.current = true;
+    dispatch(fetchDatasources()).finally(() => setResolving(false));
+  }, [id, existing, dispatch]);
 
   useEffect(() => {
     if (existing) {
@@ -78,6 +93,32 @@ const DatasourceForm: React.FC = () => {
 
     navigate('/datasources');
   };
+
+  if (resolving) {
+    return (
+      <div className="form-page">
+        <p className="form-status" role="status">Loading datasource…</p>
+      </div>
+    );
+  }
+
+  if (id && !existing) {
+    return (
+      <div className="form-page">
+        <button type="button" className="back-btn" onClick={() => navigate('/datasources')}>
+          <ArrowLeft size={14} aria-hidden="true" />
+          Back to datasources
+        </button>
+        <div className="form-status form-status--error" role="alert">
+          <h2>Datasource not found</h2>
+          <p>It may have been deleted, or it belongs to another organization.</p>
+          <Button variant="secondary" onClick={() => navigate('/datasources')}>
+            Back to datasources
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="form-page">
