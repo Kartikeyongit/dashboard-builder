@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import { fetchDatasources, deleteDatasource, testDatasourceConnection } from '../../store/datasourceSlice';
 import { addToast } from '../../store/toastSlice';
 import { canEditContent } from '../../utils/permissions';
 import EmptyState from '../ui/EmptyState';
+import ConfirmDialog from '../../ui/ConfirmDialog';
 import '../ui/ListPage.css';
 import './DatasourceList.css';
 
@@ -13,15 +14,23 @@ const DatasourceList: React.FC = () => {
   const { items, loading } = useAppSelector((state) => state.datasources);
   const user = useAppSelector((state) => state.auth.user);
   const canEdit = canEditContent(user);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     dispatch(fetchDatasources());
   }, [dispatch]);
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('Delete this datasource?')) {
-      dispatch(deleteDatasource(id));
+  const handleDelete = async () => {
+    if (!pendingDelete || deleting) return;
+    setDeleting(true);
+    const result = await dispatch(deleteDatasource(pendingDelete.id));
+    setDeleting(false);
+    setPendingDelete(null);
+    if (deleteDatasource.fulfilled.match(result)) {
       dispatch(addToast({ message: 'Datasource deleted', type: 'success' }));
+    } else {
+      dispatch(addToast({ message: 'Failed to delete datasource', type: 'error' }));
     }
   };
 
@@ -77,7 +86,7 @@ const DatasourceList: React.FC = () => {
                       <>
                         <button className="edit-link" onClick={() => handleTest(ds.id)}>Test</button>
                         <Link to={`/datasources/${ds.id}/edit`} className="edit-link">Edit</Link>
-                        <button className="delete-btn" onClick={() => handleDelete(ds.id)}>Delete</button>
+                        <button className="delete-btn" onClick={() => setPendingDelete({ id: ds.id, name: ds.name })}>Delete</button>
                       </>
                     )}
                   </div>
@@ -97,6 +106,21 @@ const DatasourceList: React.FC = () => {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title="Delete datasource?"
+        description={
+          pendingDelete
+            ? `“${pendingDelete.name}” will be permanently removed. Queries that depend on it will stop working.`
+            : undefined
+        }
+        confirmLabel="Delete"
+        destructive
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 };

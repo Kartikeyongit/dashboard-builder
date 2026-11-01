@@ -229,8 +229,6 @@
 
 .feature-card {
   background: var(--color-glass);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   border-radius: var(--radius-xl);
   padding: 2rem 1.5rem;
   border: 1px solid var(--color-glass-border);
@@ -292,8 +290,6 @@
 
 .step-card {
   background: var(--color-glass);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   border-radius: var(--radius-xl);
   padding: 2rem 1.75rem;
   border: 1px solid var(--color-glass-border);
@@ -522,87 +518,6 @@
 .showcase-change.positive { color: var(--color-success); }
 .showcase-change.negative { color: var(--color-danger); }
 
-/* ---------- Testimonials (horizontal scroll) ---------- */
-.testimonials-scroll {
-  display: flex;
-  gap: 1.25rem;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  padding: 0.5rem 0.25rem;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  cursor: grab;
-  scroll-behavior: smooth;
-}
-
-.testimonials-scroll:active {
-  cursor: grabbing;
-}
-
-.testimonials-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.testimonial-card {
-  flex: 0 0 340px;
-  scroll-snap-align: start;
-  background: var(--color-glass);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-radius: var(--radius-xl);
-  padding: 1.75rem;
-  border: 1px solid var(--color-glass-border);
-  box-shadow: var(--color-glass-shadow);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-}
-
-.testimonial-card:hover {
-  border-color: rgba(99, 102, 241, 0.25);
-  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.06), var(--color-glass-shadow);
-}
-
-.testimonial-text {
-  font-size: 0.9rem;
-  color: var(--color-text-secondary);
-  line-height: 1.65;
-  font-style: italic;
-  margin-bottom: 1.25rem;
-  flex: 1;
-}
-
-.testimonial-author {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.testimonial-avatar {
-  width: 38px;
-  height: 38px;
-  border-radius: 999px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: white;
-  flex-shrink: 0;
-}
-
-.testimonial-name {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--color-text);
-}
-
-.testimonial-role {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-}
-
 /* ---------- CTA ---------- */
 .cta-section {
   padding-bottom: 5rem;
@@ -815,10 +730,6 @@
 
   .hero-visual {
     display: none;
-  }
-
-  .testimonial-card {
-    flex: 0 0 280px;
   }
 
   .footer-inner {
@@ -1454,70 +1365,6 @@
 .mockup-change.positive { color: var(--color-success); }
 .mockup-change.negative { color: var(--color-danger); }
 
-/* ---------- Testimonials ---------- */
-.testimonials-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.25rem;
-}
-
-.testimonial-card {
-  background: var(--color-surface);
-  border-radius: var(--radius-xl);
-  padding: 1.75rem;
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-  cursor: default;
-}
-
-.testimonial-card:hover {
-  border-color: rgba(59, 130, 246, 0.25);
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.06), var(--shadow-md);
-}
-
-.testimonial-quote {
-  font-size: 0.9rem;
-  color: var(--color-text-secondary);
-  line-height: 1.65;
-  font-style: italic;
-  margin-bottom: 1.25rem;
-  flex: 1;
-}
-
-.testimonial-author {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.testimonial-avatar {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: white;
-  flex-shrink: 0;
-}
-
-.testimonial-name {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--color-text);
-}
-
-.testimonial-role {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-}
-
 /* ---------- Pricing ---------- */
 .pricing-section {
   background: var(--color-bg);
@@ -1768,9 +1615,6 @@
     grid-template-columns: 1fr;
   }
   .integrations-grid {
-    grid-template-columns: 1fr;
-  }
-  .testimonials-grid {
     grid-template-columns: 1fr;
   }
 }

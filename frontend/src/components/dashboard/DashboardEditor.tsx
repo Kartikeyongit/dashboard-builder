@@ -15,6 +15,7 @@ import type { CreateWidgetPayload } from '../../api/dashboard';
 import { addToast } from '../../store/toastSlice';
 import { useDashboardSocket } from '../../hooks/useDashboardSocket';
 import { canEditContent } from '../../utils/permissions';
+import { apiErrorMessage } from '../../utils/apiError';
 import { getNextWidgetY, widgetToLayout } from '../../utils/dashboard';
 import ChartWidget from './ChartWidget';
 import TableWidget from './TableWidget';
@@ -23,6 +24,7 @@ import AddWidgetDialog from './AddWidgetDialog';
 import ShareDialog from './ShareDialog';
 import DashboardFilterDialog from './DashboardFilterDialog';
 import EmptyState from '../ui/EmptyState';
+import WidgetBoundary from '../errors/WidgetBoundary';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import './DashboardEditor.css';
@@ -154,16 +156,24 @@ const DashboardEditor: React.FC = () => {
 
   const handleAddWidget = async (payload: CreateWidgetPayload) => {
     if (!dashboardId) return;
-    await widgetAPI.create(dashboardId, payload);
-    dispatch(addToast({ message: 'Widget added', type: 'success' }));
-    dispatch(loadDashboardFull(dashboardId));
+    try {
+      await widgetAPI.create(dashboardId, payload);
+      dispatch(addToast({ message: 'Widget added', type: 'success' }));
+      dispatch(loadDashboardFull(dashboardId));
+    } catch (err) {
+      dispatch(addToast({ message: apiErrorMessage(err, 'Could not add the widget'), type: 'error' }));
+    }
   };
 
   const handleDeleteWidget = async (widgetId: string) => {
     if (!dashboardId) return;
-    await widgetAPI.delete(dashboardId, widgetId);
-    dispatch(addToast({ message: 'Widget removed', type: 'success' }));
-    dispatch(removeWidgetFromCurrent(widgetId));
+    try {
+      await widgetAPI.delete(dashboardId, widgetId);
+      dispatch(addToast({ message: 'Widget removed', type: 'success' }));
+      dispatch(removeWidgetFromCurrent(widgetId));
+    } catch (err) {
+      dispatch(addToast({ message: apiErrorMessage(err, 'Could not remove the widget'), type: 'error' }));
+    }
   };
 
   if (loading || !currentFull) {
@@ -271,9 +281,14 @@ const DashboardEditor: React.FC = () => {
                 )}
               </div>
               <div className="widget-content">
-                {wd.widget.widget_type === 'chart' && <ChartWidget data={wd.data} config={wd.widget.config} />}
-                {wd.widget.widget_type === 'table' && <TableWidget data={wd.data} />}
-                {wd.widget.widget_type === 'metric' && <MetricWidget data={wd.data} config={wd.widget.config} />}
+                <WidgetBoundary
+                  title="This widget failed to render"
+                  resetKey={`${wd.widget.id}:${wd.error ?? ''}:${wd.data ? wd.data.rows.length : 'none'}`}
+                >
+                  {wd.widget.widget_type === 'chart' && <ChartWidget data={wd.data} config={wd.widget.config} />}
+                  {wd.widget.widget_type === 'table' && <TableWidget data={wd.data} />}
+                  {wd.widget.widget_type === 'metric' && <MetricWidget data={wd.data} config={wd.widget.config} />}
+                </WidgetBoundary>
                 {wd.error && <div className="widget-error">{wd.error}</div>}
               </div>
             </div>

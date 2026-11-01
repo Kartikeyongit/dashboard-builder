@@ -121,9 +121,7 @@
 /* ---------- Form Side ---------- */
 .auth-form-side {
   flex: 1;
-  background: var(--color-glass);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--color-surface);
   padding: 2.5rem 3rem;
   display: flex;
   flex-direction: column;
@@ -361,29 +359,30 @@
 
 /* Demo hint */
 .demo-hint {
+  display: block;
+  width: 100%;
   margin-top: 1.25rem;
   padding: 0.75rem 1rem;
-  background: var(--color-glass);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid var(--color-glass-border);
+  background: var(--color-surface-hover);
+  border: 1px dashed var(--color-border-strong);
   border-radius: var(--radius-lg);
+  font-family: inherit;
   font-size: 0.8rem;
   color: var(--color-text-secondary);
   text-align: center;
   line-height: 1.5;
   cursor: pointer;
-  transition: background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
 }
 
 .demo-hint:hover {
-  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-glass));
-  border-color: color-mix(in srgb, var(--color-primary) 30%, var(--color-glass-border));
-  box-shadow: 0 0 16px color-mix(in srgb, var(--color-primary) 12%, transparent);
+  background: var(--color-primary-subtle);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .demo-hint code {
-  font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 0.78rem;
   background: color-mix(in srgb, var(--color-primary) 10%, transparent);
   padding: 0.1rem 0.4rem;

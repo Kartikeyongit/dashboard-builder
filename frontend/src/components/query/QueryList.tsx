@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import { fetchQueries, deleteQuery } from '../../store/querySlice';
@@ -6,6 +6,7 @@ import { queryAPI } from '../../api/query';
 import { addToast } from '../../store/toastSlice';
 import { canEditContent } from '../../utils/permissions';
 import EmptyState from '../ui/EmptyState';
+import ConfirmDialog from '../../ui/ConfirmDialog';
 import '../ui/ListPage.css';
 import './QueryList.css';
 
@@ -14,15 +15,23 @@ const QueryList: React.FC = () => {
   const { items, loading } = useAppSelector((state) => state.queries);
   const user = useAppSelector((state) => state.auth.user);
   const canEdit = canEditContent(user);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     dispatch(fetchQueries());
   }, [dispatch]);
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('Delete this query?')) {
-      dispatch(deleteQuery(id));
+  const handleDelete = async () => {
+    if (!pendingDelete || deleting) return;
+    setDeleting(true);
+    const result = await dispatch(deleteQuery(pendingDelete.id));
+    setDeleting(false);
+    setPendingDelete(null);
+    if (deleteQuery.fulfilled.match(result)) {
       dispatch(addToast({ message: 'Query deleted', type: 'success' }));
+    } else {
+      dispatch(addToast({ message: 'Failed to delete query', type: 'error' }));
     }
   };
 
@@ -76,7 +85,9 @@ const QueryList: React.FC = () => {
                     {canEdit && <Link to={`/queries/${q.id}/edit`} className="edit-link">Edit</Link>}
                     <button className="edit-link" onClick={() => handleRun(q.id)}>Run</button>
                     {canEdit && (
-                      <button className="delete-btn" onClick={() => handleDelete(q.id)}>Delete</button>
+                      <button className="delete-btn" onClick={() => setPendingDelete({ id: q.id, name: q.name })}>
+                        Delete
+                      </button>
                     )}
                   </div>
                 </li>
@@ -95,6 +106,21 @@ const QueryList: React.FC = () => {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title="Delete query?"
+        description={
+          pendingDelete
+            ? `“${pendingDelete.name}” will be permanently removed. Widgets that use it must be updated first.`
+            : undefined
+        }
+        confirmLabel="Delete"
+        destructive
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 };

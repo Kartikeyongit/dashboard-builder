@@ -20,6 +20,7 @@ import MetricWidget from './MetricWidget';
 import DashboardFilterBar from './DashboardFilterBar';
 import ShareDialog from './ShareDialog';
 import EmptyState from '../ui/EmptyState';
+import WidgetBoundary from '../errors/WidgetBoundary';
 import './DashboardView.css';
 
 const normalizeFull = (data: DashboardFull): DashboardFull => ({
@@ -337,17 +338,22 @@ const DashboardView: React.FC = () => {
                 )}
               </div>
               <div className="dashboard-view-widget-body">
-                {widgetData.widget.widget_type === 'chart' && (
-                  <ChartWidget
-                    data={widgetData.data}
-                    config={widgetData.widget.config}
-                    onSelect={(column, value) => handleChartSelect(widgetData.widget.id, column, value)}
-                  />
-                )}
-                {widgetData.widget.widget_type === 'table' && <TableWidget data={widgetData.data} />}
-                {widgetData.widget.widget_type === 'metric' && (
-                  <MetricWidget data={widgetData.data} config={widgetData.widget.config} />
-                )}
+                <WidgetBoundary
+                  title={`Widget ${index + 1} failed to render`}
+                  resetKey={`${widgetData.widget.id}:${widgetData.error ?? ''}:${widgetData.data ? widgetData.data.rows.length : 'none'}`}
+                >
+                  {widgetData.widget.widget_type === 'chart' && (
+                    <ChartWidget
+                      data={widgetData.data}
+                      config={widgetData.widget.config}
+                      onSelect={(column, value) => handleChartSelect(widgetData.widget.id, column, value)}
+                    />
+                  )}
+                  {widgetData.widget.widget_type === 'table' && <TableWidget data={widgetData.data} />}
+                  {widgetData.widget.widget_type === 'metric' && (
+                    <MetricWidget data={widgetData.data} config={widgetData.widget.config} />
+                  )}
+                </WidgetBoundary>
                 {widgetData.error && <div className="dashboard-view-widget-error">{widgetData.error}</div>}
               </div>
             </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppDispatch, useAppSelector } from '../../hooks';
@@ -31,18 +31,12 @@ const features = [
   },
 ];
 
-const testimonials = [
-  { name: 'Sarah Chen', role: 'Data Engineer at Acme', avatar: 'SC', quote: 'We replaced a complex BI stack with Dashboard Builder. Our team went from waiting days for reports to building their own dashboards in minutes.', color: '#6366f1' },
-  { name: 'Marcus Johnson', role: 'CTO at Stackflow', avatar: 'MJ', quote: 'The SQL editor with schema auto-complete is a game changer. Our analysts can explore data without switching between tools.', color: '#8b5cf6' },
-  { name: 'Elena Rodriguez', role: 'Product Manager at Nimbus', avatar: 'ER', quote: 'Sharing live dashboards with stakeholders used to be a headache. Now I just send a link and they see real-time data instantly.', color: '#10b981' },
-];
-
 const faqItems = [
-  { q: 'What databases can I connect?', a: 'Dashboard Builder supports PostgreSQL and MySQL out of the box. You can connect via SSL, use custom ports, test connections before saving, and manage multiple datasources from a single workspace.' },
-  { q: 'Do I need to install anything?', a: 'Not at all. Dashboard Builder runs entirely in your browser. Just sign up, connect your database, and start building dashboards immediately — no downloads, no CLI tools, no server setup required.' },
-  { q: 'Can I share dashboards without an account?', a: 'Yes. You can generate shareable links with live data that work for anyone, even without a login. Its perfect for stakeholders who just need to view near-time dashboards without creating an account.' },
-  { q: 'Is my data secure?', a: 'Data is encrypted in transit (TLS) and at rest. Query results are cached temporarily for performance but never persisted long-term. Viewer-only links grant read access to specific dashboards only.' },
-  { q: 'Can I export dashboard data?', a: 'Yes. Charts and tables support export to common formats like CSV and PNG. You can also share dashboards as live views or embed them in other applications.' },
+  { q: 'What databases can I connect?', a: 'Dashboard Builder supports PostgreSQL and MySQL out of the box. You can connect over SSL, use custom ports, and keep several datasources in one workspace. A saved connection can be tested at any time from the datasource list.' },
+  { q: 'Do I need to install anything?', a: 'Only if you host it yourself. The app is open source: run the Go API and the web client, or use the deployment guide in the README. Once it is running, everything happens in the browser.' },
+  { q: 'Can I share dashboards without an account?', a: 'Yes. Generate a read-only share link, optionally protected by a password and an expiry date. Anyone with the link can view the dashboard without creating an account.' },
+  { q: 'Is my data secure?', a: 'Datasource credentials are encrypted at rest with a key you control. Queries run against your own database, and share links grant read-only access to one dashboard. Query results are cached only for the dashboard refresh interval.' },
+  { q: 'Can I export dashboard data?', a: 'Yes. Table and metric widgets can be downloaded as CSV from the dashboard view.' },
 ];
 
 function SectionHeader({ label, title, desc }: { label: string; title: string; desc?: string }) {
@@ -156,58 +150,6 @@ function HeroArt() {
         </defs>
       </motion.svg>
     </div>
-  );
-}
-
-type Testimonial = { name: string; role: string; avatar: string; quote: string; color: string };
-
-function AutoScrollTestimonials({ testimonials }: { testimonials: Testimonial[] }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
-  const [isPaused, setIsPaused] = useState(false);
-
-  const startScroll = useCallback(() => {
-    intervalRef.current = setInterval(() => {
-      if (!scrollRef.current || isPaused) return;
-      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-      const maxScroll = scrollWidth - clientWidth;
-      const next = scrollLeft + clientWidth;
-      scrollRef.current.scrollTo({
-        left: next >= maxScroll ? 0 : next,
-        behavior: 'smooth',
-      });
-    }, 4000);
-  }, [isPaused]);
-
-  useEffect(() => {
-    startScroll();
-    return () => clearInterval(intervalRef.current);
-  }, [startScroll]);
-
-  return (
-    <motion.div
-      className="testimonials-scroll"
-      ref={scrollRef}
-      variants={staggerContainer}
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true }}
-      onMouseEnter={() => { setIsPaused(true); clearInterval(intervalRef.current); }}
-      onMouseLeave={() => { setIsPaused(false); startScroll(); }}
-    >
-      {testimonials.map((t, i) => (
-        <motion.div key={i} className="testimonial-card" variants={fadeInUp}>
-          <div className="testimonial-text">"{t.quote}"</div>
-          <div className="testimonial-author">
-            <div className="testimonial-avatar" style={{ background: t.color }}>{t.avatar}</div>
-            <div>
-              <div className="testimonial-name">{t.name}</div>
-              <div className="testimonial-role">{t.role}</div>
-            </div>
-          </div>
-        </motion.div>
-      ))}
-    </motion.div>
   );
 }
 
@@ -431,15 +373,6 @@ const PublicLanding = () => {
         </div>
       </section>
 
-      {/* ──────── Testimonials ──────── */}
-      <section className="section">
-        <div className="section-inner">
-          <SectionHeader label="Testimonials" title="Trusted by data teams" desc="See what our users say about Dashboard Builder." />
-
-          <AutoScrollTestimonials testimonials={testimonials} />
-        </div>
-      </section>
-
       {/* ──────── FAQ ──────── */}
       <section className="section faq-section">
         <div className="section-inner">
@@ -533,17 +466,6 @@ const AuthenticatedHome = () => {
 
   const recentDashboards = [...dashboards].slice(0, 3);
   const hasData = datasources.length > 0 || queries.length > 0 || dashboards.length > 0;
-
-  const activities: { label: string; time: string; color: string }[] = [];
-  if (datasources.length > 0) {
-    activities.push({ label: `${datasources.length} datasource${datasources.length > 1 ? 's' : ''} connected`, time: 'active', color: '#6366f1' });
-  }
-  if (queries.length > 0) {
-    activities.push({ label: `${queries.length} quer${queries.length > 1 ? 'ies' : 'y'} saved`, time: 'active', color: '#8b5cf6' });
-  }
-  if (dashboards.length > 0) {
-    activities.push({ label: `${dashboards.length} dashboard${dashboards.length > 1 ? 's' : ''} built`, time: 'active', color: '#10b981' });
-  }
 
   const firstName = user?.email?.split('@')[0] || 'there';
   const displayName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
@@ -640,35 +562,6 @@ const AuthenticatedHome = () => {
           </motion.div>
         ))}
       </motion.div>
-
-      {/* Activity */}
-      {activities.length > 0 && (
-        <motion.div
-          className="home-section"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.4 }}
-        >
-          <div className="home-section-header">
-            <h3>Activity</h3>
-          </div>
-          <div className="activity-list">
-            {activities.map((a, i) => (
-              <motion.div
-                key={i}
-                className="activity-item"
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.35 + i * 0.05, duration: 0.3 }}
-              >
-                <div className="activity-dot" style={{ background: a.color }} />
-                <span className="activity-text">{a.label}</span>
-                <span className="activity-time">{a.time}</span>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-      )}
 
       {/* Recent Dashboards */}
       {recentDashboards.length > 0 && (

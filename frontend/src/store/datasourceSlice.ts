@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { datasourceAPI } from '../api/datasource';
 import type { Datasource, CreateDatasourcePayload } from '../types';
+import { apiErrorMessage } from '../utils/apiError';
 
 interface DatasourceState {
   items: Datasource[];
@@ -19,18 +20,31 @@ export const fetchDatasources = createAsyncThunk('datasources/fetchAll', async (
   return Array.isArray(res.data) ? res.data : [];
 });
 
-export const createDatasource = createAsyncThunk('datasources/create', async (payload: CreateDatasourcePayload) => {
-  const res = await datasourceAPI.create(payload);
-  return res.data;
+export const createDatasource = createAsyncThunk<
+  Datasource,
+  CreateDatasourcePayload,
+  { rejectValue: string }
+>('datasources/create', async (payload, { rejectWithValue }) => {
+  try {
+    const res = await datasourceAPI.create(payload);
+    return res.data;
+  } catch (err) {
+    return rejectWithValue(apiErrorMessage(err, 'Could not create the datasource.'));
+  }
 });
 
-export const updateDatasource = createAsyncThunk(
-  'datasources/update',
-  async ({ id, data }: { id: string; data: CreateDatasourcePayload }) => {
+export const updateDatasource = createAsyncThunk<
+  { id: string; data: CreateDatasourcePayload },
+  { id: string; data: CreateDatasourcePayload },
+  { rejectValue: string }
+>('datasources/update', async ({ id, data }, { rejectWithValue }) => {
+  try {
     await datasourceAPI.update(id, data);
-    return { id, data }; // we'll merge changes later
+    return { id, data };
+  } catch (err) {
+    return rejectWithValue(apiErrorMessage(err, 'Could not update the datasource.'));
   }
-);
+});
 
 export const deleteDatasource = createAsyncThunk('datasources/delete', async (id: string) => {
   await datasourceAPI.delete(id);

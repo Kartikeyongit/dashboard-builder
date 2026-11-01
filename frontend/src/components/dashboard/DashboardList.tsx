@@ -5,7 +5,10 @@ import { fetchDashboards, createDashboard, duplicateDashboard, deleteDashboard }
 import { addToast } from '../../store/toastSlice';
 import { canEditContent } from '../../utils/permissions';
 import EmptyState from '../ui/EmptyState';
-import '../ui/Modal.css';
+import Dialog from '../../ui/Dialog';
+import ConfirmDialog from '../../ui/ConfirmDialog';
+import Button from '../../ui/Button';
+import Field, { Input } from '../../ui/Field';
 import '../ui/ListPage.css';
 import './DashboardList.css';
 
@@ -20,6 +23,7 @@ const DashboardList: React.FC = () => {
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -43,8 +47,10 @@ const DashboardList: React.FC = () => {
   };
 
   const handleDelete = async () => {
-    if (!pendingDelete) return;
+    if (!pendingDelete || deleting) return;
+    setDeleting(true);
     const result = await dispatch(deleteDashboard(pendingDelete.id));
+    setDeleting(false);
     setPendingDelete(null);
     if (deleteDashboard.fulfilled.match(result)) {
       dispatch(addToast({ message: 'Dashboard deleted', type: 'success' }));
@@ -144,54 +150,55 @@ const DashboardList: React.FC = () => {
         </div>
       </div>
 
-      {showCreate && (
-        <div className="modal-overlay" onClick={() => setShowCreate(false)}>
-          <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
-            <h3 className="modal-title">New Dashboard</h3>
-            <div className="modal-field">
-              <label>Name</label>
-              <input
-                autoFocus
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="e.g. Weekly revenue"
-                onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-              />
-            </div>
-            <div className="modal-actions">
-              <button
-                className="modal-btn modal-btn--primary"
-                onClick={handleCreate}
-                disabled={!newName.trim() || creating}
-              >
-                {creating ? 'Creating...' : 'Create'}
-              </button>
-              <button className="modal-btn modal-btn--secondary" onClick={() => setShowCreate(false)}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Dialog
+        open={showCreate}
+        onOpenChange={(next) => {
+          if (!next) setShowCreate(false);
+        }}
+        title="New dashboard"
+        description="Give it a name. You can add widgets and filters next."
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowCreate(false)} disabled={creating}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleCreate}
+              loading={creating}
+              disabled={!newName.trim()}
+            >
+              Create dashboard
+            </Button>
+          </>
+        }
+      >
+        <Field label="Name" required>
+          <Input
+            autoFocus
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="e.g. Weekly revenue"
+            onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+          />
+        </Field>
+      </Dialog>
 
-      {pendingDelete && (
-        <div className="modal-overlay" onClick={() => setPendingDelete(null)}>
-          <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
-            <h3 className="modal-title">Delete dashboard?</h3>
-            <p className="modal-hint">
-              “{pendingDelete.name}” and its widgets will be permanently removed. Queries are not deleted.
-            </p>
-            <div className="modal-actions">
-              <button className="modal-btn modal-btn--primary" onClick={handleDelete}>
-                Delete
-              </button>
-              <button className="modal-btn modal-btn--secondary" onClick={() => setPendingDelete(null)}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title="Delete dashboard?"
+        description={
+          pendingDelete
+            ? `“${pendingDelete.name}” and its widgets will be permanently removed. Queries are not deleted.`
+            : undefined
+        }
+        confirmLabel="Delete"
+        destructive
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 };

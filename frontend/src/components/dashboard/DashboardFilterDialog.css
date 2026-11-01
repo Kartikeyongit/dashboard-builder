@@ -1,23 +1,16 @@
-.filter-dialog {
-  width: 760px;
-  max-width: 94vw;
-  max-height: 88vh;
-  overflow-y: auto;
-}
-
 .filter-dialog-hint {
-  margin: -0.75rem 0 1.25rem;
-  font-size: 0.82rem;
-  line-height: 1.5;
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: 1.55;
   color: var(--color-text-muted);
 }
 
 .filter-dialog-hint code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.78rem;
   padding: 0.1rem 0.35rem;
   border-radius: var(--radius-xs);
-  background: var(--color-bg);
+  background: var(--color-surface-hover);
   border: 1px solid var(--color-border);
   color: var(--color-primary);
 }
@@ -31,8 +24,8 @@
 .filter-row {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: 0.9rem;
-  background: color-mix(in srgb, var(--color-bg) 55%, transparent);
+  padding: 0.85rem;
+  background: var(--color-bg);
 }
 
 .filter-row-fields {
@@ -41,62 +34,14 @@
   gap: 0.6rem;
 }
 
-.filter-row .modal-field {
-  margin-bottom: 0.5rem;
-}
-
-.filter-row .modal-field select {
-  width: 100%;
-  padding: 0.55rem 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-family: inherit;
-  font-size: 0.9rem;
-  color: var(--color-text);
-  background-color: var(--color-bg);
-  box-sizing: border-box;
-}
-
-.filter-row .modal-field select:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 12%, transparent);
-}
-
 .filter-options-field {
-  margin-top: 0.25rem;
+  margin-top: 0.6rem;
 }
 
-.filter-remove-btn {
-  border: 1px solid var(--color-danger-border);
-  background: transparent;
-  color: var(--color-danger);
-  border-radius: var(--radius-sm);
-  padding: 0.3rem 0.7rem;
-  font-size: 0.78rem;
-  cursor: pointer;
-  transition: background var(--transition-fast);
-}
-
-.filter-remove-btn:hover {
-  background: var(--color-danger-subtle);
-}
-
-.filter-add-btn {
-  margin-top: 0.9rem;
-  border: 1px dashed var(--color-border);
-  background: transparent;
-  color: var(--color-text-secondary);
-  border-radius: var(--radius-md);
-  padding: 0.5rem 0.9rem;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: border-color var(--transition-fast), color var(--transition-fast);
-}
-
-.filter-add-btn:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+.filter-row-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.4rem;
 }
 
 .filter-empty {
@@ -104,7 +49,7 @@
   padding: 1.5rem;
   text-align: center;
   color: var(--color-text-muted);
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   border: 1px dashed var(--color-border);
   border-radius: var(--radius-lg);
 }
@@ -112,5 +57,11 @@
 @media (max-width: 720px) {
   .filter-row-fields {
     grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .filter-row-fields {
+    grid-template-columns: 1fr;
   }
 }

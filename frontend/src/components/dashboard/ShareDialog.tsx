@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
+import { Check, Copy, Link2 } from 'lucide-react';
 import { shareAPI } from '../../api/share';
-import '../ui/Modal.css';
+import Dialog from '../../ui/Dialog';
+import Button from '../../ui/Button';
+import Field, { Input } from '../../ui/Field';
 import './ShareDialog.css';
 
 interface Props {
@@ -13,83 +16,122 @@ const ShareDialog: React.FC<Props> = ({ dashboardId, onClose }) => {
   const [expiry, setExpiry] = useState('');
   const [link, setLink] = useState('');
   const [error, setError] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const handleCreate = async () => {
+    if (creating) return;
+    setError('');
+
+    let expiresAt: string | undefined;
+    if (expiry) {
+      const parsed = new Date(expiry);
+      if (Number.isNaN(parsed.getTime())) {
+        setError('Enter a valid expiry date and time.');
+        return;
+      }
+      if (parsed.getTime() <= Date.now()) {
+        setError('Expiry must be in the future.');
+        return;
+      }
+      expiresAt = parsed.toISOString();
+    }
+
+    setCreating(true);
     try {
       const res = await shareAPI.create(dashboardId, {
         password: password || undefined,
-        expires_at: expiry || undefined,
+        expires_at: expiresAt,
       });
       setLink(res.data.url);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create link');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError('Could not copy automatically. Select the link and copy it manually.');
     }
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-panel modal-panel--wide" onClick={(e) => e.stopPropagation()}>
-        <h3 className="modal-title">
-          <svg viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-          </svg>
-          Share Dashboard
-        </h3>
-
-        {link ? (
-          <>
-            <p className="share-description">Shareable link (read‑only):</p>
-            <div className="link-output">
-              <input value={link} readOnly />
-              <button
-                className="modal-btn modal-btn--primary"
-                style={{ flex: '0 0 auto', padding: '0.6rem 1rem' }}
-                onClick={() => navigator.clipboard.writeText(link)}
-              >
-                Copy
-              </button>
-            </div>
-            <div className="modal-actions">
-              <button className="modal-btn modal-btn--secondary" onClick={onClose}>
-                Close
-              </button>
-            </div>
-          </>
+    <Dialog
+      open
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+      title="Share dashboard"
+      description="Anyone with the link can view this dashboard read-only. No account required."
+      size="md"
+      footer={
+        link ? (
+          <Button variant="secondary" onClick={onClose}>
+            Close
+          </Button>
         ) : (
           <>
-            <div className="modal-field">
-              <label>Password (optional)</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Leave empty for public access"
-              />
-            </div>
-
-            <div className="modal-field">
-              <label>Expiry (optional)</label>
-              <input
-                type="datetime-local"
-                value={expiry}
-                onChange={(e) => setExpiry(new Date(e.target.value).toISOString())}
-              />
-            </div>
-
-            {error && <div className="error-message">{error}</div>}
-
-            <div className="modal-actions">
-              <button className="modal-btn modal-btn--primary" onClick={handleCreate}>
-                Generate Link
-              </button>
-              <button className="modal-btn modal-btn--secondary" onClick={onClose}>
-                Cancel
-              </button>
-            </div>
+            <Button variant="secondary" onClick={onClose} disabled={creating}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={handleCreate} loading={creating}>
+              <Link2 size={14} aria-hidden="true" />
+              Generate link
+            </Button>
           </>
-        )}
-      </div>
-    </div>
+        )
+      }
+    >
+      {link ? (
+        <>
+          <div className="share-success">
+            <Check size={14} aria-hidden="true" />
+            Link created. It is active until you revoke it.
+          </div>
+          <Field label="Shareable link">
+            <Input value={link} readOnly onFocus={(event) => event.currentTarget.select()} />
+          </Field>
+          <Button variant="secondary" onClick={handleCopy}>
+            {copied ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
+            {copied ? 'Copied' : 'Copy link'}
+          </Button>
+        </>
+      ) : (
+        <>
+          <Field
+            label="Password (optional)"
+            hint="Viewers must enter this password before the dashboard loads."
+          >
+            <Input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="Leave empty for public access"
+              autoComplete="new-password"
+            />
+          </Field>
+
+          <Field
+            label="Expiry (optional)"
+            hint="The link stops working after this local date and time."
+          >
+            <Input
+              type="datetime-local"
+              value={expiry}
+              onChange={(event) => setExpiry(event.target.value)}
+            />
+          </Field>
+
+          {error && <p className="share-error" role="alert">{error}</p>}
+        </>
+      )}
+    </Dialog>
   );
 };
 

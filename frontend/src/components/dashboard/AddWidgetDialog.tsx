@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { Plus } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import { fetchQueries } from '../../store/querySlice';
 import type { CreateWidgetPayload } from '../../api/dashboard';
-import Dropdown from '../ui/Dropdown';
-import '../ui/Modal.css';
+import Dialog from '../../ui/Dialog';
+import Button from '../../ui/Button';
+import Field, { Select } from '../../ui/Field';
 
 interface Props {
   onClose: () => void;
@@ -46,75 +48,69 @@ const AddWidgetDialog: React.FC<Props> = ({ onClose, onAdd, nextY = 0 }) => {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
-        <h3 className="modal-title">
-          <svg viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-          </svg>
-          Add Widget
-        </h3>
-
-        <div className="modal-field">
-          <label>Query</label>
-          <Dropdown
-            value={selectedQueryId}
-            onChange={setSelectedQueryId}
-            options={[
-              { value: '', label: queriesLoading ? 'Loading queries...' : 'Select a query' },
-              ...queries.map(q => ({ value: q.id, label: q.name })),
-            ]}
-            placeholder="Select a query"
-          />
-          {!queriesLoading && queries.length === 0 && (
-            <p className="modal-hint">
-              No queries yet. Create a query first, then add it as a widget.
-            </p>
-          )}
-        </div>
-
-        <div className="modal-field">
-          <label>Widget type</label>
-          <Dropdown
-            value={widgetType}
-            onChange={(v) => setWidgetType(v as 'chart' | 'table' | 'metric')}
-            options={[
-              { value: 'chart', label: 'Chart' },
-              { value: 'table', label: 'Table' },
-              { value: 'metric', label: 'Metric' },
-            ]}
-          />
-        </div>
-
-        {widgetType === 'chart' && (
-          <div className="modal-field">
-            <label>Chart type</label>
-            <Dropdown
-              value={chartType}
-              onChange={setChartType}
-              options={[
-                { value: 'bar', label: 'Bar' },
-                { value: 'line', label: 'Line' },
-                { value: 'pie', label: 'Pie' },
-              ]}
-            />
-          </div>
-        )}
-
-        <div className="modal-actions">
-          <button
-            className="modal-btn modal-btn--primary"
-            onClick={handleSubmit}
-            disabled={!selectedQueryId}
-          >
-            Add Widget
-          </button>
-          <button className="modal-btn modal-btn--secondary" onClick={onClose}>
+    <Dialog
+      open
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+      title="Add widget"
+      description="Choose a saved query, then how its results should be displayed."
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
             Cancel
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+          <Button variant="primary" onClick={handleSubmit} disabled={!selectedQueryId}>
+            <Plus size={14} aria-hidden="true" />
+            Add widget
+          </Button>
+        </>
+      }
+    >
+      <Field
+        label="Query"
+        hint={
+          !queriesLoading && queries.length === 0
+            ? 'No queries yet. Create a query first, then add it as a widget.'
+            : undefined
+        }
+      >
+        <Select
+          value={selectedQueryId}
+          onChange={(event) => setSelectedQueryId(event.target.value)}
+        >
+          <option value="">
+            {queriesLoading ? 'Loading queries…' : 'Select a query'}
+          </option>
+          {queries.map((query) => (
+            <option key={query.id} value={query.id}>
+              {query.name}
+            </option>
+          ))}
+        </Select>
+      </Field>
+
+      <Field label="Widget type">
+        <Select
+          value={widgetType}
+          onChange={(event) => setWidgetType(event.target.value as 'chart' | 'table' | 'metric')}
+        >
+          <option value="chart">Chart</option>
+          <option value="table">Table</option>
+          <option value="metric">Metric</option>
+        </Select>
+      </Field>
+
+      {widgetType === 'chart' && (
+        <Field label="Chart type">
+          <Select value={chartType} onChange={(event) => setChartType(event.target.value)}>
+            <option value="bar">Bar</option>
+            <option value="line">Line</option>
+            <option value="pie">Pie</option>
+          </Select>
+        </Field>
+      )}
+    </Dialog>
   );
 };
 
