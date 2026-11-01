@@ -8,9 +8,11 @@ describe('dashboard production smoke', () => {
     cy.url({ timeout: 30000 }).should('not.include', '/login');
 
     // Navigate through the UI so the test also works on static hosts that do
-    // not rewrite deep links to index.html.
+    // not rewrite deep links to index.html. Pick the seeded "Sales Overview"
+    // dashboard explicitly: it is the one guaranteed to contain charts, while
+    // the list is ordered newest first and may open a table-only dashboard.
     cy.contains('a', 'Dashboards').click();
-    cy.get('.list-card').first().contains('a', 'View').click();
+    cy.contains('.list-card', 'Sales Overview').contains('a', 'View').click();
     cy.contains('Unexpected Application Error').should('not.exist');
     cy.get('.dashboard-view-widget', { timeout: 30000 }).should('have.length.greaterThan', 0);
     cy.get('canvas', { timeout: 30000 }).should('have.length.greaterThan', 0);
