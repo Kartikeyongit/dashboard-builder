@@ -17,8 +17,6 @@
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   background: var(--color-glass);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   color: var(--color-text-secondary);
   cursor: pointer;
   font-weight: 500;
@@ -40,8 +38,6 @@
   align-items: center;
   gap: 1rem;
   background: var(--color-glass);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--color-glass-border);
   border-radius: var(--radius-2xl);
   padding: 1rem 1.5rem;

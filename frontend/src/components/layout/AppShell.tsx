@@ -1,11 +1,41 @@
 import React, { Suspense, useEffect, useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Database,
+  Home as HomeIcon,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Moon,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Sun,
+  Terminal,
+} from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import { logoutUser, restoreAuth } from '../../store/authSlice';
+import { useTheme } from '../../theme/useTheme';
 import Toast from '../Toast';
+import Tooltip from '../../ui/Tooltip';
 import RouteFallback from '../ui/RouteFallback';
 import './AppShell.css';
+
+const SIDEBAR_STORAGE_KEY = 'dashboard-builder-sidebar-collapsed';
+
+function readSidebarCollapsed(): boolean {
+  try {
+    return window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+const NAV_ITEMS = [
+  { to: '/', label: 'Home', icon: HomeIcon, end: true },
+  { to: '/datasources', label: 'Datasources', icon: Database },
+  { to: '/queries', label: 'Queries', icon: Terminal },
+  { to: '/dashboards', label: 'Dashboards', icon: LayoutDashboard },
+];
 
 const AppShell: React.FC = () => {
   const user = useAppSelector((state) => state.auth.user);
@@ -13,15 +43,30 @@ const AppShell: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const location = useLocation();
+  const { resolved: theme, toggle: toggleTheme } = useTheme();
 
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
 
   useEffect(() => {
     dispatch(restoreAuth());
   }, [dispatch]);
 
-  const initals = user?.email
+  // Remember the sidebar choice across reloads.
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SIDEBAR_STORAGE_KEY, sidebarCollapsed ? '1' : '0');
+    } catch {
+      // Storage may be unavailable; the choice still applies for this session.
+    }
+  }, [sidebarCollapsed]);
+
+  // Close the mobile drawer whenever navigation happens.
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
+  const initials = user?.email
     ? user.email
         .split('@')[0]
         .split(/[._-]/)
@@ -30,15 +75,6 @@ const AppShell: React.FC = () => {
         .toUpperCase()
         .slice(0, 2)
     : '??';
-
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const handler = (e: MediaQueryListEvent) => {
-      document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
-    };
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
 
   const handleLogout = () => {
     dispatch(logoutUser());
@@ -63,114 +99,93 @@ const AppShell: React.FC = () => {
     return routedPage;
   }
 
-  const isActive = (path: string) => {
-    if (path === '/') return location.pathname === '/' ? 'active' : '';
-    return location.pathname.startsWith(path) ? 'active' : '';
+  const isActive = (path: string, end?: boolean) => {
+    if (end) return location.pathname === path;
+    return location.pathname.startsWith(path);
   };
 
   return (
     <div className="app-shell">
-      {/* Mobile backdrop */}
       {mobileOpen && <div className="sidebar-backdrop" onClick={() => setMobileOpen(false)} />}
 
-      <aside className={`sidebar${mobileOpen ? ' sidebar--mobile-open' : ''}${sidebarCollapsed ? ' sidebar--collapsed' : ''}`}>
+      <aside
+        className={`sidebar${mobileOpen ? ' sidebar--mobile-open' : ''}${sidebarCollapsed ? ' sidebar--collapsed' : ''}`}
+        aria-label="Main navigation"
+      >
         <div className="sidebar-logo">
-          <svg className="sidebar-logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="7" height="7" rx="1" />
-            <rect x="14" y="3" width="7" height="7" rx="1" />
-            <rect x="3" y="14" width="7" height="7" rx="1" />
-            <rect x="14" y="14" width="7" height="7" rx="1" />
-          </svg>
+          <LayoutDashboard className="sidebar-logo-icon" size={22} aria-hidden="true" />
           <span className="sidebar-logo-text">Dashboard Builder</span>
-          <button
-            className="sidebar-collapse-btn"
-            onClick={() => setSidebarCollapsed((c) => !c)}
-            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-            </svg>
-          </button>
+          <Tooltip content={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+            <button
+              className="sidebar-collapse-btn"
+              onClick={() => setSidebarCollapsed((c) => !c)}
+              aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {sidebarCollapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
+            </button>
+          </Tooltip>
         </div>
 
-        <nav onClick={() => setMobileOpen(false)}>
+        <nav>
           <ul className="sidebar-nav">
-            <li>
-              <Link to="/" className={isActive('/')} title="Home">
-                <svg className="nav-icon" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7A1 1 0 003 11h1v6a1 1 0 001 1h4a1 1 0 001-1v-3h2v3a1 1 0 001 1h4a1 1 0 001-1v-6h1a1 1 0 00.707-1.707l-7-7z" />
-                </svg>
-                <span className="nav-label">Home</span>
-              </Link>
-            </li>
-            <li>
-              <Link to="/datasources" className={isActive('/datasources')} title="Datasources">
-                <svg className="nav-icon" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 5a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V9zm0 5a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2z" />
-                </svg>
-                <span className="nav-label">Datasources</span>
-              </Link>
-            </li>
-            <li>
-              <Link to="/queries" className={isActive('/queries')} title="Queries">
-                <svg className="nav-icon" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-                </svg>
-                <span className="nav-label">Queries</span>
-              </Link>
-            </li>
-            <li>
-              <Link to="/dashboards" className={isActive('/dashboards')} title="Dashboards">
-                <svg className="nav-icon" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zm0 8a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zm6-6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zm0 8a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                </svg>
-                <span className="nav-label">Dashboards</span>
-              </Link>
-            </li>
+            {NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const active = isActive(item.to, item.end);
+              return (
+                <li key={item.to}>
+                  <Link
+                    to={item.to}
+                    className={active ? 'active' : ''}
+                    aria-current={active ? 'page' : undefined}
+                  >
+                    <Icon className="nav-icon" size={18} aria-hidden="true" />
+                    <span className="nav-label">{item.label}</span>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </nav>
 
-          <div className="sidebar-footer">
-            <div className="sidebar-user">
-              <div className="user-avatar" title={user.email}>
-                {initals}
-              </div>
-              <span className="user-email">{user.email}</span>
+        <div className="sidebar-footer">
+          <div className="sidebar-user">
+            <div className="user-avatar" title={user.email}>
+              {initials}
             </div>
+            <span className="user-email">{user.email}</span>
+          </div>
+          <div className="sidebar-actions">
+            <Tooltip content={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}>
+              <button
+                className="user-signout user-signout--theme"
+                onClick={toggleTheme}
+                aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+              >
+                {theme === 'dark' ? (
+                  <Sun className="user-signout-icon" size={16} aria-hidden="true" />
+                ) : (
+                  <Moon className="user-signout-icon" size={16} aria-hidden="true" />
+                )}
+                <span className="user-signout-label">Theme</span>
+              </button>
+            </Tooltip>
             <button className="user-signout" onClick={handleLogout}>
-              <svg className="user-signout-icon" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h5a1 1 0 100-2H4V5h4a1 1 0 100-2H3zm11.707 3.293a1 1 0 010 1.414L12.414 10l2.293 2.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clipRule="evenodd" />
-                <path d="M11 10a1 1 0 011-1h5a1 1 0 110 2h-5a1 1 0 01-1-1z" />
-              </svg>
+              <LogOut className="user-signout-icon" size={16} aria-hidden="true" />
               <span className="user-signout-label">Sign out</span>
             </button>
           </div>
+        </div>
       </aside>
 
-      {/* Mobile hamburger + main */}
       <div className="main-wrapper">
         <button
           className="mobile-menu-btn"
           onClick={() => setMobileOpen(true)}
           aria-label="Open menu"
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-          </svg>
+          <Menu size={20} aria-hidden="true" />
         </button>
-        <main className="main-content">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={location.pathname}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
-            >
-              {routedPage}
-            </motion.div>
-          </AnimatePresence>
-        </main>
+        <main className="main-content">{routedPage}</main>
       </div>
       <Toast />
     </div>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 // Use the package's ESM build. Its `lib/core` CommonJS build resolves to the
 // module object under Rolldown's production interop, which triggers React
 // error #130 (invalid element type) even though the dev server works.
@@ -7,6 +7,7 @@ import * as echarts from 'echarts/core';
 import { BarChart, LineChart, PieChart } from 'echarts/charts';
 import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
+import { useTheme } from '../../theme/useTheme';
 import type { QueryResult } from '../../types';
 
 // Register only the pieces the dashboard charts use. Importing all of ECharts
@@ -39,11 +40,16 @@ interface Props {
 }
 
 const ChartWidget: React.FC<Props> = ({ data, config, onSelect }) => {
+  const { resolved: theme } = useTheme();
   const chartType = config?.chartType || 'bar';
   const dimensionColumn = data?.columns?.[0];
   const interactive = Boolean(onSelect && dimensionColumn);
 
-  const option = buildEChartsOption(chartType, data);
+  // Rebuild when the theme changes so axis, legend, and tooltip colors follow
+  // the active palette without a data refetch. `buildEChartsOption` reads CSS
+  // variables, so the linter cannot see that `theme` is a real dependency.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const option = useMemo(() => buildEChartsOption(chartType, data), [chartType, data, theme]);
 
   const onEvents = interactive
     ? {

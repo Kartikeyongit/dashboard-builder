@@ -2,6 +2,8 @@
 import { lazy, Suspense } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import AppShell from './components/layout/AppShell';
+import RouteError from './components/errors/RouteError';
+import NotFound from './components/errors/NotFound';
 import RouteFallback from './components/ui/RouteFallback';
 
 // Routes are split so the initial bundle stays small. Monaco, AG Grid, and
@@ -26,10 +28,12 @@ const router = createBrowserRouter([
         <SharedDashboardView />
       </Suspense>
     ),
+    errorElement: <RouteError />,
   },
   {
     path: '/',
     element: <AppShell />,
+    errorElement: <RouteError />,
     children: [
       { index: true, element: <Home /> },
       { path: 'login', element: <Login /> },
@@ -43,6 +47,7 @@ const router = createBrowserRouter([
       { path: 'dashboards', element: <DashboardList /> },
       { path: 'dashboards/:dashboardId', element: <DashboardView /> },
       { path: 'dashboards/:dashboardId/edit', element: <DashboardEditor /> },
+      { path: '*', element: <NotFound /> },
     ],
   },
 ]);

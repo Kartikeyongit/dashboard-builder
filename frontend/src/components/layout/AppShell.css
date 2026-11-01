@@ -11,8 +11,6 @@
   width: 240px;
   height: 100vh;
   background: var(--color-glass);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   display: flex;
   flex-direction: column;
   padding: 1rem;
@@ -102,6 +100,21 @@
   opacity: 0;
   width: 0;
   overflow: hidden;
+}
+
+.sidebar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.user-signout--theme {
+  color: var(--color-sidebar-text);
+}
+
+.user-signout--theme:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
 }
 
 /* ──────── Logo ──────── */
@@ -351,8 +364,6 @@
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   background: var(--color-glass);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   color: var(--color-text);
   cursor: pointer;
   align-items: center;

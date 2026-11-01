@@ -1,0 +1,168 @@
+/*
+ * Design tokens.
+ *
+ * These are the only values new UI should reference. Existing component CSS
+ * already uses the --color-*, --shadow-*, and --radius-* names below, so this
+ * file is the single source of truth for both old and new surfaces.
+ */
+
+:root {
+  /* ── Typography ─────────────────────────────────────────────── */
+  --font-sans: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+
+  --text-2xs: 0.6875rem; /* 11px */
+  --text-xs: 0.75rem;    /* 12px */
+  --text-sm: 0.8125rem;  /* 13px */
+  --text-md: 0.875rem;   /* 14px */
+  --text-lg: 1rem;       /* 16px */
+  --text-xl: 1.25rem;    /* 20px */
+  --text-2xl: 1.5rem;    /* 24px */
+  --text-3xl: 2rem;      /* 32px */
+
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+
+  /* ── Spacing (4px base) ─────────────────────────────────────── */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  /* ── Surfaces ───────────────────────────────────────────────── */
+  --color-bg: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f3f4f6;
+  --color-surface-active: #e9ebef;
+  --color-sidebar: #ffffff;
+  --color-sidebar-hover: #f3f4f6;
+  --color-sidebar-active: #eef2ff;
+  --color-sidebar-text: #5b6472;
+  --color-sidebar-text-active: #111827;
+  --color-sidebar-accent: #4f46e5;
+
+  /* ── Text ───────────────────────────────────────────────────── */
+  --color-text: #111827;
+  --color-text-secondary: #4b5563;
+  --color-text-muted: #8b93a1;
+
+  /* ── Borders ────────────────────────────────────────────────── */
+  --color-border: #e3e6eb;
+  --color-border-strong: #cfd4dc;
+  --color-border-light: #f0f1f4;
+
+  /* ── Brand and semantics ────────────────────────────────────── */
+  --color-primary: #4f46e5;
+  --color-primary-hover: #4338ca;
+  --color-primary-subtle: #eef2ff;
+  --color-primary-contrast: #ffffff;
+  --color-accent: #0891b2;
+  --color-accent-hover: #0e7490;
+  --color-accent-subtle: #ecfeff;
+  --color-danger: #dc2626;
+  --color-danger-hover: #b91c1c;
+  --color-danger-subtle: #fef2f2;
+  --color-danger-border: #fecaca;
+  --color-success: #059669;
+  --color-success-hover: #047857;
+  --color-success-subtle: #ecfdf5;
+  --color-warning: #b45309;
+  --color-warning-subtle: #fffbeb;
+  --color-warning-border: #fde68a;
+
+  --color-overlay: rgba(17, 24, 39, 0.45);
+  /* Legacy glass names resolve to solid surfaces: one calm material, not five. */
+  --color-glass: var(--color-surface);
+  --color-glass-border: var(--color-border);
+  --color-glass-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+
+  /* ── Elevation ──────────────────────────────────────────────── */
+  --shadow-xs: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-sm: 0 1px 3px rgba(16, 24, 40, 0.06), 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-md: 0 4px 10px rgba(16, 24, 40, 0.07), 0 2px 4px rgba(16, 24, 40, 0.04);
+  --shadow-lg: 0 12px 24px rgba(16, 24, 40, 0.08), 0 4px 8px rgba(16, 24, 40, 0.04);
+  --shadow-xl: 0 24px 48px rgba(16, 24, 40, 0.12), 0 8px 16px rgba(16, 24, 40, 0.06);
+
+  /* ── Radii ──────────────────────────────────────────────────── */
+  --radius-xs: 3px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-2xl: 12px;
+  --radius-full: 9999px;
+
+  /* ── Motion ─────────────────────────────────────────────────── */
+  --transition-fast: 120ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 160ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 220ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Focus and layering ─────────────────────────────────────── */
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-primary) 28%, transparent);
+  --focus-ring-danger: 0 0 0 3px color-mix(in srgb, var(--color-danger) 25%, transparent);
+
+  --z-dropdown: 900;
+  --z-dialog: 1000;
+  --z-toast: 1100;
+}
+
+:root[data-theme='dark'] {
+  --color-bg: #0b1120;
+  --color-surface: #151c2c;
+  --color-surface-hover: #1c2436;
+  --color-surface-active: #232c40;
+  --color-sidebar: #0b1120;
+  --color-sidebar-hover: rgba(255, 255, 255, 0.05);
+  --color-sidebar-active: rgba(129, 140, 248, 0.12);
+  --color-sidebar-text: #8b95a7;
+  --color-sidebar-text-active: #f1f5f9;
+  --color-sidebar-accent: #a5b4fc;
+
+  --color-text: #e8ecf3;
+  --color-text-secondary: #aab3c2;
+  --color-text-muted: #7c8798;
+
+  --color-border: #2a3448;
+  --color-border-strong: #3b475e;
+  --color-border-light: #1c2436;
+
+  --color-primary: #818cf8;
+  --color-primary-hover: #a5b4fc;
+  --color-primary-subtle: rgba(129, 140, 248, 0.12);
+  --color-primary-contrast: #0b1120;
+  --color-accent: #22d3ee;
+  --color-accent-hover: #67e8f9;
+  --color-accent-subtle: rgba(34, 211, 238, 0.1);
+  --color-danger: #f87171;
+  --color-danger-hover: #fca5a5;
+  --color-danger-subtle: rgba(248, 113, 113, 0.1);
+  --color-danger-border: rgba(248, 113, 113, 0.3);
+  --color-success: #34d399;
+  --color-success-hover: #6ee7b7;
+  --color-success-subtle: rgba(52, 211, 153, 0.1);
+  --color-warning: #fbbf24;
+  --color-warning-subtle: rgba(251, 191, 36, 0.1);
+  --color-warning-border: rgba(251, 191, 36, 0.3);
+
+  --color-overlay: rgba(0, 0, 0, 0.62);
+  --color-glass: var(--color-surface);
+  --color-glass-border: var(--color-border);
+  --color-glass-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.45), 0 4px 8px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 24px 48px rgba(0, 0, 0, 0.55), 0 8px 16px rgba(0, 0, 0, 0.35);
+
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}

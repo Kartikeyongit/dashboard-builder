@@ -1,0 +1,16 @@
+.ui-tooltip {
+  z-index: var(--z-toast);
+  max-width: 260px;
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-text);
+  color: var(--color-surface);
+  font-size: var(--text-xs);
+  line-height: 1.35;
+  box-shadow: var(--shadow-md);
+  animation: fade-in var(--transition-fast) ease;
+}
+
+.ui-tooltip__arrow {
+  fill: var(--color-text);
+}
