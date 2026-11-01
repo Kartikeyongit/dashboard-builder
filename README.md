@@ -239,7 +239,7 @@ seeded local database, and a production build pointed at that API:
 ```bash
 cd frontend
 VITE_API_URL=http://127.0.0.1:8099/api/v1 npm run build
-npm run preview -- --port 4173
+npm run preview -- --port 4173 --host 127.0.0.1
 npm run test:e2e         # in another terminal
 ```
 
@@ -268,9 +268,9 @@ npm run test:e2e:features -- --env apiUrl=https://your-api.onrender.com/api/v1
 
 Run both specs at once with `npx cypress run --spec 'cypress/e2e/*.cy.ts'`.
 CI does exactly that in the `e2e` job: it starts a throwaway PostgreSQL
-service, applies migrations, seeds, boots the API on `:8099`, builds the
-frontend against that API, serves it with `vite preview`, and runs the suite in
-Electron. No external services or secrets are involved.
+service, boots the API on `:8099` (which applies the migrations), seeds the
+demo data, builds the frontend against that API, serves it with `vite preview`,
+and runs the suite in Electron. No external services or secrets are involved.
 
 ---
 
