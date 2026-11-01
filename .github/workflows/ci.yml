@@ -132,24 +132,10 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Apply migrations
-        env:
-          PGPASSWORD: postgres
-        run: |
-          if ! command -v psql >/dev/null; then
-            sudo apt-get update
-            sudo apt-get install -y postgresql-client
-          fi
-          for f in backend/internal/db/migrations/*.up.sql; do
-            psql -h localhost -U postgres -d dashboard_builder_e2e -v ON_ERROR_STOP=1 -f "$f"
-          done
-
-      - name: Seed demo data
-        working-directory: backend
-        run: go run ./cmd/seed
-
       - name: Start API
         working-directory: backend
+        env:
+          MIGRATIONS_DIR: internal/db/migrations
         run: |
           go build -o /tmp/dashboard-api ./cmd/api
           nohup /tmp/dashboard-api > /tmp/api.log 2>&1 &
@@ -158,6 +144,14 @@ jobs:
             sleep 1
           done
           echo "API did not become healthy"; cat /tmp/api.log; exit 1
+
+      # The API applies its own migrations on boot (tracked in
+      # schema_migrations), so seeding runs after it is up. Applying the SQL
+      # files separately would leave them untracked and the API would try to
+      # create the same tables again.
+      - name: Seed demo data
+        working-directory: backend
+        run: go run ./cmd/seed
 
       - name: Install frontend dependencies
         working-directory: frontend
@@ -192,3 +186,7 @@ jobs:
       - name: API logs
         if: failure()
         run: cat /tmp/api.log || true
+
+      - name: Preview logs
+        if: failure()
+        run: cat /tmp/preview.log || true
