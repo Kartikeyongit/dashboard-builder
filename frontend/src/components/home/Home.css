@@ -1646,3 +1646,97 @@
     padding: 2rem 1.25rem;
   }
 }
+
+/* ──────── Authenticated home additions ──────── */
+.welcome-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.home-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.95rem;
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background var(--transition-fast), transform var(--transition-fast);
+}
+
+.home-cta:hover {
+  background: var(--color-primary-hover);
+}
+
+.home-cta:active {
+  transform: scale(0.98);
+}
+
+.home-cta--ghost {
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-border-strong);
+}
+
+.home-cta--ghost:hover {
+  background: var(--color-primary-subtle);
+}
+
+button.home-dashboard-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  text-align: left;
+  color: inherit;
+}
+
+.home-dashboard-icon--pinned {
+  background: color-mix(in srgb, var(--color-warning, #d97706) 14%, transparent);
+  color: var(--color-warning, #d97706);
+}
+
+.home-section-sub {
+  margin: 0.15rem 0 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.home-onboarding-dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.home-onboarding-dismiss:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.home-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-surface-hover);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.home-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-primary);
+  transition: width var(--transition-normal);
+}

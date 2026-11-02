@@ -100,8 +100,12 @@ export interface Dashboard {
   id: string;
   org_id: string;
   name: string;
+  description?: string;
+  tags?: string[];
   refresh_interval_seconds: number;
   filters?: DashboardFilter[];
+  is_favorite?: boolean;
+  widget_count?: number;
   created_by: string;
   created_at: string;
   updated_at: string;

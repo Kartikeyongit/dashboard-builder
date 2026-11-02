@@ -163,6 +163,9 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 	dashboards.Get("/:id/full", dashboardFullHandler.GetFull)
 	dashboards.Post("/:id/duplicate", editorOnly, dashboardHandler.Duplicate)
 	dashboards.Post("/:id/share", editorOnly, shareHandler.CreateShareLink)
+	// Favorites are per-user, so viewers can pin dashboards too.
+	dashboards.Put("/:id/favorite", dashboardHandler.SetFavorite(true))
+	dashboards.Delete("/:id/favorite", dashboardHandler.SetFavorite(false))
 
 	widgets := dashboards.Group("/:dashboardId/widgets")
 	widgets.Post("/", editorOnly, widgetHandler.Create)

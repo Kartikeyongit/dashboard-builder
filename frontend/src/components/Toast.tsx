@@ -1,9 +1,12 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useAppSelector, useAppDispatch } from '../hooks';
 import { removeToast } from '../store/toastSlice';
+import type { Toast as ToastModel } from '../store/toastSlice';
+import { runToastAction } from '../utils/toastActions';
 import './Toast.css';
 
-const ToastItem: React.FC<{ id: string; message: string; type: string }> = ({ id, message, type }) => {
+const ToastItem: React.FC<{ toast: ToastModel }> = ({ toast }) => {
+  const { id, message, type, action, durationMs = 4000 } = toast;
   const dispatch = useAppDispatch();
   const [exiting, setExiting] = useState(false);
   const [progress, setProgress] = useState(100);
@@ -17,11 +20,10 @@ const ToastItem: React.FC<{ id: string; message: string; type: string }> = ({ id
 
   useEffect(() => {
     startRef.current = Date.now();
-    const duration = 4000;
 
     const tick = () => {
       const elapsed = Date.now() - startRef.current;
-      const remaining = Math.max(0, 100 - (elapsed / duration) * 100);
+      const remaining = Math.max(0, 100 - (elapsed / durationMs) * 100);
       setProgress(remaining);
       if (remaining > 0) {
         rafRef.current = requestAnimationFrame(tick);
@@ -31,7 +33,13 @@ const ToastItem: React.FC<{ id: string; message: string; type: string }> = ({ id
     };
     rafRef.current = requestAnimationFrame(tick);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [dismiss]);
+  }, [dismiss, durationMs]);
+
+  const handleAction = () => {
+    if (!action) return;
+    runToastAction(action.actionId, action.payload);
+    dismiss();
+  };
 
   return (
     <div className={`toast toast--${type} ${exiting ? 'toast--exit' : ''}`} role="alert">
@@ -51,6 +59,11 @@ const ToastItem: React.FC<{ id: string; message: string; type: string }> = ({ id
         )}
       </span>
       <span className="toast-message">{message}</span>
+      {action && (
+        <button type="button" className="toast-action" onClick={handleAction}>
+          {action.label}
+        </button>
+      )}
       <button className="toast-close" onClick={dismiss} aria-label="Dismiss">
         <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
           <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -71,7 +84,7 @@ const Toast: React.FC = () => {
   return (
     <div className="toast-container">
       {toasts.map(t => (
-        <ToastItem key={t.id} id={t.id} message={t.message} type={t.type} />
+        <ToastItem key={t.id} toast={t} />
       ))}
     </div>
   );

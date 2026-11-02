@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import type { PayloadAction } from '@reduxjs/toolkit';
 import { datasourceAPI } from '../api/datasource';
 import type { Datasource, CreateDatasourcePayload } from '../types';
 import { apiErrorMessage } from '../utils/apiError';
@@ -59,7 +60,16 @@ export const testDatasourceConnection = createAsyncThunk('datasources/test', asy
 const datasourceSlice = createSlice({
   name: 'datasources',
   initialState,
-  reducers: {},
+  reducers: {
+    hideDatasource: (state, action: PayloadAction<string>) => {
+      state.items = state.items.filter(d => d.id !== action.payload);
+    },
+    restoreDatasource: (state, action: PayloadAction<Datasource>) => {
+      if (!state.items.some(d => d.id === action.payload.id)) {
+        state.items.unshift(action.payload);
+      }
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchDatasources.pending, (state) => { state.loading = true; state.error = null; })
@@ -77,5 +87,10 @@ const datasourceSlice = createSlice({
       });
   },
 });
+
+export const {
+  hideDatasource,
+  restoreDatasource,
+} = datasourceSlice.actions;
 
 export default datasourceSlice.reducer;

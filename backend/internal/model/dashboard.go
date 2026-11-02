@@ -19,11 +19,17 @@ type Dashboard struct {
 	ID                 string            `json:"id"`
 	OrgID              string            `json:"org_id"`
 	Name               string            `json:"name"`
+	Description        string            `json:"description"`
+	Tags               []string          `json:"tags"`
 	RefreshIntervalSec int               `json:"refresh_interval_seconds"`
 	Filters            []DashboardFilter `json:"filters"`
-	CreatedBy          string            `json:"created_by"`
-	CreatedAt          time.Time         `json:"created_at"`
-	UpdatedAt          time.Time         `json:"updated_at"`
+	// IsFavorite is computed per user when the dashboard is listed.
+	IsFavorite bool `json:"is_favorite"`
+	// WidgetCount is computed from the widgets table for library metadata.
+	WidgetCount int       `json:"widget_count"`
+	CreatedBy   string    `json:"created_by"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // FilterDefaults returns the configured default value for every filter that has

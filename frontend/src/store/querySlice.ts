@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import type { PayloadAction } from '@reduxjs/toolkit';
 import { queryAPI } from '../api/query';
 import type { Query, CreateQueryPayload } from '../types';
 
@@ -37,7 +38,16 @@ export const deleteQuery = createAsyncThunk('queries/delete', async (id: string)
 const querySlice = createSlice({
   name: 'queries',
   initialState,
-  reducers: {},
+  reducers: {
+    hideQuery: (state, action: PayloadAction<string>) => {
+      state.items = state.items.filter(q => q.id !== action.payload);
+    },
+    restoreQuery: (state, action: PayloadAction<Query>) => {
+      if (!state.items.some(q => q.id === action.payload.id)) {
+        state.items.unshift(action.payload);
+      }
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchQueries.pending, (state) => { state.loading = true; state.error = null; })
@@ -53,5 +63,10 @@ const querySlice = createSlice({
       });
   },
 });
+
+export const {
+  hideQuery,
+  restoreQuery,
+} = querySlice.actions;
 
 export default querySlice.reducer;

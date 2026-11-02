@@ -22,6 +22,7 @@ import TableWidget from './TableWidget';
 import MetricWidget from './MetricWidget';
 import AddWidgetDialog from './AddWidgetDialog';
 import ShareDialog from './ShareDialog';
+import DashboardSettingsDialog from './DashboardSettingsDialog';
 import DashboardFilterDialog from './DashboardFilterDialog';
 import EmptyState from '../ui/EmptyState';
 import WidgetBoundary from '../errors/WidgetBoundary';
@@ -63,6 +64,7 @@ const DashboardEditor: React.FC = () => {
 
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [gridWidth, setGridWidth] = useState(1200);
@@ -237,6 +239,12 @@ const DashboardEditor: React.FC = () => {
                 </svg>
                 Share
               </button>
+              <button className="secondary" onClick={() => setShowSettings(true)}>
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M11.49 3.17a1 1 0 00-1.98 0l-.2.82a1.5 1.5 0 01-2.12 1.06l-.75-.37a1 1 0 00-1.4 1.4l.37.75a1.5 1.5 0 01-1.06 2.12l-.82.2a1 1 0 000 1.98l.82.2a1.5 1.5 0 011.06 2.12l-.37.75a1 1 0 001.4 1.4l.75-.37a1.5 1.5 0 012.12 1.06l.2.82a1 1 0 001.98 0l.2-.82a1.5 1.5 0 012.12-1.06l.75.37a1 1 0 001.4-1.4l-.37-.75a1.5 1.5 0 011.06-2.12l.82-.2a1 1 0 000-1.98l-.82-.2a1.5 1.5 0 01-1.06-2.12l.37-.75a1 1 0 00-1.4-1.4l-.75.37a1.5 1.5 0 01-2.12-1.06l-.2-.82zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                </svg>
+                Settings
+              </button>
             </>
           )}
           <button className="secondary" onClick={() => navigate(`/dashboards/${dashboardId}`)}>
@@ -316,6 +324,13 @@ const DashboardEditor: React.FC = () => {
       )}
       {canEdit && showShare && dashboardId && (
         <ShareDialog dashboardId={dashboardId} onClose={() => setShowShare(false)} />
+      )}
+      {canEdit && currentFull && (
+        <DashboardSettingsDialog
+          open={showSettings}
+          onOpenChange={setShowSettings}
+          dashboard={currentFull.dashboard}
+        />
       )}
       {canEdit && showFilters && currentFull && (
         <DashboardFilterDialog

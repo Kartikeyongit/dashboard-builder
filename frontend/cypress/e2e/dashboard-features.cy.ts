@@ -192,11 +192,12 @@ describe('dashboard features', () => {
   it('duplicates a dashboard and copies its widgets', () => {
     cy.visit('/dashboards');
     cy.contains('.list-card', fixtureName, { timeout: 30000 }).within(() => {
-      cy.contains('button', 'Duplicate').click();
+      cy.get('button[aria-label$="actions"]').click();
     });
+    cy.contains('.ui-menu__item', 'Duplicate').click();
 
     cy.contains('Dashboard duplicated', { timeout: 30000 }).should('exist');
-    cy.contains('.card-title', `${fixtureName} (copy)`, { timeout: 30000 }).should('exist');
+    cy.contains('.dashboard-card__title', `${fixtureName} (copy)`, { timeout: 30000 }).should('exist');
   });
 
   it('requires the password for a protected share link', () => {

@@ -1,34 +1,106 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Star } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../hooks';
-import { fetchDashboards, createDashboard, duplicateDashboard, deleteDashboard } from '../../store/dashboardSlice';
+import {
+  createDashboard,
+  deleteDashboard,
+  duplicateDashboard,
+  fetchDashboards,
+  hideDashboard,
+  restoreDashboard,
+  setDashboardFavorite,
+  updateDashboard,
+} from '../../store/dashboardSlice';
 import { addToast } from '../../store/toastSlice';
 import { canEditContent } from '../../utils/permissions';
+import { useDeferredDelete } from '../../hooks/useDeferredDelete';
+import {
+  DASHBOARD_SORT_OPTIONS,
+  filterDashboards,
+  sortDashboards,
+} from '../../utils/library';
+import type { DashboardSort } from '../../utils/library';
+import { pluralize } from '../../utils/format';
+import type { Dashboard } from '../../types';
 import EmptyState from '../ui/EmptyState';
+import ListToolbar from '../ui/ListToolbar';
 import Dialog from '../../ui/Dialog';
-import ConfirmDialog from '../../ui/ConfirmDialog';
 import Button from '../../ui/Button';
 import Field, { Input } from '../../ui/Field';
+import RenameDialog from '../../ui/RenameDialog';
+import DashboardCard from './DashboardCard';
+import DashboardSettingsDialog from './DashboardSettingsDialog';
 import '../ui/ListPage.css';
 import './DashboardList.css';
+
+const SORT_STORAGE_KEY = 'dashboard-builder-dashboard-sort';
+
+function readSort(): DashboardSort {
+  try {
+    const stored = window.localStorage.getItem(SORT_STORAGE_KEY);
+    if (DASHBOARD_SORT_OPTIONS.some((option) => option.value === stored)) {
+      return stored as DashboardSort;
+    }
+  } catch {
+    // Ignore storage failures and fall back to the default.
+  }
+  return 'updated';
+}
 
 const DashboardList: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { list, loading } = useAppSelector((state) => state.dashboards);
   const user = useAppSelector((state) => state.auth.user);
   const canEdit = canEditContent(user);
+  const scheduleDelete = useDeferredDelete();
 
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
-  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
-  const [deleting, setDeleting] = useState(false);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [renameTarget, setRenameTarget] = useState<Dashboard | null>(null);
+  const [settingsTarget, setSettingsTarget] = useState<Dashboard | null>(null);
+  const [search, setSearch] = useState('');
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [sort, setSort] = useState<DashboardSort>(readSort);
 
   useEffect(() => {
     dispatch(fetchDashboards());
   }, [dispatch]);
+
+  // The command palette links to /dashboards?new=1.
+  useEffect(() => {
+    if (searchParams.get('new') !== '1') return;
+    if (canEdit) setShowCreate(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('new');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, canEdit]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SORT_STORAGE_KEY, sort);
+    } catch {
+      // Storage may be unavailable; the choice still applies for this session.
+    }
+  }, [sort]);
+
+  const visible = useMemo(
+    () => sortDashboards(filterDashboards(list, { query: search, favoritesOnly }), sort),
+    [list, search, favoritesOnly, sort],
+  );
+
+  const settingsDashboard = settingsTarget
+    ? list.find((dashboard) => dashboard.id === settingsTarget.id) ?? settingsTarget
+    : null;
+
+  const clearFilters = () => {
+    setSearch('');
+    setFavoritesOnly(false);
+  };
 
   const handleCreate = async () => {
     const name = newName.trim();
@@ -46,23 +118,19 @@ const DashboardList: React.FC = () => {
     }
   };
 
-  const handleDelete = async () => {
-    if (!pendingDelete || deleting) return;
-    setDeleting(true);
-    const result = await dispatch(deleteDashboard(pendingDelete.id));
-    setDeleting(false);
-    setPendingDelete(null);
-    if (deleteDashboard.fulfilled.match(result)) {
-      dispatch(addToast({ message: 'Dashboard deleted', type: 'success' }));
-    } else {
-      dispatch(addToast({ message: 'Failed to delete dashboard', type: 'error' }));
+  const handleRename = async (name: string) => {
+    if (!renameTarget) return;
+    const result = await dispatch(updateDashboard({ id: renameTarget.id, data: { name } }));
+    if (!updateDashboard.fulfilled.match(result)) {
+      throw new Error('Could not rename this dashboard. Try again.');
     }
+    dispatch(addToast({ message: 'Dashboard renamed', type: 'success' }));
   };
 
-  const handleDuplicate = async (id: string) => {
+  const handleDuplicate = async (dashboard: Dashboard) => {
     if (duplicatingId) return;
-    setDuplicatingId(id);
-    const result = await dispatch(duplicateDashboard(id));
+    setDuplicatingId(dashboard.id);
+    const result = await dispatch(duplicateDashboard(dashboard.id));
     setDuplicatingId(null);
     if (duplicateDashboard.fulfilled.match(result)) {
       dispatch(addToast({ message: 'Dashboard duplicated', type: 'success' }));
@@ -70,6 +138,33 @@ const DashboardList: React.FC = () => {
       dispatch(addToast({ message: 'Failed to duplicate dashboard', type: 'error' }));
     }
   };
+
+  const handleToggleFavorite = async (dashboard: Dashboard) => {
+    const favorite = !dashboard.is_favorite;
+    const result = await dispatch(setDashboardFavorite({ id: dashboard.id, favorite }));
+    if (!setDashboardFavorite.fulfilled.match(result)) {
+      dispatch(addToast({ message: 'Could not update the favorite', type: 'error' }));
+    }
+  };
+
+  const handleDelete = (dashboard: Dashboard) => {
+    scheduleDelete({
+      entity: 'Dashboard',
+      remove: () => dispatch(hideDashboard(dashboard.id)),
+      restore: () => dispatch(restoreDashboard(dashboard)),
+      commit: async () => {
+        const result = await dispatch(deleteDashboard(dashboard.id));
+        return deleteDashboard.fulfilled.match(result)
+          ? { ok: true }
+          : { ok: false, error: 'Could not delete the dashboard.' };
+      },
+    });
+  };
+
+  const countLabel = (count: number) =>
+    count === list.length
+      ? pluralize(count, 'dashboard')
+      : `${count} of ${pluralize(list.length, 'dashboard')}`;
 
   return (
     <div className="list-page">
@@ -85,6 +180,27 @@ const DashboardList: React.FC = () => {
           )}
         </div>
 
+        <ListToolbar
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search dashboards by name, tag, or description"
+          sortValue={sort}
+          sortOptions={DASHBOARD_SORT_OPTIONS}
+          onSortChange={(value) => setSort(value as DashboardSort)}
+          count={visible.length}
+          countLabel={countLabel}
+        >
+          <button
+            type="button"
+            className={`list-filter-chip${favoritesOnly ? ' list-filter-chip--active' : ''}`}
+            onClick={() => setFavoritesOnly((current) => !current)}
+            aria-pressed={favoritesOnly}
+          >
+            <Star size={14} fill={favoritesOnly ? 'currentColor' : 'none'} aria-hidden="true" />
+            Pinned
+          </button>
+        </ListToolbar>
+
         <div className="list-grid-wrapper">
           {loading && (
             <ul className="list-grid">
@@ -94,45 +210,20 @@ const DashboardList: React.FC = () => {
 
           {!loading && (
             <ul className="list-grid">
-              {list.map((d) => (
-                <li key={d.id} className="list-card">
-                  <div className="card-header">
-                    <div className="card-icon">
-                      <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zm0 8a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zm6-6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zm0 8a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                      </svg>
-                    </div>
-                    <span className="card-title">{d.name}</span>
-                    {(d.filters?.length ?? 0) > 0 && (
-                      <span className="card-filter-badge">{d.filters!.length} filter{d.filters!.length > 1 ? 's' : ''}</span>
-                    )}
-                  </div>
-                  <div className="card-actions">
-                    <Link to={`/dashboards/${d.id}`} className="edit-link">
-                      View
-                    </Link>
-                    {canEdit && (
-                      <Link to={`/dashboards/${d.id}/edit`} className="edit-link">
-                        Edit
-                      </Link>
-                    )}
-                    {canEdit && (
-                      <button
-                        className="edit-link duplicate-btn"
-                        onClick={() => handleDuplicate(d.id)}
-                        disabled={duplicatingId === d.id}
-                      >
-                        {duplicatingId === d.id ? 'Copying...' : 'Duplicate'}
-                      </button>
-                    )}
-                    {canEdit && (
-                      <button className="delete-btn" onClick={() => setPendingDelete({ id: d.id, name: d.name })}>
-                        Delete
-                      </button>
-                    )}
-                  </div>
-                </li>
+              {visible.map((dashboard) => (
+                <DashboardCard
+                  key={dashboard.id}
+                  dashboard={dashboard}
+                  canEdit={canEdit}
+                  duplicating={duplicatingId === dashboard.id}
+                  onDuplicate={() => handleDuplicate(dashboard)}
+                  onRename={() => setRenameTarget(dashboard)}
+                  onSettings={() => setSettingsTarget(dashboard)}
+                  onDelete={() => handleDelete(dashboard)}
+                  onToggleFavorite={() => handleToggleFavorite(dashboard)}
+                />
               ))}
+
               {list.length === 0 && (
                 <li style={{ gridColumn: '1 / -1', listStyle: 'none' }}>
                   <EmptyState
@@ -142,6 +233,17 @@ const DashboardList: React.FC = () => {
                       ? 'Create your first dashboard to start visualizing your data.'
                       : 'No dashboards have been shared with you yet.'}
                     action={canEdit ? { label: 'New Dashboard', onClick: () => setShowCreate(true) } : undefined}
+                  />
+                </li>
+              )}
+
+              {list.length > 0 && visible.length === 0 && (
+                <li style={{ gridColumn: '1 / -1', listStyle: 'none' }}>
+                  <EmptyState
+                    icon="dashboard"
+                    title="No matching dashboards"
+                    description="Try a different search, or clear the Pinned filter to see everything."
+                    action={{ label: 'Clear filters', onClick: clearFilters }}
                   />
                 </li>
               )}
@@ -156,7 +258,7 @@ const DashboardList: React.FC = () => {
           if (!next) setShowCreate(false);
         }}
         title="New dashboard"
-        description="Give it a name. You can add widgets and filters next."
+        description="Give it a name. You can add widgets, filters, and metadata next."
         size="sm"
         footer={
           <>
@@ -185,19 +287,22 @@ const DashboardList: React.FC = () => {
         </Field>
       </Dialog>
 
-      <ConfirmDialog
-        open={Boolean(pendingDelete)}
-        title="Delete dashboard?"
-        description={
-          pendingDelete
-            ? `“${pendingDelete.name}” and its widgets will be permanently removed. Queries are not deleted.`
-            : undefined
-        }
-        confirmLabel="Delete"
-        destructive
-        loading={deleting}
-        onConfirm={handleDelete}
-        onCancel={() => setPendingDelete(null)}
+      <RenameDialog
+        open={Boolean(renameTarget)}
+        onOpenChange={(next) => {
+          if (!next) setRenameTarget(null);
+        }}
+        title="Rename dashboard"
+        initialValue={renameTarget?.name ?? ''}
+        onSave={handleRename}
+      />
+
+      <DashboardSettingsDialog
+        open={Boolean(settingsTarget)}
+        onOpenChange={(next) => {
+          if (!next) setSettingsTarget(null);
+        }}
+        dashboard={settingsDashboard}
       />
     </div>
   );

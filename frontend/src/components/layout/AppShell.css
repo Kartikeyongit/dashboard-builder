@@ -1,5 +1,6 @@
 .app-shell {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   display: flex;
 }
 
@@ -334,7 +335,9 @@
 .main-wrapper {
   flex: 1;
   margin-left: 240px;
-  min-height: 100vh;
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   transition: margin-left var(--transition-normal);
@@ -346,33 +349,10 @@
 
 .main-content {
   flex: 1;
-  padding: 2rem 2rem;
+  min-height: 0;
+  padding: 1.75rem 2rem;
   overflow-y: auto;
   background: var(--color-bg);
-  animation: fade-in var(--transition-slow) cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* ──────── Mobile menu button ──────── */
-.mobile-menu-btn {
-  display: none;
-  position: fixed;
-  top: 0.75rem;
-  left: 0.75rem;
-  z-index: 50;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  background: var(--color-glass);
-  color: var(--color-text);
-  cursor: pointer;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--shadow-sm);
-}
-
-.mobile-menu-btn:hover {
-  background: var(--color-surface-hover);
 }
 
 /* ──────── Mobile backdrop ──────── */
@@ -428,10 +408,6 @@
 
   .main-content {
     padding: 1rem 1rem;
-  }
-
-  .mobile-menu-btn {
-    display: flex;
   }
 
   .sidebar-backdrop {

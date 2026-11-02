@@ -17,6 +17,12 @@ Connect databases, write SQL, and design live dashboards with drag‑and‑drop 
 - 🖱️ **Cross‑filtering** – Click a bar or pie slice to set the dashboard filter for that dimension; every widget using the filter reloads, and the URL updates so the view stays shareable.
 - 📤 **CSV export** – Download table and metric widgets as CSV, including the active filter values.
 - 📑 **Duplicate dashboards** – Copy a dashboard and all of its widgets in one click; saved queries are shared.
+- 🗂️ **Dashboard library** – Search by name, tag, or description; sort by recent activity, name, or widget count; pin favourites per user; rename, edit settings, and delete from the card menu.
+- ⌨️ **Command palette** – `Ctrl`/`Cmd`+`K` jumps to any page, dashboard, query, or datasource, and runs common actions.
+- ↩️ **Undo delete** – Deleting a dashboard, query, or datasource is deferred for a few seconds with an Undo action, so a misclick never loses work.
+- 🧭 **Wayfinding** – Breadcrumbs resolve real names, the top bar carries search and the account menu, and the sidebar collapses on desktop and becomes a drawer on mobile.
+- 🚀 **Guided onboarding** – A dismissible home checklist tracks the connect → query → dashboard → widget path with real progress.
+- ⚙️ **Dashboard settings** – Edit name, description, tags, and auto-refresh from the library or while viewing a dashboard.
 - ✍️ **SQL editor** – Monaco editor with schema autocomplete, query execution, and sandboxed validation.
 - 🔄 **Real‑time updates** – WebSocket push with in-process pub/sub (optional Redis for multi-instance deployments); dashboards refresh automatically on a schedule.
 - ⚡ **Fast dashboards** – Widget queries run in parallel with bounded concurrency, identical queries are deduplicated, and a short‑lived in‑process cache absorbs repeated refreshes.
@@ -258,6 +264,14 @@ writable API (not a shared demo deployment):
 npm run test:e2e:features
 ```
 
+The library spec covers search, rename, pinning, dashboard settings, the
+command palette, breadcrumbs, and delete-with-undo. It also creates and removes
+its own dashboard through the API:
+
+```bash
+npm run test:e2e:library
+```
+
 Both specs read the API base from `apiUrl` (default
 `http://127.0.0.1:8099/api/v1`) and the login from `demoEmail` /
 `demoPassword`:
@@ -266,7 +280,7 @@ Both specs read the API base from `apiUrl` (default
 npm run test:e2e:features -- --env apiUrl=https://your-api.onrender.com/api/v1
 ```
 
-Run both specs at once with `npx cypress run --spec 'cypress/e2e/*.cy.ts'`.
+Run every spec at once with `npx cypress run --spec 'cypress/e2e/*.cy.ts'`.
 CI does exactly that in the `e2e` job: it starts a throwaway PostgreSQL
 service, boots the API on `:8099` (which applies the migrations), seeds the
 demo data, builds the frontend against that API, serves it with `vite preview`,
@@ -346,11 +360,13 @@ All API routes are prefixed with `/api/v1`.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/dashboards` | List all dashboards |
-| `POST` | `/dashboards` | Create a dashboard |
+| `GET` | `/dashboards` | List all dashboards with metadata and the caller's favourite flag |
+| `POST` | `/dashboards` | Create a dashboard (accepts `description`, `tags`) |
 | `GET` | `/dashboards/:id` | Get dashboard details |
-| `PUT` | `/dashboards/:id` | Update a dashboard |
+| `PUT` | `/dashboards/:id` | Partially update a dashboard (name, description, tags, refresh, filters) |
 | `DELETE` | `/dashboards/:id` | Delete a dashboard |
+| `PUT` | `/dashboards/:id/favorite` | Pin a dashboard for the current user |
+| `DELETE` | `/dashboards/:id/favorite` | Unpin a dashboard for the current user |
 | `POST` | `/dashboards/:id/duplicate` | Duplicate a dashboard and its widgets |
 | `GET` | `/dashboards/:id/full` | Get dashboard with all widgets (accepts `f_<filter>` query params) |
 | `POST` | `/dashboards/:dashboardId/widgets` | Add widget to dashboard |

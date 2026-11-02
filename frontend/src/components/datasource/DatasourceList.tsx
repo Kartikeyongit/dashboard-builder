@@ -1,37 +1,100 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../hooks';
-import { fetchDatasources, deleteDatasource, testDatasourceConnection } from '../../store/datasourceSlice';
+import {
+  deleteDatasource,
+  fetchDatasources,
+  hideDatasource,
+  restoreDatasource,
+  testDatasourceConnection,
+  updateDatasource,
+} from '../../store/datasourceSlice';
 import { addToast } from '../../store/toastSlice';
 import { canEditContent } from '../../utils/permissions';
+import { useDeferredDelete } from '../../hooks/useDeferredDelete';
+import { matchesSearch } from '../../utils/library';
+import { pluralize, relativeTime } from '../../utils/format';
+import type { Datasource } from '../../types';
 import EmptyState from '../ui/EmptyState';
-import ConfirmDialog from '../../ui/ConfirmDialog';
+import ListToolbar from '../ui/ListToolbar';
+import Menu from '../../ui/Menu';
+import RenameDialog from '../../ui/RenameDialog';
 import '../ui/ListPage.css';
 import './DatasourceList.css';
+
+type DatasourceSort = 'updated' | 'created' | 'name';
+
+const DATASOURCE_SORT_OPTIONS: { value: DatasourceSort; label: string }[] = [
+  { value: 'updated', label: 'Recently updated' },
+  { value: 'created', label: 'Recently created' },
+  { value: 'name', label: 'Name A–Z' },
+];
 
 const DatasourceList: React.FC = () => {
   const dispatch = useAppDispatch();
   const { items, loading } = useAppSelector((state) => state.datasources);
   const user = useAppSelector((state) => state.auth.user);
   const canEdit = canEditContent(user);
-  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const scheduleDelete = useDeferredDelete();
+
+  const [search, setSearch] = useState('');
+  const [sort, setSort] = useState<DatasourceSort>('updated');
+  const [renameTarget, setRenameTarget] = useState<Datasource | null>(null);
 
   useEffect(() => {
     dispatch(fetchDatasources());
   }, [dispatch]);
 
-  const handleDelete = async () => {
-    if (!pendingDelete || deleting) return;
-    setDeleting(true);
-    const result = await dispatch(deleteDatasource(pendingDelete.id));
-    setDeleting(false);
-    setPendingDelete(null);
-    if (deleteDatasource.fulfilled.match(result)) {
-      dispatch(addToast({ message: 'Datasource deleted', type: 'success' }));
+  const visible = useMemo(() => {
+    const filtered = items.filter((datasource) =>
+      matchesSearch(search, datasource.name, datasource.host, datasource.db_name, datasource.username),
+    );
+    const sorted = [...filtered];
+    if (sort === 'name') {
+      sorted.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+    } else if (sort === 'created') {
+      sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     } else {
-      dispatch(addToast({ message: 'Failed to delete datasource', type: 'error' }));
+      sorted.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
     }
+    return sorted;
+  }, [items, search, sort]);
+
+  const handleDelete = (datasource: Datasource) => {
+    scheduleDelete({
+      entity: 'Datasource',
+      remove: () => dispatch(hideDatasource(datasource.id)),
+      restore: () => dispatch(restoreDatasource(datasource)),
+      commit: async () => {
+        const result = await dispatch(deleteDatasource(datasource.id));
+        return deleteDatasource.fulfilled.match(result)
+          ? { ok: true }
+          : { ok: false, error: 'Could not delete the datasource.' };
+      },
+    });
+  };
+
+  const handleRename = async (name: string) => {
+    if (!renameTarget) return;
+    const result = await dispatch(
+      updateDatasource({
+        id: renameTarget.id,
+        data: {
+          name,
+          type: renameTarget.type,
+          host: renameTarget.host,
+          port: renameTarget.port,
+          db_name: renameTarget.db_name,
+          username: renameTarget.username,
+          ssl_mode: renameTarget.ssl_mode,
+        },
+      }),
+    );
+    if (!updateDatasource.fulfilled.match(result)) {
+      throw new Error('Could not rename this datasource. Try again.');
+    }
+    dispatch(addToast({ message: 'Datasource renamed', type: 'success' }));
   };
 
   const handleTest = async (id: string) => {
@@ -42,6 +105,11 @@ const DatasourceList: React.FC = () => {
       dispatch(addToast({ message: 'Connection failed', type: 'error' }));
     }
   };
+
+  const countLabel = (count: number) =>
+    count === items.length
+      ? pluralize(count, 'datasource')
+      : `${count} of ${pluralize(items.length, 'datasource')}`;
 
   return (
     <div className="list-page">
@@ -55,6 +123,17 @@ const DatasourceList: React.FC = () => {
           {canEdit && <Link to="/datasources/new" className="add-btn">+ Add Datasource</Link>}
         </div>
 
+        <ListToolbar
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search by name, host, or database"
+          sortValue={sort}
+          sortOptions={DATASOURCE_SORT_OPTIONS}
+          onSortChange={(value) => setSort(value as DatasourceSort)}
+          count={visible.length}
+          countLabel={countLabel}
+        />
+
         <div className="list-grid-wrapper">
           {loading && (
             <ul className="list-grid">
@@ -64,7 +143,7 @@ const DatasourceList: React.FC = () => {
 
           {!loading && (
             <ul className="list-grid">
-              {items.map((ds) => (
+              {visible.map((ds) => (
                 <li key={ds.id} className="list-card">
                   <div className="card-header">
                     <div className="card-icon">
@@ -76,22 +155,46 @@ const DatasourceList: React.FC = () => {
                       {ds.name}
                       <span className="type-badge">{ds.type}</span>
                     </div>
+                    {canEdit && (
+                      <Menu
+                        label={`${ds.name} actions`}
+                        trigger={
+                          <button type="button" className="card-menu-btn" aria-label={`${ds.name} actions`}>
+                            <MoreHorizontal size={17} aria-hidden="true" />
+                          </button>
+                        }
+                        items={[
+                          { key: 'rename', label: 'Rename', icon: Pencil, onSelect: () => setRenameTarget(ds) },
+                          {
+                            key: 'delete',
+                            label: 'Delete',
+                            icon: Trash2,
+                            onSelect: () => handleDelete(ds),
+                            danger: true,
+                            separatorBefore: true,
+                          },
+                        ]}
+                      />
+                    )}
                   </div>
                   <div className="card-detail">
                     <span>{ds.host}:{ds.port}/{ds.db_name}</span>
                     <span>{ds.username}</span>
+                  </div>
+                  <div className="card-meta">
+                    <span title={new Date(ds.updated_at).toLocaleString()}>Updated {relativeTime(ds.updated_at)}</span>
                   </div>
                   <div className="card-actions">
                     {canEdit && (
                       <>
                         <button className="edit-link" onClick={() => handleTest(ds.id)}>Test</button>
                         <Link to={`/datasources/${ds.id}/edit`} className="edit-link">Edit</Link>
-                        <button className="delete-btn" onClick={() => setPendingDelete({ id: ds.id, name: ds.name })}>Delete</button>
                       </>
                     )}
                   </div>
                 </li>
               ))}
+
               {items.length === 0 && (
                 <li style={{ gridColumn: '1 / -1', listStyle: 'none' }}>
                   <EmptyState
@@ -102,24 +205,30 @@ const DatasourceList: React.FC = () => {
                   />
                 </li>
               )}
+
+              {items.length > 0 && visible.length === 0 && (
+                <li style={{ gridColumn: '1 / -1', listStyle: 'none' }}>
+                  <EmptyState
+                    icon="datasource"
+                    title="No matching datasources"
+                    description="Try a different search term."
+                    action={{ label: 'Clear search', onClick: () => setSearch('') }}
+                  />
+                </li>
+              )}
             </ul>
           )}
         </div>
       </div>
 
-      <ConfirmDialog
-        open={Boolean(pendingDelete)}
-        title="Delete datasource?"
-        description={
-          pendingDelete
-            ? `“${pendingDelete.name}” will be permanently removed. Queries that depend on it will stop working.`
-            : undefined
-        }
-        confirmLabel="Delete"
-        destructive
-        loading={deleting}
-        onConfirm={handleDelete}
-        onCancel={() => setPendingDelete(null)}
+      <RenameDialog
+        open={Boolean(renameTarget)}
+        onOpenChange={(next) => {
+          if (!next) setRenameTarget(null);
+        }}
+        title="Rename datasource"
+        initialValue={renameTarget?.name ?? ''}
+        onSave={handleRename}
       />
     </div>
   );

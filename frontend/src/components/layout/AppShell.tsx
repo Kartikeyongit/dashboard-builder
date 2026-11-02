@@ -1,23 +1,29 @@
-import React, { Suspense, useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Database,
   Home as HomeIcon,
   LayoutDashboard,
   LogOut,
-  Menu,
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
+  Plus,
   Sun,
   Terminal,
 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import { logoutUser, restoreAuth } from '../../store/authSlice';
+import { fetchDashboards } from '../../store/dashboardSlice';
+import { fetchDatasources } from '../../store/datasourceSlice';
+import { fetchQueries } from '../../store/querySlice';
 import { useTheme } from '../../theme/useTheme';
 import Toast from '../Toast';
 import Tooltip from '../../ui/Tooltip';
 import RouteFallback from '../ui/RouteFallback';
+import CommandPalette from '../../ui/CommandPalette';
+import type { CommandItem } from '../../ui/CommandPalette';
+import TopBar from './TopBar';
 import './AppShell.css';
 
 const SIDEBAR_STORAGE_KEY = 'dashboard-builder-sidebar-collapsed';
@@ -40,6 +46,9 @@ const NAV_ITEMS = [
 const AppShell: React.FC = () => {
   const user = useAppSelector((state) => state.auth.user);
   const isInitializing = useAppSelector((state) => state.auth.isInitializing);
+  const dashboards = useAppSelector((state) => state.dashboards.list);
+  const datasources = useAppSelector((state) => state.datasources.items);
+  const queries = useAppSelector((state) => state.queries.items);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const location = useLocation();
@@ -47,10 +56,20 @@ const AppShell: React.FC = () => {
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   useEffect(() => {
     dispatch(restoreAuth());
   }, [dispatch]);
+
+  // Keep library data warm so breadcrumbs and the command palette can resolve
+  // names on any route.
+  useEffect(() => {
+    if (!user) return;
+    dispatch(fetchDashboards());
+    dispatch(fetchDatasources());
+    dispatch(fetchQueries());
+  }, [dispatch, user]);
 
   // Remember the sidebar choice across reloads.
   useEffect(() => {
@@ -62,24 +81,86 @@ const AppShell: React.FC = () => {
   }, [sidebarCollapsed]);
 
   // Close the mobile drawer whenever navigation happens.
-  useEffect(() => {
+  const [lastPath, setLastPath] = useState(location.pathname);
+  if (location.pathname !== lastPath) {
+    setLastPath(location.pathname);
     setMobileOpen(false);
-  }, [location.pathname]);
+  }
 
-  const initials = user?.email
-    ? user.email
-        .split('@')[0]
-        .split(/[._-]/)
-        .map((s) => s[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2)
-    : '??';
+  // Ctrl/Cmd+K opens the palette from anywhere in the app.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setPaletteOpen((open) => !open);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   const handleLogout = () => {
     dispatch(logoutUser());
     navigate('/login');
   };
+
+  const commandItems = useMemo<CommandItem[]>(() => {
+    const items: CommandItem[] = [
+      { id: 'nav-home', label: 'Go to Home', group: 'Navigate', icon: HomeIcon, run: () => navigate('/') },
+      { id: 'nav-datasources', label: 'Go to Datasources', group: 'Navigate', icon: Database, run: () => navigate('/datasources') },
+      { id: 'nav-queries', label: 'Go to Queries', group: 'Navigate', icon: Terminal, run: () => navigate('/queries') },
+      { id: 'nav-dashboards', label: 'Go to Dashboards', group: 'Navigate', icon: LayoutDashboard, run: () => navigate('/dashboards') },
+      { id: 'new-dashboard', label: 'New dashboard', group: 'Create', icon: Plus, run: () => navigate('/dashboards?new=1') },
+      { id: 'new-query', label: 'New query', group: 'Create', icon: Plus, run: () => navigate('/queries/new') },
+      { id: 'new-datasource', label: 'New datasource', group: 'Create', icon: Plus, run: () => navigate('/datasources/new') },
+      {
+        id: 'toggle-theme',
+        label: theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme',
+        group: 'Actions',
+        icon: theme === 'dark' ? Sun : Moon,
+        run: toggleTheme,
+      },
+      { id: 'sign-out', label: 'Sign out', group: 'Actions', icon: LogOut, run: handleLogout },
+    ];
+
+    dashboards.slice(0, 20).forEach((dashboard) => {
+      items.push({
+        id: `dashboard-${dashboard.id}`,
+        label: dashboard.name,
+        group: 'Dashboards',
+        icon: LayoutDashboard,
+        hint: dashboard.is_favorite ? 'Pinned' : undefined,
+        keywords: (dashboard.tags ?? []).join(' '),
+        run: () => navigate(`/dashboards/${dashboard.id}`),
+      });
+    });
+
+    queries.slice(0, 10).forEach((query) => {
+      items.push({
+        id: `query-${query.id}`,
+        label: query.name,
+        group: 'Queries',
+        icon: Terminal,
+        hint: 'Open',
+        run: () => navigate(`/queries/${query.id}/edit`),
+      });
+    });
+
+    datasources.slice(0, 10).forEach((datasource) => {
+      items.push({
+        id: `datasource-${datasource.id}`,
+        label: datasource.name,
+        group: 'Datasources',
+        icon: Database,
+        hint: 'Edit',
+        run: () => navigate(`/datasources/${datasource.id}/edit`),
+      });
+    });
+
+    return items;
+    // handleLogout and toggleTheme are stable enough for palette lifetime.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dashboards, datasources, queries, theme, navigate]);
 
   if (isInitializing) {
     return (
@@ -146,47 +227,18 @@ const AppShell: React.FC = () => {
             })}
           </ul>
         </nav>
-
-        <div className="sidebar-footer">
-          <div className="sidebar-user">
-            <div className="user-avatar" title={user.email}>
-              {initials}
-            </div>
-            <span className="user-email">{user.email}</span>
-          </div>
-          <div className="sidebar-actions">
-            <Tooltip content={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}>
-              <button
-                className="user-signout user-signout--theme"
-                onClick={toggleTheme}
-                aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-              >
-                {theme === 'dark' ? (
-                  <Sun className="user-signout-icon" size={16} aria-hidden="true" />
-                ) : (
-                  <Moon className="user-signout-icon" size={16} aria-hidden="true" />
-                )}
-                <span className="user-signout-label">Theme</span>
-              </button>
-            </Tooltip>
-            <button className="user-signout" onClick={handleLogout}>
-              <LogOut className="user-signout-icon" size={16} aria-hidden="true" />
-              <span className="user-signout-label">Sign out</span>
-            </button>
-          </div>
-        </div>
       </aside>
 
       <div className="main-wrapper">
-        <button
-          className="mobile-menu-btn"
-          onClick={() => setMobileOpen(true)}
-          aria-label="Open menu"
-        >
-          <Menu size={20} aria-hidden="true" />
-        </button>
+        <TopBar
+          userEmail={user.email}
+          onOpenMenu={() => setMobileOpen(true)}
+          onOpenPalette={() => setPaletteOpen(true)}
+        />
         <main className="main-content">{routedPage}</main>
       </div>
+
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} items={commandItems} />
       <Toast />
     </div>
   );

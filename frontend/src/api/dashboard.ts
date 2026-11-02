@@ -9,12 +9,16 @@ import type {
 
 export interface CreateDashboardPayload {
   name: string;
+  description?: string;
+  tags?: string[];
   refresh_interval_seconds?: number;
   filters?: DashboardFilter[];
 }
 
 export interface UpdateDashboardPayload {
   name?: string;
+  description?: string;
+  tags?: string[];
   refresh_interval_seconds?: number;
   filters?: DashboardFilter[];
 }
@@ -38,6 +42,9 @@ export const dashboardAPI = {
   update: (id: string, data: UpdateDashboardPayload) => client.put(`/dashboards/${id}`, data),
   delete: (id: string) => client.delete(`/dashboards/${id}`),
   duplicate: (id: string) => client.post<Dashboard>(`/dashboards/${id}/duplicate`),
+  /** Favorites are idempotent: PUT pins, DELETE unpins. */
+  setFavorite: (id: string, favorite: boolean) =>
+    favorite ? client.put(`/dashboards/${id}/favorite`) : client.delete(`/dashboards/${id}/favorite`),
   getFull: (id: string, filters?: DashboardFilterValues) =>
     client.get<DashboardFull>(`/dashboards/${id}/full`, { params: filterParams(filters) }),
 };

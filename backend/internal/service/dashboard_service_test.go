@@ -1,6 +1,8 @@
 package service
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/your-org/dashboard-builder/backend/internal/model"
@@ -68,5 +70,59 @@ func TestNormalizeDashboardName(t *testing.T) {
 	name, err := normalizeDashboardName("  Revenue  ")
 	if err != nil || name != "Revenue" {
 		t.Fatalf("name = %q, err = %v", name, err)
+	}
+}
+
+func TestNormalizeDashboardTags(t *testing.T) {
+	got, err := NormalizeDashboardTags([]string{" Sales ", "", "sales", "Ops"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 2 || got[0] != "Sales" || got[1] != "Ops" {
+		t.Fatalf("tags = %#v, want [Sales Ops]", got)
+	}
+
+	if got, err := NormalizeDashboardTags(nil); err != nil || got == nil || len(got) != 0 {
+		t.Fatalf("nil tags = %#v, %v; want an empty slice", got, err)
+	}
+}
+
+func TestNormalizeDashboardTagsRejectsInvalidInput(t *testing.T) {
+	if _, err := NormalizeDashboardTags([]string{strings.Repeat("a", maxDashboardTagLength+1)}); err == nil {
+		t.Fatal("expected an error for an over-long tag")
+	}
+
+	tooMany := make([]string, maxDashboardTags+1)
+	for i := range tooMany {
+		tooMany[i] = fmt.Sprintf("tag-%d", i)
+	}
+	if _, err := NormalizeDashboardTags(tooMany); err == nil {
+		t.Fatal("expected an error for too many tags")
+	}
+}
+
+func TestNormalizeDashboardDescription(t *testing.T) {
+	if got := NormalizeDashboardDescription("  Weekly revenue  "); got != "Weekly revenue" {
+		t.Fatalf("description = %q", got)
+	}
+	long := strings.Repeat("é", maxDashboardDescription+10)
+	got := NormalizeDashboardDescription(long)
+	if len([]rune(got)) != maxDashboardDescription {
+		t.Fatalf("description length = %d, want %d", len([]rune(got)), maxDashboardDescription)
+	}
+}
+
+func TestNormalizeRefreshInterval(t *testing.T) {
+	if got, err := normalizeRefreshInterval(0); err != nil || got != 0 {
+		t.Fatalf("zero interval = %d, %v", got, err)
+	}
+	if got, err := normalizeRefreshInterval(60); err != nil || got != 60 {
+		t.Fatalf("60s interval = %d, %v", got, err)
+	}
+	if _, err := normalizeRefreshInterval(-1); err == nil {
+		t.Fatal("expected an error for a negative interval")
+	}
+	if _, err := normalizeRefreshInterval(maxRefreshIntervalSec + 1); err == nil {
+		t.Fatal("expected an error for an interval that is too large")
 	}
 }

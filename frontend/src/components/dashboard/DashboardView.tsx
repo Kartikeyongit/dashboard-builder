@@ -19,6 +19,7 @@ import TableWidget from './TableWidget';
 import MetricWidget from './MetricWidget';
 import DashboardFilterBar from './DashboardFilterBar';
 import ShareDialog from './ShareDialog';
+import DashboardSettingsDialog from './DashboardSettingsDialog';
 import EmptyState from '../ui/EmptyState';
 import WidgetBoundary from '../errors/WidgetBoundary';
 import './DashboardView.css';
@@ -49,6 +50,7 @@ const DashboardView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showShare, setShowShare] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [crossFilterSource, setCrossFilterSource] = useState<{ widgetId: string; filterId: string } | null>(null);
 
@@ -262,6 +264,11 @@ const DashboardView: React.FC = () => {
               Share
             </button>
           )}
+          {canEdit && (
+            <button className="dv-btn" onClick={() => setShowSettings(true)}>
+              Settings
+            </button>
+          )}
           <button className="dv-btn" onClick={toggleFullscreen} title="Toggle fullscreen">
             {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
           </button>
@@ -376,6 +383,19 @@ const DashboardView: React.FC = () => {
 
       {canEdit && showShare && (
         <ShareDialog dashboardId={full.dashboard.id} onClose={() => setShowShare(false)} />
+      )}
+
+      {canEdit && (
+        <DashboardSettingsDialog
+          open={showSettings}
+          onOpenChange={setShowSettings}
+          dashboard={full.dashboard}
+          onSaved={(updated) =>
+            setFull((current) =>
+              current ? { ...current, dashboard: { ...current.dashboard, ...updated } } : current,
+            )
+          }
+        />
       )}
     </div>
   );

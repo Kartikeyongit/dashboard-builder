@@ -57,6 +57,29 @@
   min-width: 0;
 }
 
+.toast-action {
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: inherit;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.toast-action:hover {
+  background: rgba(255, 255, 255, 0.26);
+}
+
+.toast-action:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.85);
+  outline-offset: 2px;
+}
+
 .toast-close {
   display: inline-flex;
   align-items: center;

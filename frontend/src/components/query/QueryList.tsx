@@ -1,48 +1,110 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../hooks';
-import { fetchQueries, deleteQuery } from '../../store/querySlice';
+import {
+  deleteQuery,
+  fetchQueries,
+  hideQuery,
+  restoreQuery,
+  updateQuery,
+} from '../../store/querySlice';
 import { queryAPI } from '../../api/query';
 import { addToast } from '../../store/toastSlice';
 import { canEditContent } from '../../utils/permissions';
+import { apiErrorMessage } from '../../utils/apiError';
+import { useDeferredDelete } from '../../hooks/useDeferredDelete';
+import { matchesSearch } from '../../utils/library';
+import { pluralize, relativeTime } from '../../utils/format';
+import type { Query } from '../../types';
 import EmptyState from '../ui/EmptyState';
-import ConfirmDialog from '../../ui/ConfirmDialog';
+import ListToolbar from '../ui/ListToolbar';
+import Menu from '../../ui/Menu';
+import RenameDialog from '../../ui/RenameDialog';
 import '../ui/ListPage.css';
 import './QueryList.css';
+
+type QuerySort = 'updated' | 'created' | 'name';
+
+const QUERY_SORT_OPTIONS: { value: QuerySort; label: string }[] = [
+  { value: 'updated', label: 'Recently updated' },
+  { value: 'created', label: 'Recently created' },
+  { value: 'name', label: 'Name A–Z' },
+];
 
 const QueryList: React.FC = () => {
   const dispatch = useAppDispatch();
   const { items, loading } = useAppSelector((state) => state.queries);
   const user = useAppSelector((state) => state.auth.user);
   const canEdit = canEditContent(user);
-  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const scheduleDelete = useDeferredDelete();
+
+  const [search, setSearch] = useState('');
+  const [sort, setSort] = useState<QuerySort>('updated');
+  const [renameTarget, setRenameTarget] = useState<Query | null>(null);
 
   useEffect(() => {
     dispatch(fetchQueries());
   }, [dispatch]);
 
-  const handleDelete = async () => {
-    if (!pendingDelete || deleting) return;
-    setDeleting(true);
-    const result = await dispatch(deleteQuery(pendingDelete.id));
-    setDeleting(false);
-    setPendingDelete(null);
-    if (deleteQuery.fulfilled.match(result)) {
-      dispatch(addToast({ message: 'Query deleted', type: 'success' }));
+  const visible = useMemo(() => {
+    const filtered = items.filter((query) => matchesSearch(search, query.name, query.sql_text));
+    const sorted = [...filtered];
+    if (sort === 'name') {
+      sorted.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+    } else if (sort === 'created') {
+      sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     } else {
-      dispatch(addToast({ message: 'Failed to delete query', type: 'error' }));
+      sorted.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
     }
+    return sorted;
+  }, [items, search, sort]);
+
+  const handleDelete = (query: Query) => {
+    scheduleDelete({
+      entity: 'Query',
+      remove: () => dispatch(hideQuery(query.id)),
+      restore: () => dispatch(restoreQuery(query)),
+      commit: async () => {
+        const result = await dispatch(deleteQuery(query.id));
+        return deleteQuery.fulfilled.match(result)
+          ? { ok: true }
+          : { ok: false, error: 'Could not delete the query.' };
+      },
+    });
+  };
+
+  const handleRename = async (name: string) => {
+    if (!renameTarget) return;
+    const result = await dispatch(
+      updateQuery({
+        id: renameTarget.id,
+        data: {
+          datasource_id: renameTarget.datasource_id,
+          name,
+          sql_text: renameTarget.sql_text,
+          max_rows: renameTarget.max_rows,
+          timeout_ms: renameTarget.timeout_ms,
+        },
+      }),
+    );
+    if (!updateQuery.fulfilled.match(result)) {
+      throw new Error('Could not rename this query. Try again.');
+    }
+    dispatch(addToast({ message: 'Query renamed', type: 'success' }));
   };
 
   const handleRun = async (id: string) => {
     try {
       await queryAPI.executeSaved(id);
       dispatch(addToast({ message: 'Query executed successfully', type: 'success' }));
-    } catch (err: any) {
-      dispatch(addToast({ message: err.response?.data?.message || 'Execution failed', type: 'error' }));
+    } catch (err) {
+      dispatch(addToast({ message: apiErrorMessage(err, 'Execution failed'), type: 'error' }));
     }
   };
+
+  const countLabel = (count: number) =>
+    count === items.length ? pluralize(count, 'query', 'queries') : `${count} of ${pluralize(items.length, 'query', 'queries')}`;
 
   return (
     <div className="list-page">
@@ -56,6 +118,17 @@ const QueryList: React.FC = () => {
           {canEdit && <Link to="/queries/new" className="add-btn">+ New Query</Link>}
         </div>
 
+        <ListToolbar
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search queries by name or SQL"
+          sortValue={sort}
+          sortOptions={QUERY_SORT_OPTIONS}
+          onSortChange={(value) => setSort(value as QuerySort)}
+          count={visible.length}
+          countLabel={countLabel}
+        />
+
         <div className="list-grid-wrapper">
           {loading && (
             <ul className="list-grid">
@@ -67,7 +140,7 @@ const QueryList: React.FC = () => {
 
           {!loading && (
             <ul className="list-grid">
-              {items.map((q) => (
+              {visible.map((q) => (
                 <li key={q.id} className="list-card">
                   <div className="card-header">
                     <div className="card-icon">
@@ -76,22 +149,43 @@ const QueryList: React.FC = () => {
                       </svg>
                     </div>
                     <span className="card-title">{q.name}</span>
+                    {canEdit && (
+                      <Menu
+                        label={`${q.name} actions`}
+                        trigger={
+                          <button type="button" className="card-menu-btn" aria-label={`${q.name} actions`}>
+                            <MoreHorizontal size={17} aria-hidden="true" />
+                          </button>
+                        }
+                        items={[
+                          { key: 'rename', label: 'Rename', icon: Pencil, onSelect: () => setRenameTarget(q) },
+                          {
+                            key: 'delete',
+                            label: 'Delete',
+                            icon: Trash2,
+                            onSelect: () => handleDelete(q),
+                            danger: true,
+                            separatorBefore: true,
+                          },
+                        ]}
+                      />
+                    )}
                   </div>
                   <div className="sql-preview">
                     {q.sql_text.substring(0, 80)}
                     {q.sql_text.length > 80 ? '…' : ''}
                   </div>
+                  <div className="card-meta">
+                    <span title={new Date(q.updated_at).toLocaleString()}>Updated {relativeTime(q.updated_at)}</span>
+                    <span>Max {pluralize(q.max_rows, 'row')}</span>
+                  </div>
                   <div className="card-actions">
                     {canEdit && <Link to={`/queries/${q.id}/edit`} className="edit-link">Edit</Link>}
                     <button className="edit-link" onClick={() => handleRun(q.id)}>Run</button>
-                    {canEdit && (
-                      <button className="delete-btn" onClick={() => setPendingDelete({ id: q.id, name: q.name })}>
-                        Delete
-                      </button>
-                    )}
                   </div>
                 </li>
               ))}
+
               {items.length === 0 && (
                 <li style={{ gridColumn: '1 / -1', listStyle: 'none' }}>
                   <EmptyState
@@ -102,24 +196,30 @@ const QueryList: React.FC = () => {
                   />
                 </li>
               )}
+
+              {items.length > 0 && visible.length === 0 && (
+                <li style={{ gridColumn: '1 / -1', listStyle: 'none' }}>
+                  <EmptyState
+                    icon="query"
+                    title="No matching queries"
+                    description="Try a different search term."
+                    action={{ label: 'Clear search', onClick: () => setSearch('') }}
+                  />
+                </li>
+              )}
             </ul>
           )}
         </div>
       </div>
 
-      <ConfirmDialog
-        open={Boolean(pendingDelete)}
-        title="Delete query?"
-        description={
-          pendingDelete
-            ? `“${pendingDelete.name}” will be permanently removed. Widgets that use it must be updated first.`
-            : undefined
-        }
-        confirmLabel="Delete"
-        destructive
-        loading={deleting}
-        onConfirm={handleDelete}
-        onCancel={() => setPendingDelete(null)}
+      <RenameDialog
+        open={Boolean(renameTarget)}
+        onOpenChange={(next) => {
+          if (!next) setRenameTarget(null);
+        }}
+        title="Rename query"
+        initialValue={renameTarget?.name ?? ''}
+        onSave={handleRename}
       />
     </div>
   );

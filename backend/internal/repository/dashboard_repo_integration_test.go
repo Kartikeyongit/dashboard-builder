@@ -39,7 +39,14 @@ func TestDashboardRepoIntegration(t *testing.T) {
 		otherOrg = "a9999999-9999-9999-9999-999999999999"
 	)
 
-	defer db.Exec(`DELETE FROM organizations WHERE id IN ($1, $2)`, orgID, otherOrg)
+	// Dashboards must go before queries: widgets reference queries with RESTRICT,
+	// so deleting the org in one statement can fail depending on cascade order.
+	cleanup := func() {
+		db.Exec(`DELETE FROM dashboards WHERE org_id IN ($1, $2)`, orgID, otherOrg)
+		db.Exec(`DELETE FROM organizations WHERE id IN ($1, $2)`, orgID, otherOrg)
+	}
+	cleanup()
+	defer cleanup()
 
 	mustExec(t, db, `INSERT INTO organizations (id, name) VALUES ($1, 'Integration Org'), ($2, 'Other Org')
 		ON CONFLICT (id) DO NOTHING`, orgID, otherOrg)
@@ -59,6 +66,8 @@ func TestDashboardRepoIntegration(t *testing.T) {
 	created, err := repo.Create(&model.Dashboard{
 		OrgID:              orgID,
 		Name:               "Filtered Dashboard",
+		Description:        "Revenue and orders",
+		Tags:               []string{"Sales", "Ops"},
 		RefreshIntervalSec: 0,
 		CreatedBy:          userID,
 		Filters: []model.DashboardFilter{
@@ -70,6 +79,9 @@ func TestDashboardRepoIntegration(t *testing.T) {
 	}
 	if len(created.Filters) != 1 || created.Filters[0].ID != "start_date" {
 		t.Fatalf("created filters = %#v", created.Filters)
+	}
+	if created.Description != "Revenue and orders" || len(created.Tags) != 2 {
+		t.Fatalf("created metadata = %#v", created)
 	}
 
 	fetched, err := repo.GetByID(created.ID, orgID)
@@ -112,12 +124,63 @@ func TestDashboardRepoIntegration(t *testing.T) {
 		t.Fatalf("create widget: %v", err)
 	}
 
+	listed, err := repo.ListByOrg(orgID, userID)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(listed) != 1 {
+		t.Fatalf("list length = %d, want 1", len(listed))
+	}
+	if listed[0].IsFavorite {
+		t.Fatalf("dashboard should not be a favorite yet")
+	}
+	if listed[0].WidgetCount != 1 {
+		t.Fatalf("widget count = %d, want 1", listed[0].WidgetCount)
+	}
+	if listed[0].Description != "Revenue and orders" || len(listed[0].Tags) != 2 {
+		t.Fatalf("listed metadata = %#v", listed[0])
+	}
+
+	if err := repo.SetFavorite(userID, created.ID, orgID, true); err != nil {
+		t.Fatalf("set favorite: %v", err)
+	}
+	// Pinning twice must stay idempotent.
+	if err := repo.SetFavorite(userID, created.ID, orgID, true); err != nil {
+		t.Fatalf("set favorite twice: %v", err)
+	}
+	listed, err = repo.ListByOrg(orgID, userID)
+	if err != nil || len(listed) != 1 || !listed[0].IsFavorite {
+		t.Fatalf("favorite flag = %#v, %v", listed, err)
+	}
+	// The update response re-reads through GetByIDForUser, so a rename must not
+	// clear the pin or report the stale updated_at.
+	if fav, err := repo.GetByIDForUser(created.ID, orgID, userID); err != nil || fav == nil || !fav.IsFavorite {
+		t.Fatalf("get by id for user = %#v, %v", fav, err)
+	}
+	if err := repo.SetFavorite(userID, created.ID, otherOrg, true); err != nil {
+		t.Fatalf("cross-org favorite: %v", err)
+	}
+	listed, err = repo.ListByOrg(otherOrg, userID)
+	if err != nil || len(listed) != 0 {
+		t.Fatalf("cross-org favorite leaked: %#v, %v", listed, err)
+	}
+	if err := repo.SetFavorite(userID, created.ID, orgID, false); err != nil {
+		t.Fatalf("clear favorite: %v", err)
+	}
+	listed, err = repo.ListByOrg(orgID, userID)
+	if err != nil || len(listed) != 1 || listed[0].IsFavorite {
+		t.Fatalf("favorite flag after clear = %#v, %v", listed, err)
+	}
+
 	dup, err := repo.Duplicate(created.ID, orgID, userID, "Filtered Dashboard (copy)")
 	if err != nil || dup == nil {
 		t.Fatalf("duplicate: %#v, %v", dup, err)
 	}
 	if dup.ID == created.ID || dup.Name != "Filtered Dashboard (copy)" {
 		t.Fatalf("unexpected duplicate: %#v", dup)
+	}
+	if dup.Description != "Revenue and orders" || len(dup.Tags) != 2 {
+		t.Fatalf("duplicate metadata = %#v", dup)
 	}
 	if len(dup.Filters) != 2 || dup.Filters[1].ID != "status" {
 		t.Fatalf("duplicate filters = %#v", dup.Filters)

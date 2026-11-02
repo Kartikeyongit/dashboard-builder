@@ -17,6 +17,8 @@ func NewDashboardHandler(dashboardService *service.DashboardService) *DashboardH
 
 type CreateDashboardRequest struct {
 	Name               string                   `json:"name"`
+	Description        string                   `json:"description"`
+	Tags               []string                 `json:"tags"`
 	RefreshIntervalSec int                      `json:"refresh_interval_seconds"`
 	Filters            *[]model.DashboardFilter `json:"filters"`
 }
@@ -32,7 +34,15 @@ func (h *DashboardHandler) Create(c *fiber.Ctx) error {
 	if req.Filters != nil {
 		filters = *req.Filters
 	}
-	dash, err := h.dashboardService.Create(orgID, req.Name, req.RefreshIntervalSec, filters, userID)
+	dash, err := h.dashboardService.Create(service.CreateDashboardInput{
+		OrgID:              orgID,
+		Name:               req.Name,
+		Description:        req.Description,
+		Tags:               req.Tags,
+		RefreshIntervalSec: req.RefreshIntervalSec,
+		Filters:            filters,
+		CreatedBy:          userID,
+	})
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
@@ -41,7 +51,8 @@ func (h *DashboardHandler) Create(c *fiber.Ctx) error {
 
 func (h *DashboardHandler) List(c *fiber.Ctx) error {
 	orgID := c.Locals("orgID").(string)
-	list, err := h.dashboardService.ListByOrg(orgID)
+	userID := middleware.GetUserID(c)
+	list, err := h.dashboardService.ListByOrg(orgID, userID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
@@ -58,17 +69,34 @@ func (h *DashboardHandler) Get(c *fiber.Ctx) error {
 	return c.JSON(dash)
 }
 
+// UpdateDashboardRequest uses pointers so a partial body only touches the
+// fields it names. The list card menu sends just {"name": "..."} for a rename.
+type UpdateDashboardRequest struct {
+	Name               *string                  `json:"name"`
+	Description        *string                  `json:"description"`
+	Tags               *[]string                `json:"tags"`
+	RefreshIntervalSec *int                     `json:"refresh_interval_seconds"`
+	Filters            *[]model.DashboardFilter `json:"filters"`
+}
+
 func (h *DashboardHandler) Update(c *fiber.Ctx) error {
 	orgID := c.Locals("orgID").(string)
 	id := c.Params("id")
-	var req CreateDashboardRequest
+	var req UpdateDashboardRequest
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid body")
 	}
-	if err := h.dashboardService.Update(id, orgID, req.Name, req.RefreshIntervalSec, req.Filters); err != nil {
+	dash, err := h.dashboardService.Update(id, orgID, middleware.GetUserID(c), service.UpdateDashboardInput{
+		Name:               req.Name,
+		Description:        req.Description,
+		Tags:               req.Tags,
+		RefreshIntervalSec: req.RefreshIntervalSec,
+		Filters:            req.Filters,
+	})
+	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
-	return c.SendStatus(fiber.StatusOK)
+	return c.JSON(dash)
 }
 
 func (h *DashboardHandler) Delete(c *fiber.Ctx) error {
@@ -88,4 +116,16 @@ func (h *DashboardHandler) Duplicate(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 	return c.Status(fiber.StatusCreated).JSON(dup)
+}
+
+// SetFavorite handles both PUT (pin) and DELETE (unpin) for the current user.
+func (h *DashboardHandler) SetFavorite(favorite bool) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		orgID := c.Locals("orgID").(string)
+		userID := middleware.GetUserID(c)
+		if err := h.dashboardService.SetFavorite(c.Params("id"), orgID, userID, favorite); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+		return c.SendStatus(fiber.StatusNoContent)
+	}
 }
