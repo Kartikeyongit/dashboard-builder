@@ -50,7 +50,19 @@ func NewWidgetService(
 	}
 }
 
-func (s *WidgetService) Create(orgID, dashboardID, queryID, widgetType string, config json.RawMessage, x, y, w, h int) (*model.Widget, error) {
+// CreateWidgetInput is the validated-by-service payload for a new widget.
+type CreateWidgetInput struct {
+	QueryID                 string
+	WidgetType              string
+	Config                  json.RawMessage
+	PositionX               int
+	PositionY               int
+	Width                   int
+	Height                  int
+	RefreshIntervalOverride *int
+}
+
+func (s *WidgetService) Create(orgID, dashboardID string, input CreateWidgetInput) (*model.Widget, error) {
 	dash, err := s.dashboardRepo.GetByID(dashboardID, orgID)
 	if err != nil {
 		return nil, err
@@ -58,7 +70,7 @@ func (s *WidgetService) Create(orgID, dashboardID, queryID, widgetType string, c
 	if dash == nil {
 		return nil, fmt.Errorf("dashboard not found")
 	}
-	query, err := s.queryService.GetByID(queryID, orgID)
+	query, err := s.queryService.GetByID(input.QueryID, orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -66,15 +78,33 @@ func (s *WidgetService) Create(orgID, dashboardID, queryID, widgetType string, c
 		return nil, fmt.Errorf("query not found")
 	}
 
+	widgetType, err := NormalizeWidgetType(input.WidgetType)
+	if err != nil {
+		return nil, err
+	}
+	config, err := NormalizeWidgetConfig(widgetType, input.Config)
+	if err != nil {
+		return nil, err
+	}
+	x, y, w, h, err := NormalizeWidgetLayout(input.PositionX, input.PositionY, input.Width, input.Height)
+	if err != nil {
+		return nil, err
+	}
+	override, err := NormalizeWidgetRefreshOverride(input.RefreshIntervalOverride)
+	if err != nil {
+		return nil, err
+	}
+
 	widget := &model.Widget{
-		DashboardID: dashboardID,
-		QueryID:     queryID,
-		WidgetType:  widgetType,
-		Config:      config,
-		PositionX:   x,
-		PositionY:   y,
-		Width:       w,
-		Height:      h,
+		DashboardID:             dashboardID,
+		QueryID:                 input.QueryID,
+		WidgetType:              widgetType,
+		Config:                  config,
+		PositionX:               x,
+		PositionY:               y,
+		Width:                   w,
+		Height:                  h,
+		RefreshIntervalOverride: override,
 	}
 	return s.widgetRepo.Create(widget)
 }
@@ -104,6 +134,28 @@ func (s *WidgetService) Update(orgID, dashboardID string, widget *model.Widget) 
 	}
 	// The dashboard must not be changed through a widget update.
 	widget.DashboardID = existing.DashboardID
+
+	widgetType, err := NormalizeWidgetType(widget.WidgetType)
+	if err != nil {
+		return err
+	}
+	config, err := NormalizeWidgetConfig(widgetType, widget.Config)
+	if err != nil {
+		return err
+	}
+	x, y, w, h, err := NormalizeWidgetLayout(widget.PositionX, widget.PositionY, widget.Width, widget.Height)
+	if err != nil {
+		return err
+	}
+	override, err := NormalizeWidgetRefreshOverride(widget.RefreshIntervalOverride)
+	if err != nil {
+		return err
+	}
+	widget.WidgetType = widgetType
+	widget.Config = config
+	widget.PositionX, widget.PositionY, widget.Width, widget.Height = x, y, w, h
+	widget.RefreshIntervalOverride = override
+
 	return s.widgetRepo.Update(widget)
 }
 

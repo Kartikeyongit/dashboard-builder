@@ -5,6 +5,8 @@ import type {
   DashboardFilterValues,
   DashboardFull,
   Widget,
+  WidgetConfig,
+  WidgetType,
 } from '../types';
 
 export interface CreateDashboardPayload {
@@ -52,7 +54,7 @@ export const dashboardAPI = {
 export const widgetAPI = {
   create: (dashboardId: string, data: CreateWidgetPayload) =>
     client.post<Widget>(`/dashboards/${dashboardId}/widgets`, data),
-  update: (dashboardId: string, widgetId: string, data: Partial<CreateWidgetPayload>) =>
+  update: (dashboardId: string, widgetId: string, data: UpdateWidgetPayload) =>
     client.put<Widget>(`/dashboards/${dashboardId}/widgets/${widgetId}`, data),
   delete: (dashboardId: string, widgetId: string) =>
     client.delete(`/dashboards/${dashboardId}/widgets/${widgetId}`),
@@ -60,10 +62,24 @@ export const widgetAPI = {
 
 export interface CreateWidgetPayload {
   query_id: string;
-  widget_type: 'chart' | 'table' | 'metric';
-  config?: any;
+  widget_type: WidgetType;
+  config?: WidgetConfig;
   position_x: number;
   position_y: number;
   width: number;
   height: number;
+  /** Omit to inherit the dashboard interval; 0 disables refresh. */
+  refresh_interval_override?: number | null;
+}
+
+export interface UpdateWidgetPayload {
+  query_id?: string;
+  widget_type?: WidgetType;
+  config?: WidgetConfig;
+  position_x?: number;
+  position_y?: number;
+  width?: number;
+  height?: number;
+  /** Explicit null clears an override back to "inherit". */
+  refresh_interval_override?: number | null;
 }

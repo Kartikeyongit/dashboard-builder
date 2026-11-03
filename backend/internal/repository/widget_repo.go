@@ -113,11 +113,12 @@ func (r *WidgetRepo) Update(w *model.Widget) error {
 	} else {
 		configBytes = json.RawMessage("{}")
 	}
-	_, err := r.db.Exec(
+	return r.db.QueryRow(
 		`UPDATE widgets SET query_id=$1, widget_type=$2, config_json=$3, position_x=$4, position_y=$5, width=$6, height=$7, refresh_interval_override=$8, updated_at=NOW()
-		 WHERE id=$9`,
-		w.QueryID, w.WidgetType, configBytes, w.PositionX, w.PositionY, w.Width, w.Height, w.RefreshIntervalOverride, w.ID)
-	return err
+		 WHERE id=$9
+		 RETURNING updated_at`,
+		w.QueryID, w.WidgetType, configBytes, w.PositionX, w.PositionY, w.Width, w.Height, w.RefreshIntervalOverride, w.ID,
+	).Scan(&w.UpdatedAt)
 }
 
 func (r *WidgetRepo) Delete(id string) error {

@@ -11,6 +11,7 @@
     "test:e2e": "cypress run --spec cypress/e2e/dashboard-smoke.cy.ts",
     "test:e2e:features": "cypress run --spec cypress/e2e/dashboard-features.cy.ts",
     "test:e2e:library": "cypress run --spec cypress/e2e/library.cy.ts",
+    "test:e2e:builder": "cypress run --spec cypress/e2e/builder.cy.ts",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -16,13 +16,14 @@ func NewWidgetHandler(widgetService *service.WidgetService) *WidgetHandler {
 }
 
 type CreateWidgetRequest struct {
-	QueryID    string          `json:"query_id"`
-	WidgetType string          `json:"widget_type"`
-	Config     json.RawMessage `json:"config"`
-	PositionX  int             `json:"position_x"`
-	PositionY  int             `json:"position_y"`
-	Width      int             `json:"width"`
-	Height     int             `json:"height"`
+	QueryID                 string          `json:"query_id"`
+	WidgetType              string          `json:"widget_type"`
+	Config                  json.RawMessage `json:"config"`
+	PositionX               int             `json:"position_x"`
+	PositionY               int             `json:"position_y"`
+	Width                   int             `json:"width"`
+	Height                  int             `json:"height"`
+	RefreshIntervalOverride *int            `json:"refresh_interval_override"`
 }
 
 func (h *WidgetHandler) Create(c *fiber.Ctx) error {
@@ -35,7 +36,16 @@ func (h *WidgetHandler) Create(c *fiber.Ctx) error {
 	if req.QueryID == "" || req.WidgetType == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "query_id and widget_type are required")
 	}
-	widget, err := h.widgetService.Create(orgID, dashboardID, req.QueryID, req.WidgetType, req.Config, req.PositionX, req.PositionY, req.Width, req.Height)
+	widget, err := h.widgetService.Create(orgID, dashboardID, service.CreateWidgetInput{
+		QueryID:                 req.QueryID,
+		WidgetType:              req.WidgetType,
+		Config:                  req.Config,
+		PositionX:               req.PositionX,
+		PositionY:               req.PositionY,
+		Width:                   req.Width,
+		Height:                  req.Height,
+		RefreshIntervalOverride: req.RefreshIntervalOverride,
+	})
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
@@ -54,6 +64,9 @@ func (h *WidgetHandler) Update(c *fiber.Ctx) error {
 		PositionY  *int            `json:"position_y,omitempty"`
 		Width      *int            `json:"width,omitempty"`
 		Height     *int            `json:"height,omitempty"`
+		// **int distinguishes "field absent" (nil) from an explicit null,
+		// which means "inherit the dashboard interval".
+		RefreshIntervalOverride **int `json:"refresh_interval_override,omitempty"`
 	}
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid body")
@@ -82,6 +95,9 @@ func (h *WidgetHandler) Update(c *fiber.Ctx) error {
 	}
 	if req.Height != nil {
 		widget.Height = *req.Height
+	}
+	if req.RefreshIntervalOverride != nil {
+		widget.RefreshIntervalOverride = *req.RefreshIntervalOverride
 	}
 	if err := h.widgetService.Update(orgID, dashboardID, widget); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())

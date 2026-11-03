@@ -250,8 +250,19 @@ func (r *DashboardRepo) Duplicate(id, orgID, createdBy, name string) (*model.Das
 }
 
 func (r *DashboardRepo) GetAllWithRefresh() ([]*model.Dashboard, error) {
+	// A dashboard is schedulable when it has its own interval or when at least
+	// one widget overrides the interval. Widgets that opt out (override 0, or
+	// no override on a dashboard with interval 0) are filtered per widget by
+	// the scheduler.
 	rows, err := r.db.Query(
-		`SELECT ` + dashboardColumns + ` FROM dashboards WHERE refresh_interval_seconds > 0`)
+		`SELECT ` + dashboardColumns + ` FROM dashboards
+		 WHERE refresh_interval_seconds > 0
+		    OR EXISTS (
+		        SELECT 1 FROM widgets w
+		        WHERE w.dashboard_id = dashboards.id
+		          AND w.refresh_interval_override IS NOT NULL
+		          AND w.refresh_interval_override > 0
+		    )`)
 	if err != nil {
 		return nil, err
 	}

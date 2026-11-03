@@ -110,7 +110,7 @@ func TestDashboardRepoIntegration(t *testing.T) {
 		t.Fatalf("updated filters = %#v", updated.Filters)
 	}
 
-	_, err = widgetRepo.Create(&model.Widget{
+	widget, err := widgetRepo.Create(&model.Widget{
 		DashboardID: created.ID,
 		QueryID:     queryID,
 		WidgetType:  "table",
@@ -199,6 +199,46 @@ func TestDashboardRepoIntegration(t *testing.T) {
 
 	if missing, err := repo.Duplicate(created.ID, otherOrg, userID, "nope"); err != nil || missing != nil {
 		t.Fatalf("cross-org duplicate = %#v, %v", missing, err)
+	}
+
+	// A dashboard with no interval must still be scheduled when a widget
+	// overrides the interval. The widget's own override (0) must opt it out.
+	containsDashboard := func(list []*model.Dashboard, id string) bool {
+		for _, d := range list {
+			if d.ID == id {
+				return true
+			}
+		}
+		return false
+	}
+
+	override := 30
+	widget.RefreshIntervalOverride = &override
+	if err := widgetRepo.Update(widget); err != nil {
+		t.Fatalf("update widget override: %v", err)
+	}
+	if widget.UpdatedAt.IsZero() {
+		t.Fatal("widget update did not return updated_at")
+	}
+	scheduled, err := repo.GetAllWithRefresh()
+	if err != nil {
+		t.Fatalf("get all with refresh: %v", err)
+	}
+	if !containsDashboard(scheduled, created.ID) {
+		t.Fatal("dashboard with a widget override was not scheduled")
+	}
+
+	never := 0
+	widget.RefreshIntervalOverride = &never
+	if err := widgetRepo.Update(widget); err != nil {
+		t.Fatalf("disable widget override: %v", err)
+	}
+	scheduled, err = repo.GetAllWithRefresh()
+	if err != nil {
+		t.Fatalf("get all with refresh after opt-out: %v", err)
+	}
+	if containsDashboard(scheduled, created.ID) {
+		t.Fatal("dashboard with only an opted-out widget was scheduled")
 	}
 }
 

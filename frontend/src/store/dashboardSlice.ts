@@ -2,7 +2,7 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { dashboardAPI } from '../api/dashboard';
 import type { CreateDashboardPayload, UpdateDashboardPayload } from '../api/dashboard';
-import type { Dashboard, DashboardFilterValues, DashboardFull, WidgetData } from '../types';
+import type { Dashboard, DashboardFilterValues, DashboardFull, QueryResult, Widget, WidgetData } from '../types';
 
 interface DashboardState {
   list: Dashboard[];
@@ -103,7 +103,28 @@ const dashboardSlice = createSlice({
         );
       }
     },
-    updateWidgetData: (state, action: PayloadAction<{ widget_id: string; data?: any; error?: string }>) => {
+    /** Puts a widget back after an undo, preserving its saved position. */
+    restoreWidgetToCurrent: (state, action: PayloadAction<WidgetData>) => {
+      if (!state.currentFull) return;
+      const widgets = Array.isArray(state.currentFull.widgets) ? state.currentFull.widgets : [];
+      if (widgets.some(w => w.widget.id === action.payload.widget.id)) return;
+      widgets.push(action.payload);
+      widgets.sort((a, b) => {
+        if (a.widget.position_y !== b.widget.position_y) {
+          return a.widget.position_y - b.widget.position_y;
+        }
+        return a.widget.position_x - b.widget.position_x;
+      });
+      state.currentFull.widgets = widgets;
+    },
+    /** Replaces a widget after an inspector save or duplicate. */
+    updateWidgetInCurrent: (state, action: PayloadAction<Widget>) => {
+      if (!state.currentFull) return;
+      const widgets = Array.isArray(state.currentFull.widgets) ? state.currentFull.widgets : [];
+      const wd = widgets.find(w => w.widget.id === action.payload.id);
+      if (wd) wd.widget = action.payload;
+    },
+    updateWidgetData: (state, action: PayloadAction<{ widget_id: string; data?: QueryResult; error?: string }>) => {
       if (state.currentFull) {
         const widgets = Array.isArray(state.currentFull.widgets) ? state.currentFull.widgets : [];
         const wd = widgets.find(w => w.widget.id === action.payload.widget_id);
@@ -167,6 +188,8 @@ export const {
   restoreDashboard,
   addWidgetToCurrent,
   removeWidgetFromCurrent,
+  restoreWidgetToCurrent,
+  updateWidgetInCurrent,
   updateWidgetData,
   updateWidgetLayout,
 } = dashboardSlice.actions;

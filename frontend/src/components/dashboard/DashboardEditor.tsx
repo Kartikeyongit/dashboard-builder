@@ -1,22 +1,44 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useParams, useNavigate, useBlocker } from 'react-router-dom';
 import GridLayout from 'react-grid-layout';
 import type { Layout } from 'react-grid-layout';
 import { debounce } from 'lodash';
+import {
+  ArrowLeft,
+  ClipboardCopy,
+  Copy,
+  Eye,
+  Monitor,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Settings,
+  Share2,
+  SlidersHorizontal,
+  Smartphone,
+  Trash2,
+} from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import {
   loadDashboardFull,
   clearCurrentFull,
   removeWidgetFromCurrent,
+  restoreWidgetToCurrent,
+  updateWidgetInCurrent,
   updateWidgetLayout,
 } from '../../store/dashboardSlice';
 import { widgetAPI } from '../../api/dashboard';
-import type { CreateWidgetPayload } from '../../api/dashboard';
+import type { CreateWidgetPayload, UpdateWidgetPayload } from '../../api/dashboard';
+import type { Widget, WidgetConfig, WidgetData } from '../../types';
 import { addToast } from '../../store/toastSlice';
 import { useDashboardSocket } from '../../hooks/useDashboardSocket';
+import { useDeferredDelete } from '../../hooks/useDeferredDelete';
 import { canEditContent } from '../../utils/permissions';
 import { apiErrorMessage } from '../../utils/apiError';
 import { getNextWidgetY, widgetToLayout } from '../../utils/dashboard';
+import { refreshLabel } from '../../utils/format';
+import { normalizeWidgetConfig, widgetTitle } from '../../utils/widgetConfig';
 import ChartWidget from './ChartWidget';
 import TableWidget from './TableWidget';
 import MetricWidget from './MetricWidget';
@@ -24,17 +46,15 @@ import AddWidgetDialog from './AddWidgetDialog';
 import ShareDialog from './ShareDialog';
 import DashboardSettingsDialog from './DashboardSettingsDialog';
 import DashboardFilterDialog from './DashboardFilterDialog';
+import WidgetInspector from './WidgetInspector';
+import Menu from '../../ui/Menu';
+import type { MenuItem } from '../../ui/Menu';
+import ConfirmDialog from '../../ui/ConfirmDialog';
 import EmptyState from '../ui/EmptyState';
 import WidgetBoundary from '../errors/WidgetBoundary';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import './DashboardEditor.css';
-
-const WIDGET_LABELS: Record<string, string> = {
-  chart: 'Chart',
-  table: 'Table',
-  metric: 'Metric',
-};
 
 const WIDGET_ICONS: Record<string, React.ReactNode> = {
   chart: (
@@ -61,15 +81,26 @@ const DashboardEditor: React.FC = () => {
   const { currentFull, loading } = useAppSelector((state) => state.dashboards);
   const user = useAppSelector((state) => state.auth.user);
   const canEdit = canEditContent(user);
+  const deferredDelete = useDeferredDelete();
 
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [editingWidgetId, setEditingWidgetId] = useState<string | null>(null);
+  const [inspectorDirty, setInspectorDirty] = useState(false);
+  const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [gridWidth, setGridWidth] = useState(1200);
   const pendingLayoutUpdates = useRef(new Map<string, Partial<CreateWidgetPayload>>());
   const gridContainerRef = useRef<HTMLDivElement>(null);
+  const saveLayoutRef = useRef<ReturnType<typeof debounce> | null>(null);
+
+  // Warn before leaving the page while the inspector has unsaved changes.
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      inspectorDirty && currentLocation.pathname !== nextLocation.pathname,
+  );
 
   useEffect(() => {
     if (dashboardId) dispatch(loadDashboardFull(dashboardId));
@@ -77,6 +108,16 @@ const DashboardEditor: React.FC = () => {
   }, [dashboardId, dispatch]);
 
   useDashboardSocket(dashboardId);
+
+  useEffect(() => {
+    if (!inspectorDirty) return;
+    const handler = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [inspectorDirty]);
 
   // Measure the real container instead of assuming a fixed 1200px width.
   useEffect(() => {
@@ -100,10 +141,10 @@ const DashboardEditor: React.FC = () => {
     const observer = new ResizeObserver(updateWidth);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [loading, dashboardId]);
+  }, [loading, dashboardId, previewMode]);
 
-  const debouncedSaveLayout = useMemo(
-    () => debounce(async (dashId: string) => {
+  useEffect(() => {
+    const saveLayout = debounce(async (dashId: string) => {
       const updates = Array.from(pendingLayoutUpdates.current.entries());
       pendingLayoutUpdates.current.clear();
       if (updates.length === 0) return;
@@ -114,25 +155,26 @@ const DashboardEditor: React.FC = () => {
           updates.map(([widgetId, layout]) => widgetAPI.update(dashId, widgetId, layout))
         );
         setSaveStatus('saved');
-        dispatch(addToast({ message: 'Layout saved', type: 'success' }));
       } catch (error) {
         updates.forEach(([widgetId, layout]) => {
           pendingLayoutUpdates.current.set(widgetId, layout);
         });
         console.error(error);
         setSaveStatus('error');
-        dispatch(addToast({ message: 'Failed to save layout', type: 'error' }));
       }
-    }, 500),
-    []
-  );
+    }, 500);
 
-  useEffect(() => {
+    saveLayoutRef.current = saveLayout;
     return () => {
-      debouncedSaveLayout.flush();
-      debouncedSaveLayout.cancel();
+      saveLayout.flush();
+      saveLayout.cancel();
+      saveLayoutRef.current = null;
     };
-  }, [debouncedSaveLayout]);
+  }, [dispatch]);
+
+  const queueLayoutSave = (dashId: string) => {
+    saveLayoutRef.current?.(dashId);
+  };
 
   const handleLayoutChange = (layout: Layout) => {
     if (!canEdit || !currentFull || !dashboardId) return;
@@ -153,7 +195,7 @@ const DashboardEditor: React.FC = () => {
         pendingLayoutUpdates.current.set(l.i, newPos);
       }
     });
-    debouncedSaveLayout(dashboardId);
+    queueLayoutSave(dashboardId);
   };
 
   const handleAddWidget = async (payload: CreateWidgetPayload) => {
@@ -167,15 +209,82 @@ const DashboardEditor: React.FC = () => {
     }
   };
 
-  const handleDeleteWidget = async (widgetId: string) => {
-    if (!dashboardId) return;
+  const handleDuplicateWidget = async (widget: Widget) => {
+    if (!dashboardId || !currentFull) return;
+    const allWidgets = currentFull.widgets.map(w => w.widget);
+    const config = {
+      ...normalizeWidgetConfig(widget.widget_type, widget.config),
+      title: `${widgetTitle(widget)} (copy)`.slice(0, 120),
+    };
     try {
-      await widgetAPI.delete(dashboardId, widgetId);
-      dispatch(addToast({ message: 'Widget removed', type: 'success' }));
-      dispatch(removeWidgetFromCurrent(widgetId));
+      await widgetAPI.create(dashboardId, {
+        query_id: widget.query_id,
+        widget_type: widget.widget_type,
+        config,
+        position_x: widget.position_x,
+        position_y: getNextWidgetY(allWidgets),
+        width: widget.width,
+        height: widget.height,
+        refresh_interval_override: widget.refresh_interval_override ?? null,
+      });
+      dispatch(addToast({ message: 'Widget duplicated', type: 'success' }));
+      dispatch(loadDashboardFull(dashboardId));
     } catch (err) {
-      dispatch(addToast({ message: apiErrorMessage(err, 'Could not remove the widget'), type: 'error' }));
+      dispatch(addToast({ message: apiErrorMessage(err, 'Could not duplicate the widget'), type: 'error' }));
     }
+  };
+
+  const handleDeleteWidget = (widgetData: WidgetData) => {
+    if (!dashboardId) return;
+    // Capture the current snapshot so Undo can restore the widget and its data
+    // without refetching.
+    const snapshot = widgetData;
+    deferredDelete({
+      entity: 'Widget',
+      remove: () => dispatch(removeWidgetFromCurrent(snapshot.widget.id)),
+      restore: () => dispatch(restoreWidgetToCurrent(snapshot)),
+      commit: async () => {
+        try {
+          await widgetAPI.delete(dashboardId, snapshot.widget.id);
+          return { ok: true };
+        } catch (err) {
+          return { ok: false, error: apiErrorMessage(err, 'Could not remove the widget') };
+        }
+      },
+    });
+  };
+
+  const handleCopyConfig = async (widget: Widget) => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(widget.config ?? {}, null, 2));
+      dispatch(addToast({ message: 'Widget config copied', type: 'success' }));
+    } catch {
+      dispatch(addToast({ message: 'Could not copy the widget config', type: 'error' }));
+    }
+  };
+
+  const handleInspectorSave = useCallback(
+    async (values: { config: WidgetConfig; refresh_interval_override: number | null }) => {
+      if (!dashboardId || !editingWidgetId) return;
+      const payload: UpdateWidgetPayload = {
+        config: values.config,
+        refresh_interval_override: values.refresh_interval_override,
+      };
+      try {
+        const res = await widgetAPI.update(dashboardId, editingWidgetId, payload);
+        dispatch(updateWidgetInCurrent(res.data));
+        setEditingWidgetId(null);
+        dispatch(addToast({ message: 'Widget updated', type: 'success' }));
+      } catch (err) {
+        throw new Error(apiErrorMessage(err, 'Could not update the widget'), { cause: err });
+      }
+    },
+    [dashboardId, dispatch, editingWidgetId],
+  );
+
+  const retryLayoutSave = () => {
+    if (!dashboardId) return;
+    queueLayoutSave(dashboardId);
   };
 
   if (loading || !currentFull) {
@@ -196,122 +305,232 @@ const DashboardEditor: React.FC = () => {
   const widgets = Array.isArray(currentFull.widgets) ? currentFull.widgets : [];
   const layout: Layout = widgets.map(wd => widgetToLayout(wd.widget));
   const nextWidgetY = getNextWidgetY(widgets.map(w => w.widget));
+  const editingWidget = widgets.find(w => w.widget.id === editingWidgetId) ?? null;
+
+  const widgetMenu = (widgetData: WidgetData): MenuItem[] => [
+    {
+      key: 'edit',
+      label: 'Edit widget',
+      icon: Pencil,
+      onSelect: () => setEditingWidgetId(widgetData.widget.id),
+    },
+    {
+      key: 'duplicate',
+      label: 'Duplicate',
+      icon: Copy,
+      onSelect: () => handleDuplicateWidget(widgetData.widget),
+    },
+    {
+      key: 'copy-json',
+      label: 'Copy config JSON',
+      icon: ClipboardCopy,
+      onSelect: () => handleCopyConfig(widgetData.widget),
+    },
+    {
+      key: 'delete',
+      label: 'Delete widget',
+      icon: Trash2,
+      danger: true,
+      separatorBefore: true,
+      onSelect: () => handleDeleteWidget(widgetData),
+    },
+  ];
+
+  const renderWidgetBody = (widgetData: WidgetData) => (
+    <>
+      <WidgetBoundary
+        title="This widget failed to render"
+        resetKey={`${widgetData.widget.id}:${widgetData.error ?? ''}:${widgetData.data ? widgetData.data.rows.length : 'none'}`}
+      >
+        {widgetData.widget.widget_type === 'chart' && (
+          <ChartWidget data={widgetData.data} config={widgetData.widget.config} />
+        )}
+        {widgetData.widget.widget_type === 'table' && (
+          <TableWidget data={widgetData.data} config={widgetData.widget.config} />
+        )}
+        {widgetData.widget.widget_type === 'metric' && (
+          <MetricWidget data={widgetData.data} config={widgetData.widget.config} />
+        )}
+      </WidgetBoundary>
+      {widgetData.error && <div className="widget-error">{widgetData.error}</div>}
+    </>
+  );
+
+  const renderWidgetFooter = (widgetData: WidgetData) => (
+    <div className="widget-header" key={`${widgetData.widget.id}-footer`}>
+      <div className={`widget-header-left${canEdit ? ' widget-drag-handle' : ''}`}>
+        <span className="widget-type-icon">{WIDGET_ICONS[widgetData.widget.widget_type]}</span>
+        <span className="widget-header-title">{widgetTitle(widgetData.widget)}</span>
+        {widgetData.widget.refresh_interval_override !== undefined &&
+          widgetData.widget.refresh_interval_override !== null && (
+            <span
+              className="widget-refresh-badge"
+              title={`Refresh override: ${refreshLabel(widgetData.widget.refresh_interval_override)}`}
+            >
+              {widgetData.widget.refresh_interval_override === 0
+                ? 'Off'
+                : refreshLabel(widgetData.widget.refresh_interval_override)}
+            </span>
+          )}
+      </div>
+      {canEdit && (
+        <Menu
+          label={`${widgetTitle(widgetData.widget)} actions`}
+          trigger={
+            <button
+              type="button"
+              className="widget-menu-btn widget-no-drag"
+              aria-label={`${widgetTitle(widgetData.widget)} actions`}
+            >
+              <MoreHorizontal size={16} aria-hidden="true" />
+            </button>
+          }
+          items={widgetMenu(widgetData)}
+        />
+      )}
+    </div>
+  );
+
+  const renderWidgetCard = (widgetData: WidgetData, mobile = false) => {
+    const layoutInfo = widgetToLayout(widgetData.widget);
+    return (
+      <div
+        className={`widget-box${mobile ? ' widget-box--mobile' : ''}`}
+        key={widgetData.widget.id}
+        style={mobile ? { minHeight: Math.max(layoutInfo.h * 30, 180) } : undefined}
+      >
+        {renderWidgetFooter(widgetData)}
+        <div className="widget-content">{renderWidgetBody(widgetData)}</div>
+      </div>
+    );
+  };
 
   return (
     <div className="editor-page">
       <button type="button" className="back-btn" onClick={() => navigate('/dashboards')}>
-        <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
-        </svg>
+        <ArrowLeft size={14} aria-hidden="true" />
         Back to Dashboards
       </button>
 
       <div className="editor-toolbar">
         <h2>{currentFull.dashboard.name}</h2>
         <div className="toolbar-actions">
+          {canEdit && (
+            <span className="preview-toggle" role="group" aria-label="Preview width">
+              <button
+                type="button"
+                className={`preview-toggle__btn${previewMode === 'desktop' ? ' is-active' : ''}`}
+                onClick={() => setPreviewMode('desktop')}
+                aria-pressed={previewMode === 'desktop'}
+                title="Desktop preview"
+              >
+                <Monitor size={14} aria-hidden="true" />
+                Desktop
+              </button>
+              <button
+                type="button"
+                className={`preview-toggle__btn${previewMode === 'mobile' ? ' is-active' : ''}`}
+                onClick={() => setPreviewMode('mobile')}
+                aria-pressed={previewMode === 'mobile'}
+                title="Mobile preview"
+              >
+                <Smartphone size={14} aria-hidden="true" />
+                Mobile
+              </button>
+            </span>
+          )}
           {canEdit && saveStatus !== 'idle' && (
-            <span className={`save-status save-status--${saveStatus}`}>
-              {saveStatus === 'saving' && 'Saving...'}
+            <span className={`save-status save-status--${saveStatus}`} aria-live="polite">
+              {saveStatus === 'saving' && 'Saving…'}
               {saveStatus === 'saved' && 'Saved'}
-              {saveStatus === 'error' && 'Save failed'}
+              {saveStatus === 'error' && (
+                <>
+                  Save failed
+                  <button type="button" className="save-retry" onClick={retryLayoutSave}>
+                    Retry
+                  </button>
+                </>
+              )}
             </span>
           )}
           {canEdit && (
             <>
               <button onClick={() => setShowAddDialog(true)}>
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-                </svg>
+                <Plus size={14} aria-hidden="true" />
                 Add Widget
               </button>
               <button className="secondary" onClick={() => setShowFilters(true)}>
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm2 5a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm3 5a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clipRule="evenodd" />
-                </svg>
+                <SlidersHorizontal size={14} aria-hidden="true" />
                 Filters
                 {currentFull.dashboard.filters && currentFull.dashboard.filters.length > 0 && (
                   <span className="filter-count">{currentFull.dashboard.filters.length}</span>
                 )}
               </button>
               <button className="secondary" onClick={() => setShowShare(true)}>
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M15 8a3 3 0 10-2.977-2.633l-4.94 2.47a3 3 0 100 4.326l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.748l4.94-2.47A3 3 0 0015 8z" />
-                </svg>
+                <Share2 size={14} aria-hidden="true" />
                 Share
               </button>
               <button className="secondary" onClick={() => setShowSettings(true)}>
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M11.49 3.17a1 1 0 00-1.98 0l-.2.82a1.5 1.5 0 01-2.12 1.06l-.75-.37a1 1 0 00-1.4 1.4l.37.75a1.5 1.5 0 01-1.06 2.12l-.82.2a1 1 0 000 1.98l.82.2a1.5 1.5 0 011.06 2.12l-.37.75a1 1 0 001.4 1.4l.75-.37a1.5 1.5 0 012.12 1.06l.2.82a1 1 0 001.98 0l.2-.82a1.5 1.5 0 012.12-1.06l.75.37a1 1 0 001.4-1.4l-.37-.75a1.5 1.5 0 011.06-2.12l.82-.2a1 1 0 000-1.98l-.82-.2a1.5 1.5 0 01-1.06-2.12l.37-.75a1 1 0 00-1.4-1.4l-.75.37a1.5 1.5 0 01-2.12-1.06l-.2-.82zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-                </svg>
+                <Settings size={14} aria-hidden="true" />
                 Settings
               </button>
             </>
           )}
           <button className="secondary" onClick={() => navigate(`/dashboards/${dashboardId}`)}>
-            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-              <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-            </svg>
+            <Eye size={14} aria-hidden="true" />
             View
           </button>
           <button className="secondary" onClick={() => dispatch(loadDashboardFull(dashboardId!))}>
-            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
-            </svg>
+            <RefreshCw size={14} aria-hidden="true" />
             Refresh
           </button>
         </div>
       </div>
 
-      <div className="grid-container" ref={gridContainerRef}>
-        <GridLayout
-          className="layout"
-          layout={layout}
-          gridConfig={{ cols: 12, rowHeight: 30 }}
-          width={gridWidth}
-          onLayoutChange={handleLayoutChange}
-          dragConfig={{ handle: '.widget-drag-handle', enabled: canEdit }}
-          resizeConfig={{ enabled: canEdit }}
-        >
-          {widgets.map(wd => (
-            <div key={wd.widget.id} className="widget-box">
-              <div className={`widget-header${canEdit ? ' widget-drag-handle' : ''}`}>
-                <div className="widget-header-left">
-                  <span className="widget-type-icon">{WIDGET_ICONS[wd.widget.widget_type]}</span>
-                  <span>{WIDGET_LABELS[wd.widget.widget_type] || wd.widget.widget_type}</span>
-                </div>
-                {canEdit && (
-                  <button className="widget-remove-btn" onClick={() => handleDeleteWidget(wd.widget.id)} title="Remove widget">
-                    <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                  </button>
+      <div
+        className={`grid-container${previewMode === 'mobile' ? ' grid-container--mobile-preview' : ''}`}
+        ref={gridContainerRef}
+      >
+        {previewMode === 'mobile' ? (
+          <div className="editor-mobile-preview">
+            <div className="editor-mobile-preview__frame">
+              <div className="editor-mobile-preview__bar">
+                <Smartphone size={14} aria-hidden="true" />
+                Mobile preview
+              </div>
+              <div className="editor-mobile-preview__list">
+                {widgets.map(wd => renderWidgetCard(wd, true))}
+                {widgets.length === 0 && (
+                  <div className="editor-mobile-preview__empty">No widgets yet.</div>
                 )}
               </div>
-              <div className="widget-content">
-                <WidgetBoundary
-                  title="This widget failed to render"
-                  resetKey={`${wd.widget.id}:${wd.error ?? ''}:${wd.data ? wd.data.rows.length : 'none'}`}
-                >
-                  {wd.widget.widget_type === 'chart' && <ChartWidget data={wd.data} config={wd.widget.config} />}
-                  {wd.widget.widget_type === 'table' && <TableWidget data={wd.data} />}
-                  {wd.widget.widget_type === 'metric' && <MetricWidget data={wd.data} config={wd.widget.config} />}
-                </WidgetBoundary>
-                {wd.error && <div className="widget-error">{wd.error}</div>}
-              </div>
             </div>
-          ))}
-        </GridLayout>
+          </div>
+        ) : (
+          <>
+            <GridLayout
+              className="layout"
+              layout={layout}
+              gridConfig={{ cols: 12, rowHeight: 30 }}
+              width={gridWidth}
+              onLayoutChange={handleLayoutChange}
+              dragConfig={{ handle: '.widget-drag-handle', cancel: '.widget-no-drag', enabled: canEdit }}
+              resizeConfig={{ enabled: canEdit }}
+            >
+              {widgets.map(wd => renderWidgetCard(wd))}
+            </GridLayout>
 
-        {widgets.length === 0 && (
-          <EmptyState
-            icon="widget"
-            title="No widgets yet"
-            description={canEdit
-              ? 'Add a chart, table, or metric to start building your dashboard.'
-              : 'This dashboard does not have any widgets yet.'}
-            action={canEdit ? { label: 'Add Widget', onClick: () => setShowAddDialog(true) } : undefined}
-          />
+            {widgets.length === 0 && (
+              <EmptyState
+                icon="widget"
+                title="No widgets yet"
+                description={canEdit
+                  ? 'Add a chart, table, or metric to start building your dashboard.'
+                  : 'This dashboard does not have any widgets yet.'}
+                action={canEdit ? { label: 'Add Widget', onClick: () => setShowAddDialog(true) } : undefined}
+              />
+            )}
+          </>
         )}
       </div>
 
@@ -339,6 +558,38 @@ const DashboardEditor: React.FC = () => {
           onSaved={() => dashboardId && dispatch(loadDashboardFull(dashboardId))}
         />
       )}
+      {canEdit && editingWidget && dashboardId && (
+        <WidgetInspector
+          key={editingWidget.widget.id}
+          widget={editingWidget.widget}
+          columns={editingWidget.data?.columns ?? []}
+          dashboardRefreshSeconds={currentFull.dashboard.refresh_interval_seconds}
+          onClose={() => setEditingWidgetId(null)}
+          onSave={handleInspectorSave}
+          onDirtyChange={setInspectorDirty}
+        />
+      )}
+
+      <ConfirmDialog
+        open={blocker.state === 'blocked'}
+        title="Discard unsaved widget changes?"
+        description="You have unsaved changes in the widget inspector. Leaving this page will discard them."
+        confirmLabel="Discard and leave"
+        cancelLabel="Keep editing"
+        destructive
+        onConfirm={() => {
+          if (blocker.state === 'blocked') {
+            setInspectorDirty(false);
+            setEditingWidgetId(null);
+            blocker.proceed();
+          }
+        }}
+        onCancel={() => {
+          if (blocker.state === 'blocked') blocker.reset();
+          setInspectorDirty(false);
+          setEditingWidgetId(null);
+        }}
+      />
     </div>
   );
 };

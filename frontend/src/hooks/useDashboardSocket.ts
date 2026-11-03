@@ -1,10 +1,29 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import socket from '../api/websocket';
 import { useAppDispatch } from '../hooks';
 import { updateWidgetData } from '../store/dashboardSlice';
 
-export const useDashboardSocket = (dashboardId: string | undefined) => {
+export interface WidgetSocketMessage {
+  widget_id: string;
+  data?: import('../types').QueryResult;
+  error?: string;
+}
+
+/**
+ * Subscribes to per-widget scheduler updates. The editor reads from Redux, so
+ * the default path always dispatches there. Pages that keep data in local state
+ * (the viewer) can pass `onWidgetData` and update their own copy as well.
+ */
+export const useDashboardSocket = (
+  dashboardId: string | undefined,
+  onWidgetData?: (message: WidgetSocketMessage) => void,
+) => {
   const dispatch = useAppDispatch();
+  const handlerRef = useRef(onWidgetData);
+
+  useEffect(() => {
+    handlerRef.current = onWidgetData;
+  }, [onWidgetData]);
 
   useEffect(() => {
     if (!dashboardId) return;
@@ -16,6 +35,11 @@ export const useDashboardSocket = (dashboardId: string | undefined) => {
           data: msg.data,
           error: msg.error,
         }));
+        handlerRef.current?.({
+          widget_id: msg.widget_id,
+          data: msg.data,
+          error: msg.error,
+        });
       }
     });
     return () => {

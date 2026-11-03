@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import { fetchQueries } from '../../store/querySlice';
 import type { CreateWidgetPayload } from '../../api/dashboard';
+import type { ChartType, WidgetType } from '../../types';
+import { CHART_TYPE_OPTIONS, defaultWidgetConfig } from '../../utils/widgetConfig';
 import Dialog from '../../ui/Dialog';
 import Button from '../../ui/Button';
-import Field, { Select } from '../../ui/Field';
+import Field, { Input, Select } from '../../ui/Field';
 
 interface Props {
   onClose: () => void;
@@ -19,8 +21,9 @@ const AddWidgetDialog: React.FC<Props> = ({ onClose, onAdd, nextY = 0 }) => {
   const queries = useAppSelector((state) => state.queries.items);
   const queriesLoading = useAppSelector((state) => state.queries.loading);
   const [selectedQueryId, setSelectedQueryId] = useState('');
-  const [widgetType, setWidgetType] = useState<'chart' | 'table' | 'metric'>('chart');
-  const [chartType, setChartType] = useState('bar');
+  const [widgetType, setWidgetType] = useState<WidgetType>('chart');
+  const [chartType, setChartType] = useState<ChartType>('bar');
+  const [title, setTitle] = useState('');
 
   useEffect(() => {
     // The editor does not load queries, so the dialog must do it itself.
@@ -31,18 +34,18 @@ const AddWidgetDialog: React.FC<Props> = ({ onClose, onAdd, nextY = 0 }) => {
 
   const handleSubmit = () => {
     if (!selectedQueryId) return;
-    let config = {};
-    if (widgetType === 'chart') {
-      config = { chartType };
-    }
+    const config = {
+      ...defaultWidgetConfig(widgetType, chartType),
+      ...(title.trim() ? { title: title.trim() } : {}),
+    };
     onAdd({
       query_id: selectedQueryId,
       widget_type: widgetType,
       config,
       position_x: 0,
       position_y: nextY,
-      width: 4,
-      height: 4,
+      width: widgetType === 'metric' ? 3 : 4,
+      height: widgetType === 'metric' ? 3 : 4,
     });
     onClose();
   };
@@ -93,7 +96,7 @@ const AddWidgetDialog: React.FC<Props> = ({ onClose, onAdd, nextY = 0 }) => {
       <Field label="Widget type">
         <Select
           value={widgetType}
-          onChange={(event) => setWidgetType(event.target.value as 'chart' | 'table' | 'metric')}
+          onChange={(event) => setWidgetType(event.target.value as WidgetType)}
         >
           <option value="chart">Chart</option>
           <option value="table">Table</option>
@@ -103,13 +106,27 @@ const AddWidgetDialog: React.FC<Props> = ({ onClose, onAdd, nextY = 0 }) => {
 
       {widgetType === 'chart' && (
         <Field label="Chart type">
-          <Select value={chartType} onChange={(event) => setChartType(event.target.value)}>
-            <option value="bar">Bar</option>
-            <option value="line">Line</option>
-            <option value="pie">Pie</option>
+          <Select
+            value={chartType}
+            onChange={(event) => setChartType(event.target.value as ChartType)}
+          >
+            {CHART_TYPE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </Select>
         </Field>
       )}
+
+      <Field label="Title" hint="Optional. Shown above the widget in the editor and viewer.">
+        <Input
+          value={title}
+          maxLength={120}
+          placeholder={widgetType === 'chart' ? 'e.g. Revenue by month' : 'Optional title'}
+          onChange={(event) => setTitle(event.target.value)}
+        />
+      </Field>
     </Dialog>
   );
 };

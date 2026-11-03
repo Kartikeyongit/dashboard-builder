@@ -15,6 +15,10 @@
   line-height: 1.1;
   color: var(--color-text);
   font-variant-numeric: tabular-nums;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .metric-widget__label {
@@ -25,4 +29,22 @@
 
 .metric-widget--empty {
   color: var(--color-text-muted);
+}
+
+.metric-widget__threshold {
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.metric-widget--success .metric-widget__value {
+  color: var(--color-success);
+}
+
+.metric-widget--warning .metric-widget__value {
+  color: var(--color-warning);
+}
+
+.metric-widget--danger .metric-widget__value {
+  color: var(--color-danger);
 }

@@ -4,11 +4,18 @@ import React, { useMemo } from 'react';
 // error #130 (invalid element type) even though the dev server works.
 import ReactEChartsCore from 'echarts-for-react/esm/core';
 import * as echarts from 'echarts/core';
-import { BarChart, LineChart, PieChart } from 'echarts/charts';
-import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components';
+import { BarChart, LineChart, PieChart, ScatterChart } from 'echarts/charts';
+import {
+  GridComponent,
+  LegendComponent,
+  TitleComponent,
+  TooltipComponent,
+} from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { useTheme } from '../../theme/useTheme';
-import type { QueryResult } from '../../types';
+import type { QueryResult, WidgetConfig } from '../../types';
+import { buildChartOption } from '../../utils/widgetConfig';
+import type { ChartTheme } from '../../utils/widgetConfig';
 
 // Register only the pieces the dashboard charts use. Importing all of ECharts
 // pulls in every chart type, component, and renderer, which triples the size of
@@ -17,8 +24,10 @@ echarts.use([
   BarChart,
   LineChart,
   PieChart,
+  ScatterChart,
   GridComponent,
   LegendComponent,
+  TitleComponent,
   TooltipComponent,
   CanvasRenderer,
 ]);
@@ -30,7 +39,7 @@ type ChartClickParams = {
 
 interface Props {
   data?: QueryResult;
-  config: any;
+  config?: WidgetConfig | null;
   /**
    * Called when a data point is clicked. `column` is the chart's first result
    * column and `value` is the clicked category/slice name. DashboardView maps
@@ -41,15 +50,22 @@ interface Props {
 
 const ChartWidget: React.FC<Props> = ({ data, config, onSelect }) => {
   const { resolved: theme } = useTheme();
-  const chartType = config?.chartType || 'bar';
   const dimensionColumn = data?.columns?.[0];
   const interactive = Boolean(onSelect && dimensionColumn);
 
-  // Rebuild when the theme changes so axis, legend, and tooltip colors follow
-  // the active palette without a data refetch. `buildEChartsOption` reads CSS
-  // variables, so the linter cannot see that `theme` is a real dependency.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const option = useMemo(() => buildEChartsOption(chartType, data), [chartType, data, theme]);
+  // Rebuild when the theme or config changes so colors, labels, and axes stay
+  // in sync without a data refetch. `buildChartOption` reads CSS variables, so
+  // the resolved theme is read here to make the dependency explicit.
+  const option = useMemo(() => {
+    void theme;
+    const colors: ChartTheme = {
+      text: cssVar('--color-text'),
+      muted: cssVar('--color-text-muted'),
+      border: cssVar('--color-border'),
+      surface: cssVar('--color-surface'),
+    };
+    return buildChartOption(data, config, colors);
+  }, [config, data, theme]);
 
   const onEvents = interactive
     ? {
@@ -75,55 +91,6 @@ const ChartWidget: React.FC<Props> = ({ data, config, onSelect }) => {
 
 function cssVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-}
-
-function buildEChartsOption(type: string, data?: QueryResult) {
-  const textColor = cssVar('--color-text');
-  const mutedColor = cssVar('--color-text-muted');
-  const borderColor = cssVar('--color-border');
-  const surfaceColor = cssVar('--color-surface');
-
-  const columns = data?.columns ?? [];
-  const rows = data?.rows ?? [];
-
-  const baseTextStyle = { color: textColor };
-
-  if (type === 'pie') {
-    const pieData = rows.map((row) => ({
-      name: row[0] ?? '',
-      value: Number(row[1]) || 0,
-    }));
-    return {
-      tooltip: { trigger: 'item', backgroundColor: surfaceColor, textStyle: baseTextStyle },
-      series: [{ type: 'pie', data: pieData, label: baseTextStyle }],
-    };
-  }
-
-  const categories = rows.map((row) => row[0] ?? '');
-  const series = columns.slice(1).map((col, idx) => ({
-    name: col,
-    type: type,
-    data: rows.map((row) => Number(row[idx + 1]) || 0),
-  }));
-
-  return {
-    tooltip: { backgroundColor: surfaceColor, textStyle: baseTextStyle },
-    legend: { data: columns.slice(1), textStyle: baseTextStyle },
-    grid: { containLabel: true },
-    xAxis: {
-      data: categories,
-      axisLabel: { color: mutedColor },
-      axisLine: { lineStyle: { color: borderColor } },
-      axisTick: { lineStyle: { color: borderColor } },
-    },
-    yAxis: {
-      axisLabel: { color: mutedColor },
-      splitLine: { lineStyle: { color: borderColor } },
-      axisLine: { show: false },
-      axisTick: { show: false },
-    },
-    series,
-  };
 }
 
 export default ChartWidget;

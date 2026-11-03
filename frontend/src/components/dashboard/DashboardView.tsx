@@ -14,6 +14,9 @@ import {
 } from '../../utils/filters';
 import { findCrossFilter, normalizeDimensionName, toggledFilterValue } from '../../utils/crossFilter';
 import { downloadCSV, safeFilename, toCSV } from '../../utils/csv';
+import { apiErrorMessage } from '../../utils/apiError';
+import { WIDGET_TYPE_LABELS, refreshOverrideLabel, widgetTitle } from '../../utils/widgetConfig';
+import { useDashboardSocket } from '../../hooks/useDashboardSocket';
 import ChartWidget from './ChartWidget';
 import TableWidget from './TableWidget';
 import MetricWidget from './MetricWidget';
@@ -61,6 +64,25 @@ const DashboardView: React.FC = () => {
   const requestSeq = useRef(0);
   const searchKey = searchParams.toString();
 
+  // The scheduler pushes per-widget refreshes over the dashboard socket. The
+  // viewer keeps its data in local state, so merge those updates here.
+  useDashboardSocket(
+    dashboardId,
+    useCallback((message) => {
+      setFull((current) => {
+        if (!current) return current;
+        return {
+          ...current,
+          widgets: current.widgets.map((widgetData) =>
+            widgetData.widget.id === message.widget_id
+              ? { ...widgetData, data: message.data, error: message.error }
+              : widgetData,
+          ),
+        };
+      });
+    }, []),
+  );
+
   const load = useCallback(
     async (filters: DashboardFilterValues, silent = false) => {
       if (!dashboardId) return;
@@ -71,9 +93,9 @@ const DashboardView: React.FC = () => {
         if (seq !== requestSeq.current) return;
         setFull(normalizeFull(res.data));
         setError('');
-      } catch (err: any) {
+      } catch (err) {
         if (seq !== requestSeq.current) return;
-        setError(err.response?.data?.message || err.response?.data?.error || 'Failed to load dashboard');
+        setError(apiErrorMessage(err, 'Failed to load dashboard'));
       } finally {
         if (seq === requestSeq.current) setLoading(false);
       }
@@ -333,7 +355,28 @@ const DashboardView: React.FC = () => {
               }}
             >
               <div className="dashboard-view-widget-header">
-                <span className="dv-widget-type">{widgetData.widget.widget_type}</span>
+                <div className="dv-widget-heading">
+                  <span className="dv-widget-title">{widgetTitle(widgetData.widget)}</span>
+                  {widgetData.widget.config?.title && (
+                    <span className="dv-widget-type">
+                      {WIDGET_TYPE_LABELS[widgetData.widget.widget_type]}
+                    </span>
+                  )}
+                  {widgetData.widget.refresh_interval_override !== undefined &&
+                    widgetData.widget.refresh_interval_override !== null && (
+                      <span
+                        className="dv-widget-refresh"
+                        title={refreshOverrideLabel(
+                          widgetData.widget.refresh_interval_override,
+                          refreshInterval,
+                        )}
+                      >
+                        {widgetData.widget.refresh_interval_override === 0
+                          ? 'Off'
+                          : `${widgetData.widget.refresh_interval_override}s`}
+                      </span>
+                    )}
+                </div>
                 {canExport && (
                   <button
                     className="dv-export-btn"
@@ -356,7 +399,9 @@ const DashboardView: React.FC = () => {
                       onSelect={(column, value) => handleChartSelect(widgetData.widget.id, column, value)}
                     />
                   )}
-                  {widgetData.widget.widget_type === 'table' && <TableWidget data={widgetData.data} />}
+                  {widgetData.widget.widget_type === 'table' && (
+                    <TableWidget data={widgetData.data} config={widgetData.widget.config} />
+                  )}
                   {widgetData.widget.widget_type === 'metric' && (
                     <MetricWidget data={widgetData.data} config={widgetData.widget.config} />
                   )}

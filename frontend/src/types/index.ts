@@ -96,6 +96,73 @@ export interface DashboardFilter {
 
 export type DashboardFilterValues = Record<string, string>;
 
+export type WidgetType = 'chart' | 'table' | 'metric';
+
+export type ChartType =
+  | 'bar'
+  | 'hbar'
+  | 'stackedBar'
+  | 'line'
+  | 'area'
+  | 'pie'
+  | 'donut'
+  | 'scatter';
+
+export type NumberFormat =
+  | 'auto'
+  | 'integer'
+  | 'decimal'
+  | 'currency'
+  | 'percent'
+  | 'compact'
+  | 'duration';
+
+export type WidgetPalette = 'default' | 'ocean' | 'warm' | 'forest' | 'mono';
+
+export type TableDensity = 'normal' | 'compact';
+
+export type ThresholdDirection = 'above' | 'below';
+
+export type ThresholdTone = 'success' | 'warning' | 'danger';
+
+export interface MetricThreshold {
+  value: number;
+  direction: ThresholdDirection;
+  tone: ThresholdTone;
+}
+
+/**
+ * Type-specific widget configuration. The backend validates and drops unknown
+ * keys, so every property here is optional and safe to omit.
+ */
+export interface WidgetConfig {
+  /** Custom title shown above the widget in the editor and viewer. */
+  title?: string;
+  description?: string;
+  numberFormat?: NumberFormat;
+
+  // Chart
+  chartType?: ChartType;
+  showLegend?: boolean;
+  showLabels?: boolean;
+  showGrid?: boolean;
+  xAxisTitle?: string;
+  yAxisTitle?: string;
+  palette?: WidgetPalette;
+
+  // Table
+  visibleColumns?: string[];
+  density?: TableDensity;
+  pinFirstColumn?: boolean;
+
+  // Metric
+  label?: string;
+  prefix?: string;
+  suffix?: string;
+  decimals?: number;
+  threshold?: MetricThreshold;
+}
+
 export interface Dashboard {
   id: string;
   org_id: string;
@@ -115,13 +182,14 @@ export interface Widget {
   id: string;
   dashboard_id: string;
   query_id: string;
-  widget_type: 'chart' | 'table' | 'metric';
-  config: any;
+  widget_type: WidgetType;
+  config: WidgetConfig | null;
   position_x: number;
   position_y: number;
   width: number;
   height: number;
-  refresh_interval_override?: number;
+  /** Omitted/null = inherit the dashboard interval; 0 = never refresh. */
+  refresh_interval_override?: number | null;
 }
 
 export interface DashboardFull {

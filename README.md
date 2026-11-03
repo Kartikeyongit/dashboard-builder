@@ -11,7 +11,10 @@ Connect databases, write SQL, and design live dashboards with drag‑and‑drop 
 ## ✨ Features
 
 - 🔗 **Connect databases** – PostgreSQL and MySQL via a UI; credentials encrypted at rest.
-- 🧩 **Drag‑&‑drop builder** – Arrange charts, tables, and metric cards on a grid; auto‑saving layout.
+- 🧩 **Drag‑&‑drop builder** – Arrange charts, tables, and metric cards on a grid; auto‑saving layout with a retry if a save fails.
+- 🎛️ **Widget inspector** – Edit any widget after it is created: title, chart type and palette, legend/grid/labels, table columns and density, metric prefix/suffix/decimals and thresholds, and number formatting.
+- 🧰 **Widget actions** – Edit, duplicate, copy the config JSON, or delete with Undo directly from the editor; set a per‑widget refresh interval that inherits, overrides, or disables dashboard refresh.
+- 📱 **Responsive preview** – Toggle a mobile preview in the editor; the viewer stacks widgets into a single column on small screens and stays draggable only on desktop.
 - 👁️ **Read‑only view mode** – Open any dashboard at `/dashboards/:id` for a clean, distraction‑free view with fullscreen and refresh controls.
 - 🎛️ **Dashboard filters** – Add date, number, text, or dropdown filters and reference them in SQL as `{{filter_id}}`; values are bound as real SQL parameters, never interpolated.
 - 🖱️ **Cross‑filtering** – Click a bar or pie slice to set the dashboard filter for that dimension; every widget using the filter reloads, and the URL updates so the view stays shareable.
@@ -270,6 +273,14 @@ its own dashboard through the API:
 
 ```bash
 npm run test:e2e:library
+```
+
+The builder spec covers editing a widget in the inspector, duplicating it,
+deleting with Undo, and saving a per-widget refresh override. It uses the same
+API-created fixture pattern:
+
+```bash
+npm run test:e2e:builder
 ```
 
 Both specs read the API base from `apiUrl` (default
