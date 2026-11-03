@@ -15,10 +15,12 @@ Connect databases, write SQL, and design live dashboards with drag‑and‑drop 
 - 🎛️ **Widget inspector** – Edit any widget after it is created: title, chart type and palette, legend/grid/labels, table columns and density, metric prefix/suffix/decimals and thresholds, and number formatting.
 - 🧰 **Widget actions** – Edit, duplicate, copy the config JSON, or delete with Undo directly from the editor; set a per‑widget refresh interval that inherits, overrides, or disables dashboard refresh.
 - 📱 **Responsive preview** – Toggle a mobile preview in the editor; the viewer stacks widgets into a single column on small screens and stays draggable only on desktop.
-- 👁️ **Read‑only view mode** – Open any dashboard at `/dashboards/:id` for a clean, distraction‑free view with fullscreen and refresh controls.
-- 🎛️ **Dashboard filters** – Add date, number, text, or dropdown filters and reference them in SQL as `{{filter_id}}`; values are bound as real SQL parameters, never interpolated.
+- 👁️ **Read‑only view mode** – Open any dashboard at `/dashboards/:id` for a clean, distraction‑free view with fullscreen, freshness, auto‑refresh, per‑widget actions, and export controls.
+- ⏱️ **Freshness and auto‑refresh** – See when the dashboard and each widget last updated; choose off/15s/30s/1m/5m from the viewer without changing the saved dashboard.
+- 🎛️ **Dashboard filters** – Add date, number, text, or dropdown filters and reference them in SQL as `{{filter_id}}`; values are bound as real SQL parameters, never interpolated. Select and date filters apply automatically, date presets are one click away, and active filters show as removable chips.
 - 🖱️ **Cross‑filtering** – Click a bar or pie slice to set the dashboard filter for that dimension; every widget using the filter reloads, and the URL updates so the view stays shareable.
-- 📤 **CSV export** – Download table and metric widgets as CSV, including the active filter values.
+- 📤 **CSV and image export** – Download one widget or every widget at once as CSV; export any chart as a PNG, or print the dashboard to PDF.
+- 🔗 **Share manager** – Create password-protected or expiring links, copy them later, show a QR code, copy an iframe embed snippet, and revoke any link immediately.
 - 📑 **Duplicate dashboards** – Copy a dashboard and all of its widgets in one click; saved queries are shared.
 - 🗂️ **Dashboard library** – Search by name, tag, or description; sort by recent activity, name, or widget count; pin favourites per user; rename, edit settings, and delete from the card menu.
 - ⌨️ **Command palette** – `Ctrl`/`Cmd`+`K` jumps to any page, dashboard, query, or datasource, and runs common actions.
@@ -30,7 +32,7 @@ Connect databases, write SQL, and design live dashboards with drag‑and‑drop 
 - 🔄 **Real‑time updates** – WebSocket push with in-process pub/sub (optional Redis for multi-instance deployments); dashboards refresh automatically on a schedule.
 - ⚡ **Fast dashboards** – Widget queries run in parallel with bounded concurrency, identical queries are deduplicated, and a short‑lived in‑process cache absorbs repeated refreshes.
 - 🧳 **Small initial bundle** – Routes are lazy‑loaded; Monaco, AG Grid, and ECharts load only on the pages that need them.
-- 🔗 **Shareable links** – Read‑only public URLs with optional password protection and expiry.
+- 🔗 **Shareable links** – Read‑only public URLs with optional password protection and expiry; shared views keep the filter bar, freshness, refresh, and `?embed=1` mode.
 - 👥 **Multi‑tenant** – Organizations, users, and role‑based access (admin/editor/viewer).
 - 🛡️ **Secure** – JWT authentication, rate limiting, SQL sandbox (read‑only, row limits, timeouts).
 - 📦 **Seed data** – 200 customers, 1000 orders, 500 events, 2800 metrics, and 30+ queries across 6 dashboards.
@@ -258,10 +260,11 @@ To run the same flow against a deployed site, pass its URL:
 npm run test:e2e -- --config baseUrl=https://your-frontend.onrender.com
 ```
 
-The feature spec covers filters and URL persistence, CSV export, duplicate, and
-password-protected share links. It creates its own query, dashboard, and widget
-through the API and deletes them afterwards, so it needs a seeded database and a
-writable API (not a shared demo deployment):
+The feature spec covers filters and URL persistence, CSV/PNG export, freshness,
+auto-refresh, the share manager, share-link revocation, shared-view filters, and
+embed mode. It creates its own query, dashboard, and widgets through the API and
+deletes them afterwards, so it needs a seeded database and a writable API (not a
+shared demo deployment):
 
 ```bash
 npm run test:e2e:features
@@ -389,8 +392,10 @@ All API routes are prefixed with `/api/v1`.
 | Method | Path | Description |
 |--------|------|-------------|
 | `POST` | `/dashboards/:id/share` | Create share link (protected) |
-| `GET` | `/share/:token` | Get shared dashboard (public) |
-| `POST` | `/share/:token/verify` | Verify share link password (public) |
+| `GET` | `/dashboards/:id/shares` | List share links with status (protected) |
+| `DELETE` | `/dashboards/:id/shares/:shareId` | Revoke a share link (protected) |
+| `GET` | `/share/:token` | Get shared dashboard (public; accepts `f_*` filters) |
+| `POST` | `/share/:token/verify` | Verify share link password (public; accepts `f_*` filters) |
 
 ### WebSockets (public + protected)
 
@@ -435,7 +440,7 @@ Clicking a bar or pie slice sets the dashboard filter whose id (or label) matche
 
 - Clicking the same value again clears the filter back to its configured default.
 - Charts whose first column has no matching filter show a one-time hint instead of changing the dashboard.
-- Cross-filtering is available in the authenticated dashboard view. Public share links continue to use the dashboard's default filter values.
+- Cross-filtering is available in the authenticated dashboard view. Public share links keep their filter bar, freshness, refresh, and embed mode, but chart clicks do not change filters.
 - The URL is updated with the normal `f_<filter_id>` parameter, so a cross-filtered view can be bookmarked or shared.
 
 ---

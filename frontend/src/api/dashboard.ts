@@ -6,6 +6,7 @@ import type {
   DashboardFull,
   Widget,
   WidgetConfig,
+  WidgetData,
   WidgetType,
 } from '../types';
 
@@ -58,6 +59,10 @@ export const widgetAPI = {
     client.put<Widget>(`/dashboards/${dashboardId}/widgets/${widgetId}`, data),
   delete: (dashboardId: string, widgetId: string) =>
     client.delete(`/dashboards/${dashboardId}/widgets/${widgetId}`),
+  refresh: (dashboardId: string, widgetId: string, filters?: DashboardFilterValues) =>
+    client.post<WidgetData>(`/dashboards/${dashboardId}/widgets/${widgetId}/refresh`, undefined, {
+      params: filterParams(filters),
+    }),
 };
 
 export interface CreateWidgetPayload {

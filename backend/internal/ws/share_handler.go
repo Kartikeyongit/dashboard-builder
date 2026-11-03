@@ -13,7 +13,7 @@ func HandleShareWebSocket(hub *Hub, shareService *service.ShareService) fiber.Ha
 			return fiber.NewError(fiber.StatusBadRequest, "missing share token")
 		}
 
-		dashFull, err := shareService.GetDashboardByToken(token, nil)
+		dashFull, err := shareService.GetDashboardByToken(token, nil, nil)
 		if err != nil {
 			return fiber.NewError(fiber.StatusUnauthorized, "invalid share token")
 		}

@@ -72,13 +72,53 @@ func shareURL(c *fiber.Ctx, token string) string {
 	return base + "/view/" + token
 }
 
+func (h *ShareHandler) ListShareLinks(c *fiber.Ctx) error {
+	orgID := c.Locals("orgID").(string)
+	dashboardID := c.Params("id")
+
+	links, err := h.shareService.ListShareLinks(orgID, dashboardID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusNotFound, err.Error())
+	}
+
+	out := make([]fiber.Map, 0, len(links))
+	for _, link := range links {
+		url := ""
+		if link.Token != "" {
+			url = shareURL(c, link.Token)
+		}
+		out = append(out, fiber.Map{
+			"id":                 link.ID,
+			"url":                url,
+			"password_protected": link.PasswordProtected,
+			"expires_at":         link.ExpiresAt,
+			"last_used_at":       link.LastUsedAt,
+			"created_at":         link.CreatedAt,
+			"is_active":          link.IsActive,
+			"token_available":    link.Token != "",
+		})
+	}
+	return c.JSON(fiber.Map{"links": out})
+}
+
+func (h *ShareHandler) RevokeShareLink(c *fiber.Ctx) error {
+	orgID := c.Locals("orgID").(string)
+	dashboardID := c.Params("id")
+	shareID := c.Params("shareId")
+
+	if err := h.shareService.RevokeShareLink(orgID, dashboardID, shareID); err != nil {
+		return fiber.NewError(fiber.StatusNotFound, err.Error())
+	}
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
 type VerifyPasswordRequest struct {
 	Password string `json:"password"`
 }
 
 func (h *ShareHandler) GetSharedDashboard(c *fiber.Ctx) error {
 	token := c.Params("token")
-	full, err := h.shareService.GetDashboardByToken(token, nil)
+	full, err := h.shareService.GetDashboardByToken(token, nil, filterOverrides(c))
 	if err == service.ErrPasswordRequired {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"password_required": true})
 	}
@@ -94,7 +134,7 @@ func (h *ShareHandler) VerifyPassword(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid body")
 	}
-	full, err := h.shareService.GetDashboardByToken(token, &req.Password)
+	full, err := h.shareService.GetDashboardByToken(token, &req.Password, filterOverrides(c))
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "incorrect password or invalid link")
 	}

@@ -89,6 +89,22 @@ describe('dashboard features', () => {
       .then(() => {
         return cy.request({
           method: 'POST',
+          url: `${apiUrl}/dashboards/${dashboardId}/widgets`,
+          headers: authHeaders(),
+          body: {
+            query_id: queryId,
+            widget_type: 'chart',
+            config: { title: 'Customers by country', chartType: 'bar' },
+            position_x: 6,
+            position_y: 0,
+            width: 6,
+            height: 4,
+          },
+        });
+      })
+      .then(() => {
+        return cy.request({
+          method: 'POST',
           url: `${apiUrl}/dashboards/${dashboardId}/share`,
           headers: authHeaders(),
           body: { password: sharePassword },
@@ -200,20 +216,128 @@ describe('dashboard features', () => {
     cy.contains('.dashboard-card__title', `${fixtureName} (copy)`, { timeout: 30000 }).should('exist');
   });
 
-  it('requires the password for a protected share link', () => {
+  it('shows freshness, changes auto-refresh, and exports every widget', () => {
+    let capturedCsv = '';
+
+    cy.visit(`/dashboards/${dashboardId}?f_country=US`);
+    cy.contains('.ag-cell', 'US', { timeout: 30000 }).should('exist');
+
+    cy.get('.dv-freshness').should('contain', 'just now');
+
+    cy.contains('.dashboard-view-actions button', 'Auto:').click();
+    cy.contains('.ui-menu__item', '15s').click();
+    cy.get('.dv-refresh-badge').should('contain', '15s');
+
+    cy.window().then((win) => {
+      cy.stub(win.URL, 'createObjectURL')
+        .callsFake((blob: Blob) => {
+          void blob.text().then((text) => {
+            capturedCsv = text;
+          });
+          return 'blob:mock';
+        })
+        .as('createObjectURL');
+      cy.stub(win.URL, 'revokeObjectURL').as('revokeObjectURL');
+      cy.stub(win.HTMLAnchorElement.prototype, 'click').as('downloadClick');
+    });
+
+    cy.contains('.dashboard-view-actions button', 'Export').click();
+    cy.get('@createObjectURL').should('have.been.calledOnce');
+    cy.wrap(null).should(() => {
+      expect(capturedCsv).to.contain('Widget,Table');
+      expect(capturedCsv).to.contain('Widget,Customers by country');
+    });
+  });
+
+  it('exports a chart as PNG from the per-widget menu', () => {
+    let downloadName = '';
+
+    cy.visit(`/dashboards/${dashboardId}?f_country=US`);
+    cy.get('canvas', { timeout: 30000 }).should('have.length.greaterThan', 0);
+
+    cy.window().then((win) => {
+      cy.stub(win.HTMLAnchorElement.prototype, 'click')
+        .callsFake(function (this: HTMLAnchorElement) {
+          downloadName = this.download;
+        })
+        .as('pngClick');
+    });
+
+    cy.get('button[aria-label="Customers by country actions"]').click();
+    cy.contains('.ui-menu__item', 'Export PNG').click();
+
+    cy.get('@pngClick').should('have.been.calledOnce');
+    cy.then(() => {
+      expect(downloadName).to.match(/-Customers by country-2\.png$/);
+    });
+  });
+
+  it('lists share links, shows a QR code, and revokes a link', () => {
+    cy.visit(`/dashboards/${dashboardId}?f_country=US`);
+    cy.contains('.ag-cell', 'US', { timeout: 30000 }).should('exist');
+
+    cy.contains('.dashboard-view-actions button', 'Share').click();
+    cy.get('.share-link', { timeout: 30000 }).should('have.length.at.least', 1);
+
+    cy.contains('.share-create button', 'Generate link').click();
+    cy.get('.share-link', { timeout: 30000 }).should('have.length.at.least', 2);
+
+    cy.get('.share-link--new').within(() => {
+      cy.contains('.share-status', 'Active');
+      cy.get('img[alt="QR code for this share link"]', { timeout: 15000 }).should('exist');
+      cy.get('button[aria-label="Revoke link"]').click();
+    });
+    cy.get('.share-confirm').contains('button', 'Revoke').click();
+
+    cy.contains('.share-status', 'Revoked', { timeout: 30000 }).should('exist');
+
+    cy.request({
+      method: 'GET',
+      url: `${apiUrl}/dashboards/${dashboardId}/shares`,
+      headers: authHeaders(),
+    }).then((res) => {
+      const revoked = (res.body.links as Array<{ is_active: boolean; url: string }>).find(
+        (link) => !link.is_active,
+      );
+      expect(revoked, 'revoked link').to.not.equal(undefined);
+      const revokedToken = revoked!.url.split('/view/')[1];
+      cy.request({
+        url: `${apiUrl}/share/${revokedToken}`,
+        failOnStatusCode: false,
+      }).then((shared) => {
+        expect(shared.status).to.equal(401);
+      });
+    });
+  });
+
+  it('applies filters in the shared viewer and keeps them in the URL', () => {
     cy.visit(`/view/${shareToken}`);
-
     cy.contains('h3', 'Password Required', { timeout: 30000 }).should('exist');
-    cy.get('input[placeholder="Enter dashboard password"]').type('wrong-password');
-    cy.contains('button', 'Submit').click();
-    cy.get('.shared-view-error').should('be.visible');
-
-    cy.get('input[placeholder="Enter dashboard password"]').clear();
     cy.get('input[placeholder="Enter dashboard password"]').type(sharePassword);
     cy.contains('button', 'Submit').click();
 
-    cy.contains('h2', fixtureName, { timeout: 30000 }).should('exist');
-    cy.get('.shared-view-widget', { timeout: 30000 }).should('have.length.greaterThan', 0);
+    cy.get('#filter-country', { timeout: 30000 }).should('have.value', 'US');
     cy.contains('.ag-cell', 'US', { timeout: 30000 }).should('exist');
+    cy.get('.shared-view-freshness').should('contain', 'Updated');
+
+    cy.get('#filter-country').clear();
+    cy.get('#filter-country').type('UK');
+    cy.contains('.dashboard-filter-actions button', 'Apply').click();
+
+    cy.location('search').should('contain', 'f_country=UK');
+    cy.contains('.ag-cell', 'UK', { timeout: 30000 }).should('exist');
+    cy.contains('.ag-cell', 'US').should('not.exist');
+    cy.get('.dashboard-filter-chip').should('contain', 'UK');
+  });
+
+  it('renders embed mode without branding', () => {
+    cy.visit(`/view/${shareToken}?embed=1`);
+    cy.contains('h3', 'Password Required', { timeout: 30000 }).should('exist');
+    cy.get('input[placeholder="Enter dashboard password"]').type(sharePassword);
+    cy.contains('button', 'Submit').click();
+
+    cy.get('.shared-view--embed', { timeout: 30000 }).should('exist');
+    cy.get('.shared-view-brand h2').should('not.be.visible');
+    cy.get('.shared-view-widget', { timeout: 30000 }).should('have.length.greaterThan', 0);
   });
 });

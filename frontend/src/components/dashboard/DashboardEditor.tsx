@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate, useBlocker } from 'react-router-dom';
+import { useParams, useNavigate, useBlocker, useSearchParams } from 'react-router-dom';
 import GridLayout from 'react-grid-layout';
 import type { Layout } from 'react-grid-layout';
 import { debounce } from 'lodash';
@@ -77,6 +77,8 @@ const WIDGET_ICONS: Record<string, React.ReactNode> = {
 const DashboardEditor: React.FC = () => {
   const { dashboardId } = useParams<{ dashboardId: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const widgetParam = searchParams.get('widget');
   const dispatch = useAppDispatch();
   const { currentFull, loading } = useAppSelector((state) => state.dashboards);
   const user = useAppSelector((state) => state.auth.user);
@@ -108,6 +110,24 @@ const DashboardEditor: React.FC = () => {
   }, [dashboardId, dispatch]);
 
   useDashboardSocket(dashboardId);
+
+  // Deep links from the viewer ("Edit widget") open the inspector directly.
+  useEffect(() => {
+    if (!widgetParam || !currentFull) return;
+    if (currentFull.widgets.some((item) => item.widget.id === widgetParam)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- open the inspector requested by the URL
+      setEditingWidgetId(widgetParam);
+    }
+  }, [widgetParam, currentFull]);
+
+  const closeInspector = useCallback(() => {
+    setEditingWidgetId(null);
+    if (widgetParam) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('widget');
+      setSearchParams(next, { replace: true });
+    }
+  }, [widgetParam, searchParams, setSearchParams]);
 
   useEffect(() => {
     if (!inspectorDirty) return;
@@ -273,13 +293,13 @@ const DashboardEditor: React.FC = () => {
       try {
         const res = await widgetAPI.update(dashboardId, editingWidgetId, payload);
         dispatch(updateWidgetInCurrent(res.data));
-        setEditingWidgetId(null);
+        closeInspector();
         dispatch(addToast({ message: 'Widget updated', type: 'success' }));
       } catch (err) {
         throw new Error(apiErrorMessage(err, 'Could not update the widget'), { cause: err });
       }
     },
-    [dashboardId, dispatch, editingWidgetId],
+    [closeInspector, dashboardId, dispatch, editingWidgetId],
   );
 
   const retryLayoutSave = () => {
@@ -564,7 +584,7 @@ const DashboardEditor: React.FC = () => {
           widget={editingWidget.widget}
           columns={editingWidget.data?.columns ?? []}
           dashboardRefreshSeconds={currentFull.dashboard.refresh_interval_seconds}
-          onClose={() => setEditingWidgetId(null)}
+          onClose={closeInspector}
           onSave={handleInspectorSave}
           onDirtyChange={setInspectorDirty}
         />

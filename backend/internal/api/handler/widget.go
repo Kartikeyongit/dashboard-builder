@@ -114,3 +114,14 @@ func (h *WidgetHandler) Delete(c *fiber.Ctx) error {
 	}
 	return c.SendStatus(fiber.StatusNoContent)
 }
+
+func (h *WidgetHandler) Refresh(c *fiber.Ctx) error {
+	orgID := c.Locals("orgID").(string)
+	dashboardID := c.Params("dashboardId")
+	id := c.Params("id")
+	widget, err := h.widgetService.RefreshWidget(c.Context(), orgID, dashboardID, id, filterOverrides(c))
+	if err != nil {
+		return fiber.NewError(fiber.StatusNotFound, err.Error())
+	}
+	return c.JSON(widget)
+}

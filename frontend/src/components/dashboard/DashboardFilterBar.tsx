@@ -1,15 +1,30 @@
 import React from 'react';
-import type { DashboardFilter, DashboardFilterValues } from '../../types';
+import type { DashboardFilter, DashboardFilterType, DashboardFilterValues } from '../../types';
 
 interface Props {
   filters: DashboardFilter[];
   values: DashboardFilterValues;
   loading?: boolean;
   dirty?: boolean;
-  onChange: (id: string, value: string) => void;
+  onChange: (id: string, value: string, type: DashboardFilterType) => void;
   onApply: () => void;
   onReset: () => void;
 }
+
+const DATE_PRESETS: Array<{ label: string; days: number }> = [
+  { label: 'Today', days: 0 },
+  { label: '7d', days: 7 },
+  { label: '30d', days: 30 },
+  { label: '90d', days: 90 },
+];
+
+/** Local `YYYY-MM-DD` without the UTC shift toISOString() would introduce. */
+const localDate = (daysAgo: number): string => {
+  const date = new Date();
+  date.setDate(date.getDate() - daysAgo);
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 10);
+};
 
 const DashboardFilterBar: React.FC<Props> = ({
   filters,
@@ -44,7 +59,7 @@ const DashboardFilterBar: React.FC<Props> = ({
               <select
                 id={inputId}
                 value={value}
-                onChange={(event) => onChange(filter.id, event.target.value)}
+                onChange={(event) => onChange(filter.id, event.target.value, filter.type)}
               >
                 <option value="">All</option>
                 {hasUnlistedValue && <option value={value}>{value}</option>}
@@ -58,8 +73,25 @@ const DashboardFilterBar: React.FC<Props> = ({
                 type={filter.type === 'number' ? 'number' : filter.type === 'date' ? 'date' : 'text'}
                 value={value}
                 placeholder={filter.default || undefined}
-                onChange={(event) => onChange(filter.id, event.target.value)}
+                onChange={(event) => onChange(filter.id, event.target.value, filter.type)}
               />
+            )}
+            {filter.type === 'date' && (
+              <div className="dashboard-filter-presets">
+                {DATE_PRESETS.map((preset) => {
+                  const presetValue = localDate(preset.days);
+                  return (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      className={`dashboard-filter-preset${value === presetValue ? ' dashboard-filter-preset--active' : ''}`}
+                      onClick={() => onChange(filter.id, presetValue, filter.type)}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
             )}
           </div>
         );

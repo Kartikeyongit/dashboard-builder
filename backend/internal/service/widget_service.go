@@ -278,3 +278,33 @@ func (s *WidgetService) LoadDashboardWithData(ctx context.Context, orgID, dashbo
 		Widgets:   widgetDataList,
 	}, nil
 }
+
+// RefreshWidget executes one widget's query and returns its latest data. It is
+// used by the viewer's per-widget refresh action so one slow widget does not
+// block the rest of the dashboard.
+func (s *WidgetService) RefreshWidget(ctx context.Context, orgID, dashboardID, widgetID string, overrides map[string]string) (*WidgetData, error) {
+	dash, err := s.dashboardRepo.GetByID(dashboardID, orgID)
+	if err != nil {
+		return nil, err
+	}
+	if dash == nil {
+		return nil, fmt.Errorf("dashboard not found")
+	}
+
+	widget, err := s.widgetRepo.GetByIDForOrg(widgetID, orgID)
+	if err != nil {
+		return nil, err
+	}
+	if widget == nil || widget.DashboardID != dashboardID {
+		return nil, fmt.Errorf("widget not found")
+	}
+
+	wd := &WidgetData{Widget: widget}
+	result, err := s.queryService.ExecuteSavedQueryWithParams(ctx, widget.QueryID, orgID, dash.ResolveFilterValues(overrides))
+	if err != nil {
+		wd.Error = err.Error()
+		return wd, nil
+	}
+	wd.Data = result
+	return wd, nil
+}

@@ -75,7 +75,7 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 	queryService := service.NewQueryService(queryRepo, datasourceRepo, poolManager, resultCache)
 	dashboardService := service.NewDashboardService(dashboardRepo, widgetRepo)
 	widgetService := service.NewWidgetService(widgetRepo, dashboardRepo, queryService, queryConcurrency)
-	shareService := service.NewShareService(shareLinkRepo, dashboardRepo, widgetService)
+	shareService := service.NewShareService(shareLinkRepo, dashboardRepo, widgetService, encryptionKey)
 
 	wsHub := ws.NewHub()
 	go wsHub.Run()
@@ -163,6 +163,8 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 	dashboards.Get("/:id/full", dashboardFullHandler.GetFull)
 	dashboards.Post("/:id/duplicate", editorOnly, dashboardHandler.Duplicate)
 	dashboards.Post("/:id/share", editorOnly, shareHandler.CreateShareLink)
+	dashboards.Get("/:id/shares", editorOnly, shareHandler.ListShareLinks)
+	dashboards.Delete("/:id/shares/:shareId", editorOnly, shareHandler.RevokeShareLink)
 	// Favorites are per-user, so viewers can pin dashboards too.
 	dashboards.Put("/:id/favorite", dashboardHandler.SetFavorite(true))
 	dashboards.Delete("/:id/favorite", dashboardHandler.SetFavorite(false))
@@ -171,6 +173,7 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 	widgets.Post("/", editorOnly, widgetHandler.Create)
 	widgets.Put("/:id", editorOnly, widgetHandler.Update)
 	widgets.Delete("/:id", editorOnly, widgetHandler.Delete)
+	widgets.Post("/:id/refresh", widgetHandler.Refresh)
 
 	protected.Get("/me", func(c *fiber.Ctx) error {
 		userID := middleware.GetUserID(c)

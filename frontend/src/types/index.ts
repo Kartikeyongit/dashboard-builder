@@ -197,6 +197,18 @@ export interface DashboardFull {
   widgets: WidgetData[];
 }
 
+export interface ShareLink {
+  id: string;
+  url: string;
+  password_protected: boolean;
+  expires_at?: string | null;
+  last_used_at?: string | null;
+  created_at: string;
+  is_active: boolean;
+  /** False for links created before encrypted token storage; they cannot be copied. */
+  token_available: boolean;
+}
+
 export interface WidgetData {
   widget: Widget;
   data?: QueryResult;

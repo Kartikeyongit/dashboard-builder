@@ -25,6 +25,7 @@ export function toCSV(result?: QueryResult | null): string {
 /** Makes a filename safe on Windows, macOS, and Linux. */
 export function safeFilename(name: string, fallback = 'export'): string {
   const cleaned = name
+    // eslint-disable-next-line no-control-regex -- strip control characters that break filenames
     .replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-')
     .replace(/\s+/g, ' ')
     .trim()
@@ -48,4 +49,16 @@ export function downloadCSV(filename: string, csv: string): void {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+/** Downloads an image (for example a chart canvas data URL). */
+export function downloadDataUrl(filename: string, dataUrl: string): void {
+  if (!dataUrl || typeof document === 'undefined') return;
+  const link = document.createElement('a');
+  link.href = dataUrl;
+  link.download = filename;
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
