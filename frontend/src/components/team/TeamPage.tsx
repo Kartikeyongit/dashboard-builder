@@ -122,6 +122,18 @@ const TeamPage: React.FC = () => {
     void loadAll();
   }, [loadAll]);
 
+  // Mutations change the audit trail after the page has loaded, so refresh it
+  // instead of showing a stale activity list. Best-effort: never block an action.
+  const refreshAudit = useCallback(async () => {
+    if (!isAdmin) return;
+    try {
+      const res = await teamAPI.listAudit(100);
+      setEvents(res.data.events);
+    } catch {
+      // The action already succeeded; the activity can catch up on next load.
+    }
+  }, [isAdmin]);
+
   const copyLink = async (url: string) => {
     if (!url) return;
     try {
@@ -143,6 +155,7 @@ const TeamPage: React.FC = () => {
       setCreatedInvite(invite);
       setInviteEmail('');
       dispatch(addToast({ message: 'Invite created. Copy the link to share it.', type: 'success' }));
+      void refreshAudit();
     } catch (err) {
       dispatch(addToast({ message: apiErrorMessage(err, 'Could not create the invite.'), type: 'error' }));
     } finally {
@@ -156,6 +169,7 @@ const TeamPage: React.FC = () => {
       const res = await teamAPI.updateRole(member.id, role);
       setMembers((current) => current.map((item) => (item.id === member.id ? res.data : item)));
       dispatch(addToast({ message: `${memberName(member)} is now ${ROLE_LABEL[role].toLowerCase()}`, type: 'success' }));
+      void refreshAudit();
     } catch (err) {
       dispatch(addToast({ message: apiErrorMessage(err, 'Could not change the role.'), type: 'error' }));
     } finally {
@@ -177,6 +191,7 @@ const TeamPage: React.FC = () => {
         if (createdInvite?.id === confirm.id) setCreatedInvite(null);
         dispatch(addToast({ message: 'Invite revoked', type: 'success' }));
       }
+      void refreshAudit();
       setConfirm(null);
     } catch (err) {
       dispatch(addToast({ message: apiErrorMessage(err, 'Could not complete that action.'), type: 'error' }));
