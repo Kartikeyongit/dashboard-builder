@@ -245,3 +245,59 @@ export interface WidgetData {
   data?: QueryResult;
   error?: string;
 }
+
+export type TeamRole = 'admin' | 'editor' | 'viewer';
+
+export interface Member {
+  id: string;
+  email: string;
+  role: TeamRole;
+  display_name: string;
+  timezone: string;
+  last_login_at?: string | null;
+  created_at: string;
+}
+
+export interface UserSettings {
+  user_id: string;
+  display_name: string;
+  timezone: string;
+  updated_at?: string;
+}
+
+export interface Invite {
+  id: string;
+  email: string;
+  role: TeamRole;
+  invited_by_email?: string;
+  expires_at: string;
+  expired: boolean;
+  created_at: string;
+  /** Empty when the encrypted token could not be recovered. */
+  url: string;
+}
+
+export interface InvitePreview {
+  org_name: string;
+  email: string;
+  role: TeamRole;
+  expires_at: string;
+}
+
+export interface AuditEvent {
+  id: string;
+  org_id: string;
+  actor_id?: string | null;
+  actor_email?: string;
+  action: string;
+  target_type: string;
+  target_id?: string | null;
+  target_name: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface AcceptInviteRequest {
+  display_name: string;
+  password: string;
+}

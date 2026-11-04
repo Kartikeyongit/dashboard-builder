@@ -119,7 +119,7 @@ describe('dashboard features', () => {
     if (!authToken) return;
     cy.request({ method: 'GET', url: `${apiUrl}/dashboards`, headers: authHeaders() }).then((res) => {
       const ids = (res.body as Array<{ id: string; name: string }>)
-        .filter((d) => d.name === fixtureName || d.name === `${fixtureName} (copy)`)
+        .filter((d) => d.name.startsWith(fixtureName))
         .map((d) => d.id);
       ids.forEach((id) => {
         cy.request({
@@ -339,5 +339,35 @@ describe('dashboard features', () => {
     cy.get('.shared-view--embed', { timeout: 30000 }).should('exist');
     cy.get('.shared-view-brand h2').should('not.be.visible');
     cy.get('.shared-view-widget', { timeout: 30000 }).should('have.length.greaterThan', 0);
+  });
+
+  it('creates a dashboard from a template and seeds its metadata', () => {
+    loginWithSession();
+    const templateName = `${fixtureName} template`;
+
+    cy.visit('/dashboards');
+    cy.contains('button', '+ New Dashboard').click();
+    cy.contains('.template-card', 'Operations monitor').click();
+    cy.get('.ui-dialog input').clear().type(templateName);
+    cy.contains('button', 'Create dashboard').click();
+
+    cy.url({ timeout: 30000 }).should('include', '/edit');
+
+    cy.request({ method: 'GET', url: `${apiUrl}/dashboards`, headers: authHeaders() }).then((res) => {
+      const created = (res.body as Array<{ id: string; name: string }>).find(
+        (item) => item.name === templateName,
+      );
+      expect(created).to.not.equal(undefined);
+      cy.request({
+        method: 'GET',
+        url: `${apiUrl}/dashboards/${created!.id}`,
+        headers: authHeaders(),
+      }).then((detail) => {
+        expect(detail.body.refresh_interval_seconds).to.eq(60);
+        expect(detail.body.tags).to.include('operations');
+        expect(detail.body.filters[0].id).to.eq('environment');
+        expect(detail.body.filters[0].default).to.eq('Production');
+      });
+    });
   });
 });

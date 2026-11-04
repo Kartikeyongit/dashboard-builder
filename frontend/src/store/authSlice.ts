@@ -1,7 +1,10 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
+import axios from 'axios';
 import { authAPI } from '../api/auth';
-import type { User, LoginRequest, RegisterRequest } from '../types';
+import { teamAPI } from '../api/team';
+import { apiErrorMessage } from '../utils/apiError';
+import type { AcceptInviteRequest, User, LoginRequest, RegisterRequest } from '../types';
 
 interface AuthState {
   user: User | null;
@@ -25,8 +28,26 @@ export const registerUser = createAsyncThunk(
       localStorage.setItem('access_token', response.data.tokens.access_token);
       localStorage.setItem('refresh_token', response.data.tokens.refresh_token);
       return response.data.user;
-    } catch (err: any) {
-      return rejectWithValue(err.response?.data?.message || 'Registration failed');
+    } catch (err) {
+      return rejectWithValue(apiErrorMessage(err, 'Registration failed'));
+    }
+  }
+);
+
+interface AcceptTeamInviteArgs extends AcceptInviteRequest {
+  token: string;
+}
+
+export const acceptTeamInvite = createAsyncThunk(
+  'auth/acceptInvite',
+  async ({ token, ...data }: AcceptTeamInviteArgs, { rejectWithValue }) => {
+    try {
+      const response = await teamAPI.acceptInvite(token, data);
+      localStorage.setItem('access_token', response.data.tokens.access_token);
+      localStorage.setItem('refresh_token', response.data.tokens.refresh_token);
+      return response.data.user;
+    } catch (err) {
+      return rejectWithValue(apiErrorMessage(err, 'Could not accept the invite'));
     }
   }
 );
@@ -39,8 +60,8 @@ export const loginUser = createAsyncThunk(
       localStorage.setItem('access_token', response.data.tokens.access_token);
       localStorage.setItem('refresh_token', response.data.tokens.refresh_token);
       return response.data.user;
-    } catch (err: any) {
-      return rejectWithValue(err.response?.data?.message || 'Login failed');
+    } catch (err) {
+      return rejectWithValue(apiErrorMessage(err, 'Login failed'));
     }
   }
 );
@@ -58,8 +79,8 @@ export const restoreAuth = createAsyncThunk('auth/restore', async (_, { rejectWi
   try {
     const response = await authAPI.getMe();
     return response.data;
-  } catch (err: any) {
-    if (err.response?.status === 401) {
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.status === 401) {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
     }
@@ -89,6 +110,20 @@ const authSlice = createSlice({
       state.user = action.payload;
     });
     builder.addCase(registerUser.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload as string;
+    });
+    // Accept an invite link
+    builder.addCase(acceptTeamInvite.pending, (state) => {
+      state.isLoading = true;
+      state.error = null;
+    });
+    builder.addCase(acceptTeamInvite.fulfilled, (state, action) => {
+      state.isLoading = false;
+      state.user = action.payload;
+      state.isInitializing = false;
+    });
+    builder.addCase(acceptTeamInvite.rejected, (state, action) => {
       state.isLoading = false;
       state.error = action.payload as string;
     });

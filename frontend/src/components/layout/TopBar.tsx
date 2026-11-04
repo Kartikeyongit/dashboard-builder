@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Menu as MenuIcon, Moon, Search, Sun, UserRound } from 'lucide-react';
+import { LogOut, Menu as MenuIcon, Moon, Search, Settings, Sun, UserRound, Users } from 'lucide-react';
 import { useAppDispatch } from '../../hooks';
 import { logoutUser } from '../../store/authSlice';
 import { useTheme } from '../../theme/useTheme';
@@ -88,6 +88,8 @@ const TopBar: React.FC<TopBarProps> = ({ userEmail, onOpenMenu, onOpenPalette })
           }
           items={[
             { key: 'account', label: userEmail, icon: UserRound, disabled: true },
+            { key: 'settings', label: 'Settings', icon: Settings, onSelect: () => navigate('/settings'), separatorBefore: true },
+            { key: 'team', label: 'Team', icon: Users, onSelect: () => navigate('/team') },
             { key: 'theme', label: themeLabel, icon: theme === 'dark' ? Sun : Moon, onSelect: toggleTheme, separatorBefore: true },
             { key: 'logout', label: 'Sign out', icon: LogOut, onSelect: handleLogout },
           ]}

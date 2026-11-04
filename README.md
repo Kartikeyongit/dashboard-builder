@@ -22,7 +22,12 @@ Connect databases, write SQL, and design live dashboards with drag‑and‑drop 
 - 📤 **CSV and image export** – Download one widget or every widget at once as CSV; export any chart as a PNG, or print the dashboard to PDF.
 - 🔗 **Share manager** – Create password-protected or expiring links, copy them later, show a QR code, copy an iframe embed snippet, and revoke any link immediately.
 - 📑 **Duplicate dashboards** – Copy a dashboard and all of its widgets in one click; saved queries are shared.
-- 🗂️ **Dashboard library** – Search by name, tag, or description; sort by recent activity, name, or widget count; pin favourites per user; rename, edit settings, and delete from the card menu.
+- 🗂️ **Dashboard library** – Search by name, tag, or description; sort by recent activity, name, or widget count; pin favourites per user; rename, edit settings, and delete from the card menu. The New dashboard dialog can start blank or from a template that seeds metadata and filters.
+- 👥 **Team onboarding** – Admins create single-use invite links (no email service required), choose the role, and copy the link to share anywhere. Invited teammates join in one step, appear in the directory, and can update their own name, timezone, and password.
+- 🛡️ **Roles and activity** – Every member sees the directory; admins can change roles, remove members, and review an audit feed of invites, joins, role changes, profile updates, password changes, and share links.
+- 🔍 **Schema browser** – Inspect tables, columns, and types for any datasource before writing SQL.
+- ✍️ **SQL workbench** – Split-pane editor with run-selection, cancel, on-demand formatting, sortable/filterable result grid, TSV/CSV export, and friendly error hints.
+- 🧪 **Safe connections** – Test a datasource before saving and see the round-trip latency; destructive deletes return a `409` with the queries, widgets, or dashboards that depend on them.
 - ⌨️ **Command palette** – `Ctrl`/`Cmd`+`K` jumps to any page, dashboard, query, or datasource, and runs common actions.
 - ↩️ **Undo delete** – Deleting a dashboard, query, or datasource is deferred for a few seconds with an Undo action, so a misclick never loses work.
 - 🧭 **Wayfinding** – Breadcrumbs resolve real names, the top bar carries search and the account menu, and the sidebar collapses on desktop and becomes a drawer on mobile.
@@ -375,7 +380,7 @@ All API routes are prefixed with `/api/v1`.
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/dashboards` | List all dashboards with metadata and the caller's favourite flag |
-| `POST` | `/dashboards` | Create a dashboard (accepts `description`, `tags`) |
+| `POST` | `/dashboards` | Create a dashboard (accepts `description`, `tags`, `refresh_interval_seconds`, `filters`) |
 | `GET` | `/dashboards/:id` | Get dashboard details |
 | `PUT` | `/dashboards/:id` | Partially update a dashboard (name, description, tags, refresh, filters) |
 | `DELETE` | `/dashboards/:id` | Delete a dashboard |
@@ -386,6 +391,23 @@ All API routes are prefixed with `/api/v1`.
 | `POST` | `/dashboards/:dashboardId/widgets` | Add widget to dashboard |
 | `PUT` | `/dashboards/:dashboardId/widgets/:id` | Update widget |
 | `DELETE` | `/dashboards/:dashboardId/widgets/:id` | Delete widget |
+
+### Team (protected)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/team/members` | Directory of members (all roles) |
+| `PUT` | `/team/members/:id/role` | Change a member's role (admin) |
+| `DELETE` | `/team/members/:id` | Remove a member (admin; the last admin cannot be removed) |
+| `GET` | `/team/invites` | List pending invites with copyable links (admin) |
+| `POST` | `/team/invites` | Create a single-use invite link (admin) |
+| `DELETE` | `/team/invites/:id` | Revoke a pending invite (admin) |
+| `GET` | `/team/audit` | Recent team, settings, and share activity (admin) |
+| `GET` | `/me/settings` | Read the current user's display name and timezone |
+| `PUT` | `/me/settings` | Update display name and timezone |
+| `POST` | `/me/password` | Change password with the current password |
+| `GET` | `/invites/:token` | Public invite preview (organization, email, role) |
+| `POST` | `/invites/:token/accept` | Accept an invite and start a session |
 
 ### Sharing (public)
 

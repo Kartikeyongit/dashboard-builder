@@ -43,10 +43,10 @@ func NewShareService(shareLinkRepo *repository.ShareLinkRepo, dashboardRepo *rep
 	}
 }
 
-func (s *ShareService) CreateShareLink(orgID, dashboardID, createdBy string, password *string, expiresAt *time.Time) (string, error) {
+func (s *ShareService) CreateShareLink(orgID, dashboardID, createdBy string, password *string, expiresAt *time.Time) (string, string, error) {
 	dash, err := s.dashboardRepo.GetByID(dashboardID, orgID)
 	if err != nil || dash == nil {
-		return "", errors.New("dashboard not found")
+		return "", "", errors.New("dashboard not found")
 	}
 
 	rawToken := uuid.New().String() + uuid.New().String()
@@ -54,14 +54,14 @@ func (s *ShareService) CreateShareLink(orgID, dashboardID, createdBy string, pas
 
 	encryptedToken, err := crypto.Encrypt(rawToken, s.encryptionKey)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	var passwordHash *string
 	if password != nil && *password != "" {
 		hash, err := bcrypt.GenerateFromPassword([]byte(*password), bcrypt.DefaultCost)
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 		hashStr := string(hash)
 		passwordHash = &hashStr
@@ -77,9 +77,9 @@ func (s *ShareService) CreateShareLink(orgID, dashboardID, createdBy string, pas
 	}
 	_, err = s.shareLinkRepo.Create(sl)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	return rawToken, nil
+	return rawToken, dash.Name, nil
 }
 
 // ListShareLinks returns every link for a dashboard, newest active first. It
@@ -117,22 +117,22 @@ func (s *ShareService) ListShareLinks(orgID, dashboardID string) ([]ShareLinkInf
 
 // RevokeShareLink deactivates a link after confirming it belongs to the
 // dashboard and organization. Revocation is idempotent.
-func (s *ShareService) RevokeShareLink(orgID, dashboardID, shareID string) error {
+func (s *ShareService) RevokeShareLink(orgID, dashboardID, shareID string) (string, error) {
 	dash, err := s.dashboardRepo.GetByID(dashboardID, orgID)
 	if err != nil || dash == nil {
-		return errors.New("dashboard not found")
+		return "", errors.New("dashboard not found")
 	}
 	link, err := s.shareLinkRepo.GetByID(shareID, dashboardID)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if link == nil {
-		return errors.New("share link not found")
+		return "", errors.New("share link not found")
 	}
 	if !link.IsActive {
-		return nil
+		return dash.Name, nil
 	}
-	return s.shareLinkRepo.Deactivate(shareID)
+	return dash.Name, s.shareLinkRepo.Deactivate(shareID)
 }
 
 // GetDashboardByToken validates a public link and loads the dashboard with the

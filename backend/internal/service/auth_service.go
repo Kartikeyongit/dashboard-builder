@@ -65,12 +65,21 @@ func (s *AuthService) Login(email, password string) (*model.User, *TokenPair, er
 		return nil, nil, errors.New("invalid credentials")
 	}
 
+	// Best-effort activity stamp for the team directory.
+	_ = s.userRepo.TouchLastLogin(user.ID)
+
 	tokens, err := s.generateTokens(user.ID)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	return user, tokens, nil
+}
+
+// IssueTokens creates a fresh pair for a user who has just proved their
+// identity by another route, such as accepting an invite.
+func (s *AuthService) IssueTokens(userID string) (*TokenPair, error) {
+	return s.generateTokens(userID)
 }
 
 func (s *AuthService) RefreshToken(refreshToken string) (*TokenPair, error) {

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Star } from 'lucide-react';
+import { Check, LayoutTemplate, Star } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import {
   createDashboard,
@@ -22,6 +22,12 @@ import {
 } from '../../utils/library';
 import type { DashboardSort } from '../../utils/library';
 import { pluralize } from '../../utils/format';
+import {
+  DASHBOARD_TEMPLATES,
+  DEFAULT_TEMPLATE_ID,
+  getDashboardTemplate,
+  templatePayload,
+} from '../../utils/dashboardTemplates';
 import type { Dashboard } from '../../types';
 import EmptyState from '../ui/EmptyState';
 import ListToolbar from '../ui/ListToolbar';
@@ -59,6 +65,7 @@ const DashboardList: React.FC = () => {
 
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
+  const [newTemplate, setNewTemplate] = useState(DEFAULT_TEMPLATE_ID);
   const [creating, setCreating] = useState(false);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [renameTarget, setRenameTarget] = useState<Dashboard | null>(null);
@@ -74,6 +81,7 @@ const DashboardList: React.FC = () => {
   // The command palette links to /dashboards?new=1.
   useEffect(() => {
     if (searchParams.get('new') !== '1') return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- opening a dialog from a one-shot URL flag
     if (canEdit) setShowCreate(true);
     const next = new URLSearchParams(searchParams);
     next.delete('new');
@@ -103,19 +111,36 @@ const DashboardList: React.FC = () => {
   };
 
   const handleCreate = async () => {
-    const name = newName.trim();
-    if (!name || creating) return;
+    const payload = templatePayload(newTemplate, newName);
+    if ((!newName.trim() && !payload.name) || creating) return;
     setCreating(true);
-    const result = await dispatch(createDashboard({ name }));
+    const result = await dispatch(createDashboard(payload));
     setCreating(false);
     if (createDashboard.fulfilled.match(result)) {
       setShowCreate(false);
       setNewName('');
+      setNewTemplate(DEFAULT_TEMPLATE_ID);
       dispatch(addToast({ message: 'Dashboard created', type: 'success' }));
       navigate(`/dashboards/${result.payload.id}/edit`);
     } else {
       dispatch(addToast({ message: 'Failed to create dashboard', type: 'error' }));
     }
+  };
+
+  /** Keep the suggested name in sync until the user types their own. */
+  const handleTemplateChange = (id: string) => {
+    const previousDefault = getDashboardTemplate(newTemplate).defaultName;
+    const nextDefault = getDashboardTemplate(id).defaultName;
+    if (!newName.trim() || newName === previousDefault) {
+      setNewName(nextDefault);
+    }
+    setNewTemplate(id);
+  };
+
+  const closeCreate = () => {
+    setShowCreate(false);
+    setNewName('');
+    setNewTemplate(DEFAULT_TEMPLATE_ID);
   };
 
   const handleRename = async (name: string) => {
@@ -255,33 +280,62 @@ const DashboardList: React.FC = () => {
       <Dialog
         open={showCreate}
         onOpenChange={(next) => {
-          if (!next) setShowCreate(false);
+          if (!next) closeCreate();
         }}
         title="New dashboard"
-        description="Give it a name. You can add widgets, filters, and metadata next."
-        size="sm"
+        description="Pick a starting point, then add widgets that use your saved queries."
+        size="md"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setShowCreate(false)} disabled={creating}>
+            <Button variant="secondary" onClick={closeCreate} disabled={creating}>
               Cancel
             </Button>
             <Button
               variant="primary"
               onClick={handleCreate}
               loading={creating}
-              disabled={!newName.trim()}
+              disabled={!newName.trim() && !getDashboardTemplate(newTemplate).defaultName}
             >
               Create dashboard
             </Button>
           </>
         }
       >
+        <div className="template-picker">
+          <p className="template-picker__label">
+            <LayoutTemplate size={14} aria-hidden="true" />
+            Template
+          </p>
+          <div className="template-grid" role="radiogroup" aria-label="Dashboard template">
+            {DASHBOARD_TEMPLATES.map((template) => {
+              const selected = template.id === newTemplate;
+              return (
+                <button
+                  key={template.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  className={selected ? 'template-card template-card--selected' : 'template-card'}
+                  onClick={() => handleTemplateChange(template.id)}
+                >
+                  <span className="template-card__head">
+                    <span className="template-card__title">{template.label}</span>
+                    {selected && <Check size={15} aria-hidden="true" />}
+                  </span>
+                  <span className="template-card__desc">{template.description}</span>
+                  <span className="template-card__meta">{template.highlights.join(' · ')}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <Field label="Name" required>
           <Input
             autoFocus
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            placeholder="e.g. Weekly revenue"
+            placeholder={getDashboardTemplate(newTemplate).defaultName || 'e.g. Weekly revenue'}
             onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
           />
         </Field>

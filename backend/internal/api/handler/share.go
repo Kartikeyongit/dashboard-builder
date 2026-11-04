@@ -12,10 +12,11 @@ import (
 
 type ShareHandler struct {
 	shareService *service.ShareService
+	auditService *service.AuditService
 }
 
-func NewShareHandler(shareService *service.ShareService) *ShareHandler {
-	return &ShareHandler{shareService: shareService}
+func NewShareHandler(shareService *service.ShareService, auditService *service.AuditService) *ShareHandler {
+	return &ShareHandler{shareService: shareService, auditService: auditService}
 }
 
 type CreateShareRequest struct {
@@ -42,10 +43,16 @@ func (h *ShareHandler) CreateShareLink(c *fiber.Ctx) error {
 		expiresAt = &t
 	}
 
-	token, err := h.shareService.CreateShareLink(orgID, dashboardID, userID, req.Password, expiresAt)
+	token, dashboardName, err := h.shareService.CreateShareLink(orgID, dashboardID, userID, req.Password, expiresAt)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
+
+	protected := req.Password != nil && *req.Password != ""
+	_ = h.auditService.Record(orgID, userID, "share.created", "dashboard", dashboardID, dashboardName, map[string]any{
+		"password_protected": protected,
+		"expires_at":         req.ExpiresAt,
+	})
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"token": token,
@@ -103,12 +110,17 @@ func (h *ShareHandler) ListShareLinks(c *fiber.Ctx) error {
 
 func (h *ShareHandler) RevokeShareLink(c *fiber.Ctx) error {
 	orgID := c.Locals("orgID").(string)
+	userID := middleware.GetUserID(c)
 	dashboardID := c.Params("id")
 	shareID := c.Params("shareId")
 
-	if err := h.shareService.RevokeShareLink(orgID, dashboardID, shareID); err != nil {
+	dashboardName, err := h.shareService.RevokeShareLink(orgID, dashboardID, shareID)
+	if err != nil {
 		return fiber.NewError(fiber.StatusNotFound, err.Error())
 	}
+	_ = h.auditService.Record(orgID, userID, "share.revoked", "dashboard", dashboardID, dashboardName, map[string]any{
+		"share_id": shareID,
+	})
 	return c.SendStatus(fiber.StatusNoContent)
 }
 

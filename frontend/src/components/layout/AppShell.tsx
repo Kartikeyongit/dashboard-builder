@@ -9,8 +9,10 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
+  Settings as SettingsIcon,
   Sun,
   Terminal,
+  Users,
 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import { logoutUser, restoreAuth } from '../../store/authSlice';
@@ -41,6 +43,7 @@ const NAV_ITEMS = [
   { to: '/datasources', label: 'Datasources', icon: Database },
   { to: '/queries', label: 'Queries', icon: Terminal },
   { to: '/dashboards', label: 'Dashboards', icon: LayoutDashboard },
+  { to: '/team', label: 'Team', icon: Users },
 ];
 
 const AppShell: React.FC = () => {
@@ -110,6 +113,8 @@ const AppShell: React.FC = () => {
       { id: 'nav-datasources', label: 'Go to Datasources', group: 'Navigate', icon: Database, run: () => navigate('/datasources') },
       { id: 'nav-queries', label: 'Go to Queries', group: 'Navigate', icon: Terminal, run: () => navigate('/queries') },
       { id: 'nav-dashboards', label: 'Go to Dashboards', group: 'Navigate', icon: LayoutDashboard, run: () => navigate('/dashboards') },
+      { id: 'nav-team', label: 'Go to Team', group: 'Navigate', icon: Users, run: () => navigate('/team') },
+      { id: 'nav-settings', label: 'Go to Settings', group: 'Navigate', icon: SettingsIcon, run: () => navigate('/settings') },
       { id: 'new-dashboard', label: 'New dashboard', group: 'Create', icon: Plus, run: () => navigate('/dashboards?new=1') },
       { id: 'new-query', label: 'New query', group: 'Create', icon: Plus, run: () => navigate('/queries/new') },
       { id: 'new-datasource', label: 'New datasource', group: 'Create', icon: Plus, run: () => navigate('/datasources/new') },

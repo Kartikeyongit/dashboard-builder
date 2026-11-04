@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Check, Star, X } from 'lucide-react';
+import { ArrowRight, Activity, Check, Star, X } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import { fetchDashboards } from '../../store/dashboardSlice';
 import { fetchDatasources } from '../../store/datasourceSlice';
 import { fetchQueries } from '../../store/querySlice';
+import { teamAPI } from '../../api/team';
+import { auditActionLabel } from '../../utils/audit';
+import type { AuditEvent } from '../../types';
 import { pluralize, relativeTime } from '../../utils/format';
 import { fadeInUp, staggerContainer, shapeFloat, nodePulse, slowRotate } from '../../animations';
 import './Home.css';
@@ -471,12 +474,30 @@ const AuthenticatedHome = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const [onboardingDismissed, setOnboardingDismissed] = useState(readOnboardingDismissed);
+  const [activity, setActivity] = useState<AuditEvent[]>([]);
 
   useEffect(() => {
     dispatch(fetchDashboards());
     dispatch(fetchDatasources());
     dispatch(fetchQueries());
   }, [dispatch]);
+
+  // Activity is admin-only, so viewers simply do not see the section.
+  useEffect(() => {
+    if (user?.role !== 'admin') return;
+    let cancelled = false;
+    teamAPI
+      .listAudit(6)
+      .then((res) => {
+        if (!cancelled) setActivity(res.data.events);
+      })
+      .catch(() => {
+        if (!cancelled) setActivity([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.role]);
 
   const recentDashboards = useMemo(
     () =>
@@ -710,6 +731,39 @@ const AuthenticatedHome = () => {
                 </div>
                 <ArrowRight className="home-dashboard-chevron" size={16} aria-hidden="true" />
               </motion.button>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Team activity */}
+      {user?.role === 'admin' && activity.length > 0 && (
+        <motion.div
+          className="home-section"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.38, duration: 0.4 }}
+        >
+          <div className="home-section-header">
+            <h3>Team activity</h3>
+            <Link to="/team" className="home-section-link">View all</Link>
+          </div>
+          <div className="home-activity-list">
+            {activity.map((event) => (
+              <div className="home-activity-item" key={event.id}>
+                <span className="home-activity-icon" aria-hidden="true">
+                  <Activity size={14} />
+                </span>
+                <span className="home-activity-text">
+                  <span className="home-activity-title">
+                    {auditActionLabel(event.action)}
+                    {event.target_name && <strong>{event.target_name}</strong>}
+                  </span>
+                  <span className="home-activity-meta">
+                    {event.actor_email || 'System'} · {relativeTime(event.created_at)}
+                  </span>
+                </span>
+              </div>
             ))}
           </div>
         </motion.div>

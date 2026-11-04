@@ -997,6 +997,61 @@
   text-decoration: underline;
 }
 
+/* Team activity feed */
+.home-activity-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.home-activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.6rem 0.25rem;
+}
+
+.home-activity-item + .home-activity-item {
+  border-top: 1px solid var(--color-border);
+}
+
+.home-activity-icon {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 22%, transparent);
+}
+
+.home-activity-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.home-activity-title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  color: var(--color-text-secondary);
+  font-size: 0.84rem;
+}
+
+.home-activity-title strong {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.home-activity-meta {
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+}
+
 /* Recent Dashboard List */
 .home-dashboard-list {
   display: flex;

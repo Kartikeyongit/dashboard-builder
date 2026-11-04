@@ -69,3 +69,10 @@ func (r *UserRepo) CreateOrganization(name string) (string, error) {
 	}
 	return orgID, nil
 }
+
+// TouchLastLogin records a successful sign-in for the team directory. It is
+// best-effort: a failure here must never block login.
+func (r *UserRepo) TouchLastLogin(id string) error {
+	_, err := r.db.Exec(`UPDATE users SET last_login_at = NOW() WHERE id = $1`, id)
+	return err
+}

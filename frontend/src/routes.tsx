@@ -19,6 +19,8 @@ const DashboardEditor = lazy(() => import('./components/dashboard/DashboardEdito
 const DashboardView = lazy(() => import('./components/dashboard/DashboardView'));
 const SharedDashboardView = lazy(() => import('./components/viewer/SharedDashboardView'));
 const Home = lazy(() => import('./components/home/Home'));
+const TeamPage = lazy(() => import('./components/team/TeamPage'));
+const SettingsPage = lazy(() => import('./components/settings/SettingsPage'));
 
 const router = createBrowserRouter([
   {
@@ -47,6 +49,8 @@ const router = createBrowserRouter([
       { path: 'dashboards', element: <DashboardList /> },
       { path: 'dashboards/:dashboardId', element: <DashboardView /> },
       { path: 'dashboards/:dashboardId/edit', element: <DashboardEditor /> },
+      { path: 'team', element: <TeamPage /> },
+      { path: 'settings', element: <SettingsPage /> },
       { path: '*', element: <NotFound /> },
     ],
   },

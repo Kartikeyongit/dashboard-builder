@@ -62,6 +62,7 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 	dashboardRepo := repository.NewDashboardRepo(db.DB)
 	widgetRepo := repository.NewWidgetRepo(db.DB)
 	shareLinkRepo := repository.NewShareLinkRepo(db.DB)
+	teamRepo := repository.NewTeamRepo(db.DB)
 
 	poolManager := datasource.NewPoolManager(encryptionKey)
 
@@ -71,6 +72,8 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 	queryConcurrency := config.IntFromEnv("DASHBOARD_QUERY_CONCURRENCY", 6)
 
 	authService := service.NewAuthService(userRepo, jwtSecret)
+	auditService := service.NewAuditService(teamRepo)
+	teamService := service.NewTeamService(teamRepo, userRepo, auditService, encryptionKey)
 	datasourceService := service.NewDatasourceService(datasourceRepo, queryRepo, poolManager, encryptionKey, resultCache)
 	queryService := service.NewQueryService(queryRepo, datasourceRepo, poolManager, resultCache)
 	dashboardService := service.NewDashboardService(dashboardRepo, widgetRepo)
@@ -96,7 +99,8 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 	dashboardHandler := handler.NewDashboardHandler(dashboardService)
 	widgetHandler := handler.NewWidgetHandler(widgetService)
 	dashboardFullHandler := handler.NewDashboardFullHandler(widgetService)
-	shareHandler := handler.NewShareHandler(shareService)
+	shareHandler := handler.NewShareHandler(shareService, auditService)
+	teamHandler := handler.NewTeamHandler(teamService, authService)
 
 	// Stricter limiter for credential endpoints to slow brute-force attempts.
 	authLimiter := limiter.New(limiter.Config{
@@ -121,6 +125,11 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 	public.Get("/:token", shareHandler.GetSharedDashboard)
 	public.Post("/:token/verify", shareHandler.VerifyPassword)
 
+	// Public invite preview and acceptance. The token is the credential; the
+	// signup form only exposes the inviter's organization name.
+	api.Get("/invites/:token", teamHandler.PreviewInvite)
+	api.Post("/invites/:token/accept", authLimiter, teamHandler.AcceptInvite)
+
 	// ✅ Protected WebSocket for dashboard editor – FULL PATH, outside rate limiter
 	app.Get("/api/v1/ws", middleware.AuthRequiredWS(jwtSecret), middleware.RequireAccessToken, middleware.AttachOrgID, ws.HandleWebSocket(wsHub, func(orgID, dashboardID string) bool {
 		dash, err := dashboardRepo.GetByID(dashboardID, orgID)
@@ -135,6 +144,7 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 
 	// Viewers can read. Only admins and editors can change content.
 	editorOnly := middleware.RequireRole("admin", "editor")
+	adminOnly := middleware.RequireRole("admin")
 
 	datasources := protected.Group("/datasources")
 	datasources.Post("/", editorOnly, datasourceHandler.Create)
@@ -177,6 +187,21 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 	widgets.Put("/:id", editorOnly, widgetHandler.Update)
 	widgets.Delete("/:id", editorOnly, widgetHandler.Delete)
 	widgets.Post("/:id/refresh", widgetHandler.Refresh)
+
+	// Team directory is visible to every member; management is admin-only.
+	team := protected.Group("/team")
+	team.Get("/members", teamHandler.ListMembers)
+	team.Get("/invites", adminOnly, teamHandler.ListInvites)
+	team.Post("/invites", adminOnly, teamHandler.CreateInvite)
+	team.Delete("/invites/:id", adminOnly, teamHandler.RevokeInvite)
+	team.Put("/members/:id/role", adminOnly, teamHandler.UpdateMemberRole)
+	team.Delete("/members/:id", adminOnly, teamHandler.RemoveMember)
+	team.Get("/audit", adminOnly, teamHandler.ListAudit)
+
+	// Self-service account settings.
+	protected.Get("/me/settings", teamHandler.GetSettings)
+	protected.Put("/me/settings", teamHandler.UpdateSettings)
+	protected.Post("/me/password", teamHandler.ChangePassword)
 
 	protected.Get("/me", func(c *fiber.Ctx) error {
 		userID := middleware.GetUserID(c)
