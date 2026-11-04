@@ -185,7 +185,19 @@ jobs:
         working-directory: frontend
         env:
           CYPRESS_apiUrl: http://127.0.0.1:8099/api/v1
-        run: npx cypress run --spec 'cypress/e2e/*.cy.ts'
+        run: npx cypress run --spec 'cypress/e2e/*.cy.ts' 2>&1 | tee /tmp/cypress.log
+
+      # Surface the failing assertion in the check run even when logs are not
+      # available, so a red build still says what broke.
+      - name: Cypress failure summary
+        if: failure()
+        working-directory: frontend
+        run: |
+          if [ -f /tmp/cypress.log ]; then
+            grep -nE "failing|AssertionError|CypressError|Timed out|^  [0-9]+\)" /tmp/cypress.log | head -20 | while IFS= read -r line; do
+              echo "::error title=Cypress failure::$line"
+            done
+          fi
 
       - name: API logs
         if: failure()
