@@ -76,7 +76,38 @@ export interface CreateQueryPayload {
 
 export interface QueryResult {
   columns: string[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- cell values are dynamic and come straight from the datasource
   rows: any[][];
+  /** Wall-clock time spent in the target database, when reported. */
+  duration_ms?: number;
+}
+
+export interface UsageRef {
+  id: string;
+  name: string;
+}
+
+export interface WidgetUsage {
+  widget_id: string;
+  widget_type: string;
+  dashboard_id: string;
+  dashboard_name: string;
+}
+
+export interface QueryUsage {
+  widgets: WidgetUsage[];
+  dashboards: UsageRef[];
+}
+
+export interface DatasourceUsage {
+  queries: UsageRef[];
+  widgets: WidgetUsage[];
+  dashboards: UsageRef[];
+}
+
+export interface TestConnectionResult {
+  status: string;
+  latency_ms?: number;
 }
 
 export interface TableSchema {

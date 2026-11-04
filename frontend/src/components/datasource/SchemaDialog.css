@@ -1,0 +1,129 @@
+.schema-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.85rem;
+}
+
+.schema-search {
+  position: relative;
+  flex: 1 1 240px;
+  display: flex;
+  align-items: center;
+}
+
+.schema-search > svg {
+  position: absolute;
+  left: 0.6rem;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.schema-search .ui-input {
+  width: 100%;
+  padding-left: 2rem;
+}
+
+.schema-count {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.schema-status {
+  margin: 0.5rem 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.schema-status--error {
+  color: var(--color-danger);
+}
+
+.schema-tables {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  max-height: 55vh;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+.schema-table {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+  overflow: hidden;
+}
+
+.schema-table-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.65rem;
+  background: var(--color-surface-hover);
+  border-bottom: 1px solid var(--color-border-light, var(--color-border));
+  color: var(--color-text-secondary);
+}
+
+.schema-table-name {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+
+.schema-table-meta {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.schema-copy {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.schema-copy:hover {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.schema-columns {
+  list-style: none;
+  margin: 0;
+  padding: 0.35rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.schema-columns li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.15rem 0;
+  font-size: var(--text-xs);
+}
+
+.schema-column-name {
+  color: var(--color-text);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.schema-column-type {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}

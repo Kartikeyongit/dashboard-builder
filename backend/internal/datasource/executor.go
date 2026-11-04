@@ -10,10 +10,12 @@ import (
 	"github.com/your-org/dashboard-builder/backend/internal/model"
 )
 
-// QueryResult holds the structure of an executed query.
+// QueryResult holds the structure of an executed query. DurationMs is wall
+// clock time spent in the target database, including pool checkout.
 type QueryResult struct {
-	Columns []string        `json:"columns"`
-	Rows    [][]interface{} `json:"rows"`
+	Columns    []string        `json:"columns"`
+	Rows       [][]interface{} `json:"rows"`
+	DurationMs int64           `json:"duration_ms,omitempty"`
 }
 
 // ExecuteQuery runs a user query against a datasource within a sandboxed context.
@@ -35,14 +37,20 @@ func (pm *PoolManager) ExecuteQuery(ctx context.Context, ds *model.Datasource, s
 		return nil, err
 	}
 
+	start := time.Now()
+	var result *QueryResult
 	switch p := pool.(type) {
 	case *pgxpool.Pool:
-		return executeOnPostgres(execCtx, p, safeSQL, maxRows, timeoutMs, args...)
+		result, err = executeOnPostgres(execCtx, p, safeSQL, maxRows, timeoutMs, args...)
 	case *sql.DB:
-		return executeOnMySQL(execCtx, p, safeSQL, maxRows, args...)
+		result, err = executeOnMySQL(execCtx, p, safeSQL, maxRows, args...)
 	default:
 		return nil, fmt.Errorf("unsupported datasource type")
 	}
+	if result != nil {
+		result.DurationMs = time.Since(start).Milliseconds()
+	}
+	return result, err
 }
 
 // clampMaxRows keeps a caller-supplied limit inside a safe range. The service

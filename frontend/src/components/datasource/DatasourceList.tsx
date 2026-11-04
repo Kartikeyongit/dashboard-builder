@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Pencil, Table2, Trash2 } from 'lucide-react';
+import { datasourceAPI } from '../../api/datasource';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import {
   deleteDatasource,
@@ -14,12 +15,17 @@ import { addToast } from '../../store/toastSlice';
 import { canEditContent } from '../../utils/permissions';
 import { useDeferredDelete } from '../../hooks/useDeferredDelete';
 import { matchesSearch } from '../../utils/library';
+import { apiErrorMessage } from '../../utils/apiError';
 import { pluralize, relativeTime } from '../../utils/format';
 import type { Datasource } from '../../types';
+import type { DatasourceUsage } from '../../types';
 import EmptyState from '../ui/EmptyState';
 import ListToolbar from '../ui/ListToolbar';
 import Menu from '../../ui/Menu';
 import RenameDialog from '../../ui/RenameDialog';
+import DependencyDialog from '../../ui/DependencyDialog';
+import type { DependencyGroup } from '../../ui/DependencyDialog';
+import SchemaDialog from './SchemaDialog';
 import '../ui/ListPage.css';
 import './DatasourceList.css';
 
@@ -29,6 +35,21 @@ const DATASOURCE_SORT_OPTIONS: { value: DatasourceSort; label: string }[] = [
   { value: 'updated', label: 'Recently updated' },
   { value: 'created', label: 'Recently created' },
   { value: 'name', label: 'Name A–Z' },
+];
+
+const usageGroups = (usage: DatasourceUsage): DependencyGroup[] => [
+  {
+    label: 'Saved queries',
+    items: usage.queries.map((query) => ({ id: query.id, label: query.name })),
+  },
+  {
+    label: 'Dashboards',
+    items: usage.dashboards.map((dashboard) => ({
+      id: dashboard.id,
+      label: dashboard.name,
+      meta: `${usage.widgets.filter((widget) => widget.dashboard_id === dashboard.id).length} widgets`,
+    })),
+  },
 ];
 
 const DatasourceList: React.FC = () => {
@@ -41,6 +62,11 @@ const DatasourceList: React.FC = () => {
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<DatasourceSort>('updated');
   const [renameTarget, setRenameTarget] = useState<Datasource | null>(null);
+  const [schemaTarget, setSchemaTarget] = useState<Datasource | null>(null);
+  const [dependency, setDependency] = useState<{
+    datasource: Datasource;
+    usage: DatasourceUsage;
+  } | null>(null);
 
   useEffect(() => {
     dispatch(fetchDatasources());
@@ -61,7 +87,21 @@ const DatasourceList: React.FC = () => {
     return sorted;
   }, [items, search, sort]);
 
-  const handleDelete = (datasource: Datasource) => {
+  const handleDelete = async (datasource: Datasource) => {
+    // Check dependencies before scheduling the undoable delete. A datasource
+    // that still backs saved queries would orphan widgets on live dashboards.
+    try {
+      const res = await datasourceAPI.usage(datasource.id);
+      const usage = res.data;
+      if (usage.queries.length > 0 || usage.widgets.length > 0) {
+        setDependency({ datasource, usage });
+        return;
+      }
+    } catch (err) {
+      dispatch(addToast({ message: apiErrorMessage(err, 'Could not check datasource usage.'), type: 'error' }));
+      return;
+    }
+
     scheduleDelete({
       entity: 'Datasource',
       remove: () => dispatch(hideDatasource(datasource.id)),
@@ -70,7 +110,7 @@ const DatasourceList: React.FC = () => {
         const result = await dispatch(deleteDatasource(datasource.id));
         return deleteDatasource.fulfilled.match(result)
           ? { ok: true }
-          : { ok: false, error: 'Could not delete the datasource.' };
+          : { ok: false, error: apiErrorMessage(result.payload, 'Could not delete the datasource.') };
       },
     });
   };
@@ -100,9 +140,13 @@ const DatasourceList: React.FC = () => {
   const handleTest = async (id: string) => {
     const result = await dispatch(testDatasourceConnection(id));
     if (testDatasourceConnection.fulfilled.match(result)) {
-      dispatch(addToast({ message: 'Connection successful', type: 'success' }));
+      const latency = result.payload.latencyMs;
+      dispatch(addToast({
+        message: latency === undefined ? 'Connection successful' : `Connection successful · ${latency} ms`,
+        type: 'success',
+      }));
     } else {
-      dispatch(addToast({ message: 'Connection failed', type: 'error' }));
+      dispatch(addToast({ message: result.payload || 'Connection failed', type: 'error' }));
     }
   };
 
@@ -166,6 +210,12 @@ const DatasourceList: React.FC = () => {
                         items={[
                           { key: 'rename', label: 'Rename', icon: Pencil, onSelect: () => setRenameTarget(ds) },
                           {
+                            key: 'schema',
+                            label: 'Browse schema',
+                            icon: Table2,
+                            onSelect: () => setSchemaTarget(ds),
+                          },
+                          {
                             key: 'delete',
                             label: 'Delete',
                             icon: Trash2,
@@ -188,6 +238,7 @@ const DatasourceList: React.FC = () => {
                     {canEdit && (
                       <>
                         <button className="edit-link" onClick={() => handleTest(ds.id)}>Test</button>
+                        <button className="edit-link" onClick={() => setSchemaTarget(ds)}>Schema</button>
                         <Link to={`/datasources/${ds.id}/edit`} className="edit-link">Edit</Link>
                       </>
                     )}
@@ -229,6 +280,31 @@ const DatasourceList: React.FC = () => {
         title="Rename datasource"
         initialValue={renameTarget?.name ?? ''}
         onSave={handleRename}
+      />
+
+      {schemaTarget && (
+        <SchemaDialog
+          open
+          datasourceId={schemaTarget.id}
+          datasourceName={schemaTarget.name}
+          onClose={() => setSchemaTarget(null)}
+        />
+      )}
+
+      <DependencyDialog
+        open={Boolean(dependency)}
+        title="Datasource is in use"
+        description={
+          dependency
+            ? `${dependency.datasource.name} still backs ${pluralize(
+                dependency.usage.queries.length,
+                'saved query',
+                'saved queries',
+              )} and ${pluralize(dependency.usage.widgets.length, 'widget')}.`
+            : ''
+        }
+        groups={dependency ? usageGroups(dependency.usage) : []}
+        onClose={() => setDependency(null)}
       />
     </div>
   );

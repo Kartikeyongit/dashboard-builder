@@ -71,7 +71,7 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 	queryConcurrency := config.IntFromEnv("DASHBOARD_QUERY_CONCURRENCY", 6)
 
 	authService := service.NewAuthService(userRepo, jwtSecret)
-	datasourceService := service.NewDatasourceService(datasourceRepo, poolManager, encryptionKey, resultCache)
+	datasourceService := service.NewDatasourceService(datasourceRepo, queryRepo, poolManager, encryptionKey, resultCache)
 	queryService := service.NewQueryService(queryRepo, datasourceRepo, poolManager, resultCache)
 	dashboardService := service.NewDashboardService(dashboardRepo, widgetRepo)
 	widgetService := service.NewWidgetService(widgetRepo, dashboardRepo, queryService, queryConcurrency)
@@ -142,8 +142,10 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 	datasources.Get("/:id", datasourceHandler.Get)
 	datasources.Put("/:id", editorOnly, datasourceHandler.Update)
 	datasources.Delete("/:id", editorOnly, datasourceHandler.Delete)
+	datasources.Post("/test", editorOnly, datasourceHandler.TestConnectionConfig)
 	datasources.Post("/:id/test", editorOnly, datasourceHandler.TestConnection)
 	datasources.Get("/:id/schema", editorOnly, datasourceHandler.GetSchema)
+	datasources.Get("/:id/usage", editorOnly, datasourceHandler.GetUsage)
 
 	queries := protected.Group("/queries")
 	queries.Post("/", editorOnly, queryHandler.Create)
@@ -151,6 +153,7 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 	queries.Get("/:id", queryHandler.Get)
 	queries.Put("/:id", editorOnly, queryHandler.Update)
 	queries.Delete("/:id", editorOnly, queryHandler.Delete)
+	queries.Get("/:id/usage", editorOnly, queryHandler.GetUsage)
 	queries.Post("/:id/execute", queryHandler.ExecuteSaved)
 	queries.Post("/execute", editorOnly, queryHandler.ExecuteAdHoc)
 

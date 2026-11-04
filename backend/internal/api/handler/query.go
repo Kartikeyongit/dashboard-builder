@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"errors"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/your-org/dashboard-builder/backend/internal/api/middleware"
 	"github.com/your-org/dashboard-builder/backend/internal/service"
@@ -80,9 +82,29 @@ func (h *QueryHandler) Delete(c *fiber.Ctx) error {
 	orgID := c.Locals("orgID").(string)
 	id := c.Params("id")
 	if err := h.queryService.Delete(id, orgID); err != nil {
+		if errors.Is(err, service.ErrQueryInUse) {
+			usage, usageErr := h.queryService.ListUsage(id, orgID)
+			body := fiber.Map{"error": "This query is used by widgets. Remove those widgets first."}
+			if usageErr == nil {
+				body["usage"] = usage
+			}
+			return c.Status(fiber.StatusConflict).JSON(body)
+		}
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// GetUsage lists the widgets and dashboards that depend on a query. It powers
+// the delete guard in the query library and the editor.
+func (h *QueryHandler) GetUsage(c *fiber.Ctx) error {
+	orgID := c.Locals("orgID").(string)
+	id := c.Params("id")
+	usage, err := h.queryService.ListUsage(id, orgID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusNotFound, err.Error())
+	}
+	return c.JSON(usage)
 }
 
 func (h *QueryHandler) ExecuteSaved(c *fiber.Ctx) error {

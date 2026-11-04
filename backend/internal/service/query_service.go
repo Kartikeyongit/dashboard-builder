@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -9,6 +10,10 @@ import (
 	"github.com/your-org/dashboard-builder/backend/internal/model"
 	"github.com/your-org/dashboard-builder/backend/internal/repository"
 )
+
+// ErrQueryInUse is returned when a delete would break widgets on a dashboard.
+// The API translates it into a 409 with the dependency list attached.
+var ErrQueryInUse = errors.New("query is used by widgets")
 
 const (
 	DefaultMaxRows      = 1000
@@ -141,7 +146,26 @@ func (s *QueryService) Update(id, orgID, datasourceID, name, sqlText string, max
 	return nil
 }
 
+// ListUsage returns the widgets and dashboards that reference a query.
+func (s *QueryService) ListUsage(id, orgID string) (*model.QueryUsage, error) {
+	q, err := s.queryRepo.GetByID(id, orgID)
+	if err != nil {
+		return nil, err
+	}
+	if q == nil {
+		return nil, fmt.Errorf("query not found")
+	}
+	return s.queryRepo.ListQueryUsage(id, orgID)
+}
+
 func (s *QueryService) Delete(id, orgID string) error {
+	usage, err := s.queryRepo.ListQueryUsage(id, orgID)
+	if err != nil {
+		return err
+	}
+	if len(usage.Widgets) > 0 {
+		return fmt.Errorf("%w: %d widget(s) on %d dashboard(s)", ErrQueryInUse, len(usage.Widgets), len(usage.Dashboards))
+	}
 	if err := s.queryRepo.Delete(id, orgID); err != nil {
 		return err
 	}

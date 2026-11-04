@@ -52,9 +52,17 @@ export const deleteDatasource = createAsyncThunk('datasources/delete', async (id
   return id;
 });
 
-export const testDatasourceConnection = createAsyncThunk('datasources/test', async (id: string) => {
-  await datasourceAPI.test(id);
-  return id;
+export const testDatasourceConnection = createAsyncThunk<
+  { id: string; latencyMs?: number },
+  string,
+  { rejectValue: string }
+>('datasources/test', async (id, { rejectWithValue }) => {
+  try {
+    const res = await datasourceAPI.test(id);
+    return { id, latencyMs: res.data.latency_ms };
+  } catch (err) {
+    return rejectWithValue(apiErrorMessage(err, 'Connection failed.'));
+  }
 });
 
 const datasourceSlice = createSlice({

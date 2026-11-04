@@ -3,7 +3,10 @@ package handler
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"sort"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -96,18 +99,64 @@ func (h *DatasourceHandler) Delete(c *fiber.Ctx) error {
 	orgID := c.Locals("orgID").(string)
 	id := c.Params("id")
 	if err := h.dsService.Delete(id, orgID); err != nil {
+		if errors.Is(err, service.ErrDatasourceInUse) {
+			usage, usageErr := h.dsService.ListUsage(id, orgID)
+			body := fiber.Map{"error": "This datasource is used by saved queries. Move or delete those queries first."}
+			if usageErr == nil {
+				body["usage"] = usage
+			}
+			return c.Status(fiber.StatusConflict).JSON(body)
+		}
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
+func (h *DatasourceHandler) GetUsage(c *fiber.Ctx) error {
+	orgID := c.Locals("orgID").(string)
+	id := c.Params("id")
+	usage, err := h.dsService.ListUsage(id, orgID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusNotFound, err.Error())
+	}
+	return c.JSON(usage)
+}
+
 func (h *DatasourceHandler) TestConnection(c *fiber.Ctx) error {
 	orgID := c.Locals("orgID").(string)
 	id := c.Params("id")
-	if err := h.dsService.TestConnection(id, orgID); err != nil {
+	elapsed, err := h.dsService.TestConnection(id, orgID)
+	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("connection failed: %v", err))
 	}
-	return c.JSON(fiber.Map{"status": "success"})
+	return c.JSON(fiber.Map{"status": "success", "latency_ms": elapsed.Milliseconds()})
+}
+
+// TestConnectionConfig probes settings before they are saved. It is editor-only
+// and accepts the same payload shape as create/update.
+func (h *DatasourceHandler) TestConnectionConfig(c *fiber.Ctx) error {
+	var req CreateDatasourceRequest
+	if err := c.BodyParser(&req); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid request body")
+	}
+	if req.Type == "" {
+		req.Type = "postgres"
+	}
+	if req.Port == 0 {
+		req.Port = 5432
+	}
+	if req.SSLMode == "" {
+		req.SSLMode = "disable"
+	}
+	start := time.Now()
+	elapsed, err := h.dsService.TestConnectionConfig(req.Type, req.Host, req.Port, req.DBName, req.Username, req.Password, req.SSLMode)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":      fmt.Sprintf("connection failed: %v", err),
+			"latency_ms": time.Since(start).Milliseconds(),
+		})
+	}
+	return c.JSON(fiber.Map{"status": "success", "latency_ms": elapsed.Milliseconds()})
 }
 
 func (h *DatasourceHandler) GetSchema(c *fiber.Ctx) error {
@@ -135,6 +184,9 @@ func (h *DatasourceHandler) GetSchema(c *fiber.Ctx) error {
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
+	// Map iteration is unordered; a stable list keeps the schema browser
+	// predictable between refreshes.
+	sort.Slice(tables, func(i, j int) bool { return tables[i].TableName < tables[j].TableName })
 	return c.JSON(tables)
 }
 

@@ -182,9 +182,33 @@
 
 .form-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
   margin-top: 2rem;
   justify-content: flex-end;
+}
+
+.datasource-test-result {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.75rem 0 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius-md);
+  background: var(--color-success-subtle, var(--color-surface-hover));
+  border: 1px solid color-mix(in srgb, var(--color-success) 28%, var(--color-border));
+  color: var(--color-success, var(--color-text-secondary));
+  font-size: var(--text-sm);
+}
+
+.datasource-test-result svg {
+  flex-shrink: 0;
+}
+
+.datasource-test-result--error {
+  background: var(--color-danger-subtle);
+  border-color: var(--color-danger-border);
+  color: var(--color-danger);
 }
 
 .save-btn {

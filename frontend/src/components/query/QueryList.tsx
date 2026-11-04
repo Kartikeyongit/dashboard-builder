@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Copy, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import {
   deleteQuery,
@@ -16,13 +16,30 @@ import { apiErrorMessage } from '../../utils/apiError';
 import { useDeferredDelete } from '../../hooks/useDeferredDelete';
 import { matchesSearch } from '../../utils/library';
 import { pluralize, relativeTime } from '../../utils/format';
-import type { Query } from '../../types';
+import type { Query, QueryUsage } from '../../types';
 import EmptyState from '../ui/EmptyState';
 import ListToolbar from '../ui/ListToolbar';
 import Menu from '../../ui/Menu';
 import RenameDialog from '../../ui/RenameDialog';
+import DependencyDialog from '../../ui/DependencyDialog';
+import type { DependencyGroup } from '../../ui/DependencyDialog';
 import '../ui/ListPage.css';
 import './QueryList.css';
+
+const usageGroups = (usage: QueryUsage): DependencyGroup[] => [
+  {
+    label: 'Dashboards',
+    items: usage.dashboards.map((dashboard) => ({ id: dashboard.id, label: dashboard.name })),
+  },
+  {
+    label: 'Widgets',
+    items: usage.widgets.map((widget) => ({
+      id: widget.widget_id,
+      label: `${widget.widget_type} widget`,
+      meta: widget.dashboard_name,
+    })),
+  },
+];
 
 type QuerySort = 'updated' | 'created' | 'name';
 
@@ -42,6 +59,7 @@ const QueryList: React.FC = () => {
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<QuerySort>('updated');
   const [renameTarget, setRenameTarget] = useState<Query | null>(null);
+  const [dependency, setDependency] = useState<{ query: Query; usage: QueryUsage } | null>(null);
 
   useEffect(() => {
     dispatch(fetchQueries());
@@ -60,7 +78,18 @@ const QueryList: React.FC = () => {
     return sorted;
   }, [items, search, sort]);
 
-  const handleDelete = (query: Query) => {
+  const handleDelete = async (query: Query) => {
+    try {
+      const res = await queryAPI.usage(query.id);
+      if (res.data.widgets.length > 0) {
+        setDependency({ query, usage: res.data });
+        return;
+      }
+    } catch (err) {
+      dispatch(addToast({ message: apiErrorMessage(err, 'Could not check query usage.'), type: 'error' }));
+      return;
+    }
+
     scheduleDelete({
       entity: 'Query',
       remove: () => dispatch(hideQuery(query.id)),
@@ -72,6 +101,22 @@ const QueryList: React.FC = () => {
           : { ok: false, error: 'Could not delete the query.' };
       },
     });
+  };
+
+  const handleDuplicate = async (query: Query) => {
+    try {
+      await queryAPI.create({
+        datasource_id: query.datasource_id,
+        name: `${query.name} (copy)`,
+        sql_text: query.sql_text,
+        max_rows: query.max_rows,
+        timeout_ms: query.timeout_ms,
+      });
+      dispatch(fetchQueries());
+      dispatch(addToast({ message: 'Query duplicated', type: 'success' }));
+    } catch (err) {
+      dispatch(addToast({ message: apiErrorMessage(err, 'Could not duplicate the query.'), type: 'error' }));
+    }
   };
 
   const handleRename = async (name: string) => {
@@ -160,6 +205,12 @@ const QueryList: React.FC = () => {
                         items={[
                           { key: 'rename', label: 'Rename', icon: Pencil, onSelect: () => setRenameTarget(q) },
                           {
+                            key: 'duplicate',
+                            label: 'Duplicate',
+                            icon: Copy,
+                            onSelect: () => handleDuplicate(q),
+                          },
+                          {
                             key: 'delete',
                             label: 'Delete',
                             icon: Trash2,
@@ -220,6 +271,21 @@ const QueryList: React.FC = () => {
         title="Rename query"
         initialValue={renameTarget?.name ?? ''}
         onSave={handleRename}
+      />
+
+      <DependencyDialog
+        open={Boolean(dependency)}
+        title="Query is in use"
+        description={
+          dependency
+            ? `${dependency.query.name} powers ${pluralize(
+                dependency.usage.widgets.length,
+                'widget',
+              )} on ${pluralize(dependency.usage.dashboards.length, 'dashboard')}.`
+            : ''
+        }
+        groups={dependency ? usageGroups(dependency.usage) : []}
+        onClose={() => setDependency(null)}
       />
     </div>
   );

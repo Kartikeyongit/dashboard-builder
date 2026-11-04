@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Database, Save } from 'lucide-react';
+import { AlertCircle, ArrowLeft, CheckCircle2, Database, Save } from 'lucide-react';
+import { datasourceAPI } from '../../api/datasource';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import { createDatasource, fetchDatasources, updateDatasource } from '../../store/datasourceSlice';
 import type { CreateDatasourcePayload } from '../../types';
 import { addToast } from '../../store/toastSlice';
+import { apiErrorMessage } from '../../utils/apiError';
 import Button from '../../ui/Button';
 import Field, { Input, Select } from '../../ui/Field';
 import './DatasourceForm.css';
@@ -28,6 +30,8 @@ const DatasourceForm: React.FC = () => {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   // A direct visit to /datasources/:id/edit has an empty store, so the record
   // must be fetched before the form can be populated.
   const [resolving, setResolving] = useState(Boolean(id));
@@ -36,6 +40,7 @@ const DatasourceForm: React.FC = () => {
   useEffect(() => {
     if (!id) return;
     if (existing) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- stop the loading state once the store resolves the record
       setResolving(false);
       return;
     }
@@ -46,6 +51,7 @@ const DatasourceForm: React.FC = () => {
 
   useEffect(() => {
     if (existing) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate the form when the record arrives from the store
       setForm({
         name: existing.name,
         type: existing.type,
@@ -65,6 +71,29 @@ const DatasourceForm: React.FC = () => {
       ...prev,
       [name]: name === 'port' ? parseInt(value, 10) || 0 : value,
     }));
+  };
+
+  const handleTest = async () => {
+    if (testing) return;
+    setTesting(true);
+    setTestResult(null);
+    try {
+      // An edit form with a blank password keeps the stored secret, so test
+      // the saved datasource instead of sending an empty password.
+      const res =
+        id && !form.password
+          ? await datasourceAPI.test(id)
+          : await datasourceAPI.testConfig(form);
+      const latency = res.data.latency_ms;
+      setTestResult({
+        ok: true,
+        message: latency === undefined ? 'Connection successful' : `Connection successful · ${latency} ms`,
+      });
+    } catch (err) {
+      setTestResult({ ok: false, message: apiErrorMessage(err, 'Connection failed.') });
+    } finally {
+      setTesting(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -228,11 +257,34 @@ const DatasourceForm: React.FC = () => {
           </Select>
         </Field>
 
+        {testResult && (
+          <p
+            className={`datasource-test-result${testResult.ok ? '' : ' datasource-test-result--error'}`}
+            role="status"
+          >
+            {testResult.ok ? (
+              <CheckCircle2 size={14} aria-hidden="true" />
+            ) : (
+              <AlertCircle size={14} aria-hidden="true" />
+            )}
+            {testResult.message}
+          </p>
+        )}
+
         {error && <p className="ui-form-error" role="alert">{error}</p>}
 
         <div className="form-actions">
           <Button type="button" variant="secondary" onClick={() => navigate('/datasources')}>
             Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={handleTest}
+            loading={testing}
+            disabled={!form.host || !form.db_name || !form.username || (!id && !form.password)}
+          >
+            Test connection
           </Button>
           <Button type="submit" variant="primary" loading={saving}>
             <Save size={14} aria-hidden="true" />
