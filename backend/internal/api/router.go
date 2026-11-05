@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/ansrivas/fiberprometheus/v2"
@@ -103,8 +104,16 @@ func SetupRoutes(app *fiber.App, jwtSecret, encryptionKey string) {
 	teamHandler := handler.NewTeamHandler(teamService, authService)
 
 	// Stricter limiter for credential endpoints to slow brute-force attempts.
+	// The E2E suite sets AUTH_RATE_LIMIT_MAX higher because dozens of specs
+	// sign in from the same loopback IP within one minute.
+	authRateLimit := 10
+	if raw := os.Getenv("AUTH_RATE_LIMIT_MAX"); raw != "" {
+		if parsed, err := strconv.Atoi(raw); err == nil && parsed > 0 {
+			authRateLimit = parsed
+		}
+	}
 	authLimiter := limiter.New(limiter.Config{
-		Max:        10,
+		Max:        authRateLimit,
 		Expiration: 1 * time.Minute,
 		KeyGenerator: func(c *fiber.Ctx) string {
 			return c.IP()

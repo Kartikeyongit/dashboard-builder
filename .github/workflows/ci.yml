@@ -123,6 +123,8 @@ jobs:
       # Must match the origin the preview server is served from, because CORS
       # allows this exact origin only.
       FRONTEND_URL: http://127.0.0.1:4173
+      # The whole Cypress suite signs in from 127.0.0.1 many times per minute.
+      AUTH_RATE_LIMIT_MAX: '100'
     steps:
       - uses: actions/checkout@v4
 

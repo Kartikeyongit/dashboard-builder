@@ -565,6 +565,7 @@ After local setup or deployment:
 | `DASHBOARD_CACHE_TTL_SECONDS` | In‑process saved‑query cache TTL in seconds; `0` disables it | `15` |
 | `DASHBOARD_QUERY_CONCURRENCY` | Maximum widget queries executed at once per dashboard load | `6` |
 | `FRONTEND_URL` | Allowed CORS origin | `https://myfrontend.onrender.com` |
+| `AUTH_RATE_LIMIT_MAX` | Credential requests allowed per IP per minute (default `10`); raise only for automated test environments | `100` |
 | `SEED_SECRET` | Token to trigger database seeding via HTTP | `a1b2c3d4` (only needed once) |
 | `SEED_DEMO_PASSWORD` | Password for seeded demo users (8+ chars). Required when seeding a hosted database; the local default is refused there | `a-strong-unique-password` |
 | `MIGRATIONS_DIR` | Path to SQL migration files | `/etc/dashboard/migrations` |
