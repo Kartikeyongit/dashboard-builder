@@ -1,73 +1,68 @@
-# React + TypeScript + Vite
+# Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + Vite + Redux Toolkit. See the root [README](../README.md) for the
+architecture, local setup, API reference, and UI conventions.
 
-Currently, two official plugins are available:
+## Commands
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Dev server on `:5173` |
+| `npm run build` | Type-check (`tsc -b`) and produce `dist/` |
+| `npm run preview` | Serve the production build |
+| `npm test` | Vitest unit tests |
+| `npm run lint` | ESLint |
+| `npm run test:e2e` | Production smoke spec |
+| `npm run test:e2e:features` | Filters, exports, sharing, freshness |
+| `npm run test:e2e:library` | Search, rename, pin, command palette, undo delete |
+| `npm run test:e2e:builder` | Widget inspector, duplicate, refresh override |
+| `npm run test:e2e:a11y` | axe scans of the key pages (light + dark) |
+| `npm run test:visual` | Capture visual-regression screenshots |
+| `npm run visual:check` | Compare screenshots to the platform baselines |
+| `npm run visual:update` | Recreate baselines for the current platform |
+| `npm run budget` | Enforce the production bundle budgets |
 
-## React Compiler
+The Cypress specs need the API on `:8099`, a seeded database, and a production
+build pointed at that API. The root README has the exact commands.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Accessibility
 
-## Expanding the ESLint configuration
+`cypress/e2e/a11y.cy.ts` scans login, register, home, datasources, queries,
+dashboards, the dashboard viewer and editor, team, and settings with
+`cypress-axe`. Home and the viewer are also scanned in dark mode. Only
+**critical** and **serious** axe findings fail the run. The theme is pinned
+before the app boots so the result does not depend on the CI host's system
+preference.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Visual regression
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+Screenshots of login, register, settings, and a dashboard chart are compared
+with `pixelmatch`. Baselines live in `cypress/visual-baseline/<platform>/`
+because font rasterisation differs between operating systems.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+1. Run `npm run test:visual`.
+2. Run `npm run visual:check` to compare, or `npm run visual:update` to accept
+   the current screenshots as the baseline.
+3. Commit the PNGs under `cypress/visual-baseline/`.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+A missing baseline is created instead of failing (first run on a new platform).
+Once baselines exist, more than 1.5% differing pixels fails the check and writes
+a diff to `cypress/visual-diff/<platform>/`. Override the defaults with
+`VISUAL_THRESHOLD` (pixelmatch colour threshold, default `0.2`) and
+`VISUAL_ALLOWED_PERCENT` (default `1.5`). CI uploads screenshots and diffs as
+artifacts.
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Performance budgets
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+`npm run budget` runs after `npm run build` and enforces:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+| Budget | Limit |
+|--------|-------|
+| Initial JS (entry + modulepreload) | 175 KB gzip |
+| Initial CSS | 12 KB gzip |
+| Total JS | 900 KB gzip |
+| Any single chunk | 270 KB gzip |
+
+It also fails if ECharts, AG Grid, Monaco, or the editor vendor chunk is
+preloaded by `index.html`. Keep heavy libraries inside lazy routes; the table
+widget registers only the AG Grid modules it uses.
