@@ -11,6 +11,7 @@ const email = (Cypress.env('demoEmail') as string | undefined) ?? 'admin@acme.co
 const password = (Cypress.env('demoPassword') as string | undefined) ?? 'password123';
 
 let accessToken = '';
+let refreshToken = '';
 let dashboardId = '';
 
 const formatViolations = (violations: { id: string; impact?: string | null; help: string; nodes: { target: string[]; failureSummary?: string }[] }[]) =>
@@ -45,8 +46,18 @@ const scan = () => {
   );
 };
 
-const visitAndScan = (path: string, ready?: () => void) => {
-  cy.visit(path);
+const visitAndScan = (
+  path: string,
+  ready?: () => void,
+  theme: 'light' | 'dark' = 'light',
+) => {
+  // Pin the theme before the app boots: CI's headless browser may report a
+  // dark system preference, and the baseline scans must not depend on the host.
+  cy.visit(path, {
+    onBeforeLoad(win) {
+      win.localStorage.setItem('dashboard-builder-theme', theme);
+    },
+  });
   ready?.();
   scan();
 };
@@ -55,6 +66,7 @@ describe('accessibility', () => {
   before(() => {
     cy.request('POST', `${apiUrl}/auth/login`, { email, password }).then((res) => {
       accessToken = res.body.tokens.access_token;
+      refreshToken = res.body.tokens.refresh_token;
       cy.request({
         url: `${apiUrl}/dashboards`,
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -71,7 +83,7 @@ describe('accessibility', () => {
       'a11y-admin',
       () => {
         window.localStorage.setItem('access_token', accessToken);
-        window.localStorage.setItem('refresh_token', 'a11y-refresh-placeholder');
+        window.localStorage.setItem('refresh_token', refreshToken);
       },
       { cacheAcrossSpecs: true },
     );
@@ -84,29 +96,41 @@ describe('accessibility', () => {
     });
 
     it('login', () => {
-      visitAndScan('/login', () => cy.contains('h2', 'Welcome back').should('be.visible'));
+      visitAndScan('/login', () =>
+        cy.contains('h2', 'Welcome back', { timeout: 20000 }).should('be.visible'),
+      );
     });
 
     it('register', () => {
-      visitAndScan('/register', () => cy.contains('h2', 'Create an account').should('be.visible'));
+      visitAndScan('/register', () =>
+        cy.contains('h2', 'Create an account', { timeout: 20000 }).should('be.visible'),
+      );
     });
   });
 
   describe('authenticated pages', () => {
     it('home', () => {
-      visitAndScan('/', () => cy.contains('.welcome-greeting', 'Welcome back').should('be.visible'));
+      visitAndScan('/', () =>
+        cy.contains('.welcome-greeting', 'Welcome back', { timeout: 20000 }).should('be.visible'),
+      );
     });
 
     it('datasources', () => {
-      visitAndScan('/datasources', () => cy.contains('Internal PostgreSQL').should('exist'));
+      visitAndScan('/datasources', () =>
+        cy.contains('Internal PostgreSQL', { timeout: 20000 }).should('exist'),
+      );
     });
 
     it('queries', () => {
-      visitAndScan('/queries', () => cy.contains('Saved SQL').should('be.visible'));
+      visitAndScan('/queries', () =>
+        cy.contains('Saved SQL', { timeout: 20000 }).should('be.visible'),
+      );
     });
 
     it('dashboards', () => {
-      visitAndScan('/dashboards', () => cy.contains('Sales Overview').should('exist'));
+      visitAndScan('/dashboards', () =>
+        cy.contains('Sales Overview', { timeout: 20000 }).should('exist'),
+      );
     });
 
     it('dashboard viewer', () => {
@@ -122,25 +146,35 @@ describe('accessibility', () => {
     });
 
     it('home (dark theme)', () => {
-      cy.window().then((win) => win.localStorage.setItem('dashboard-builder-theme', 'dark'));
-      visitAndScan('/', () => cy.contains('.welcome-greeting', 'Welcome back').should('be.visible'));
+      visitAndScan(
+        '/',
+        () => cy.contains('.welcome-greeting', 'Welcome back', { timeout: 20000 }).should('be.visible'),
+        'dark',
+      );
       cy.get('html').should('have.attr', 'data-theme', 'dark');
     });
 
     it('dashboard viewer (dark theme)', () => {
-      cy.window().then((win) => win.localStorage.setItem('dashboard-builder-theme', 'dark'));
-      visitAndScan(`/dashboards/${dashboardId}`, () => {
-        cy.get('.dashboard-view-widget', { timeout: 30000 }).should('have.length.greaterThan', 0);
-      });
+      visitAndScan(
+        `/dashboards/${dashboardId}`,
+        () => {
+          cy.get('.dashboard-view-widget', { timeout: 30000 }).should('have.length.greaterThan', 0);
+        },
+        'dark',
+      );
       cy.get('html').should('have.attr', 'data-theme', 'dark');
     });
 
     it('team', () => {
-      visitAndScan('/team', () => cy.contains('People & access').should('be.visible'));
+      visitAndScan('/team', () =>
+        cy.contains('People & access', { timeout: 20000 }).should('be.visible'),
+      );
     });
 
     it('settings', () => {
-      visitAndScan('/settings', () => cy.contains('Your settings').should('be.visible'));
+      visitAndScan('/settings', () =>
+        cy.contains('Your settings', { timeout: 20000 }).should('be.visible'),
+      );
     });
   });
 });

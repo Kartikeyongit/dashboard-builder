@@ -11,6 +11,7 @@ const email = (Cypress.env('demoEmail') as string | undefined) ?? 'admin@acme.co
 const password = (Cypress.env('demoPassword') as string | undefined) ?? 'password123';
 
 let accessToken = '';
+let refreshToken = '';
 let dashboardId = '';
 
 const stabilize = () => {
@@ -30,24 +31,55 @@ const stabilize = () => {
   });
 };
 
+/**
+ * Screenshots must not depend on the host's system theme. Pin light mode
+ * before every visit and seed a real token pair so the auth interceptor never
+ * tries to refresh a placeholder.
+ */
+const visit = (path: string) => {
+  cy.visit(path, {
+    onBeforeLoad(win) {
+      win.localStorage.setItem('dashboard-builder-theme', 'light');
+    },
+  });
+};
+
 const shot = (name: string) => {
   stabilize();
   cy.screenshot(name, { capture: 'viewport', overwrite: true });
 };
 
+const login = (attempt = 0): void => {
+  cy.request({
+    method: 'POST',
+    url: `${apiUrl}/auth/login`,
+    body: { email, password },
+    // The suite is rate-limited per IP (10 credential requests/minute). If a
+    // previous spec just consumed the window, wait it out instead of failing.
+    failOnStatusCode: false,
+  }).then((res) => {
+    if (res.status === 429 && attempt < 2) {
+      cy.wait(20000);
+      login(attempt + 1);
+      return;
+    }
+    expect(res.status, 'admin login').to.eq(200);
+    accessToken = res.body.tokens.access_token;
+    refreshToken = res.body.tokens.refresh_token;
+    cy.request({
+      url: `${apiUrl}/dashboards`,
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }).then((dashboards) => {
+      const list = dashboards.body as { id: string; name: string }[];
+      const sales = list.find((dashboard) => dashboard.name === 'Sales Overview');
+      dashboardId = (sales ?? list[0]).id;
+    });
+  });
+};
+
 describe('visual regression', () => {
   before(() => {
-    cy.request('POST', `${apiUrl}/auth/login`, { email, password }).then((res) => {
-      accessToken = res.body.tokens.access_token;
-      cy.request({
-        url: `${apiUrl}/dashboards`,
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }).then((dashboards) => {
-        const list = dashboards.body as { id: string; name: string }[];
-        const sales = list.find((dashboard) => dashboard.name === 'Sales Overview');
-        dashboardId = (sales ?? list[0]).id;
-      });
-    });
+    login();
   });
 
   beforeEach(() => {
@@ -56,34 +88,34 @@ describe('visual regression', () => {
 
   it('login', () => {
     cy.clearLocalStorage();
-    cy.visit('/login');
-    cy.contains('h2', 'Welcome back').should('be.visible');
+    visit('/login');
+    cy.contains('h2', 'Welcome back', { timeout: 20000 }).should('be.visible');
     shot('login');
   });
 
   it('register', () => {
     cy.clearLocalStorage();
-    cy.visit('/register');
-    cy.contains('h2', 'Create an account').should('be.visible');
+    visit('/register');
+    cy.contains('h2', 'Create an account', { timeout: 20000 }).should('be.visible');
     shot('register');
   });
 
   it('settings', () => {
     cy.session('visual-admin', () => {
       window.localStorage.setItem('access_token', accessToken);
-      window.localStorage.setItem('refresh_token', 'visual-refresh-placeholder');
+      window.localStorage.setItem('refresh_token', refreshToken);
     });
-    cy.visit('/settings');
-    cy.contains('Your settings').should('be.visible');
+    visit('/settings');
+    cy.contains('Your settings', { timeout: 20000 }).should('be.visible');
     shot('settings');
   });
 
   it('dashboard widget', () => {
     cy.session('visual-admin', () => {
       window.localStorage.setItem('access_token', accessToken);
-      window.localStorage.setItem('refresh_token', 'visual-refresh-placeholder');
+      window.localStorage.setItem('refresh_token', refreshToken);
     });
-    cy.visit(`/dashboards/${dashboardId}`);
+    visit(`/dashboards/${dashboardId}`);
     cy.get('.dashboard-view-widget canvas', { timeout: 30000 }).should('exist');
     // ECharts animates on first paint with its own canvas clock; let it settle.
     cy.wait(1500);

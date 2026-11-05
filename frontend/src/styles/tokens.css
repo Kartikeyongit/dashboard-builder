@@ -53,7 +53,7 @@
   /* ── Text ───────────────────────────────────────────────────── */
   --color-text: #111827;
   --color-text-secondary: #4b5563;
-  --color-text-muted: #8b93a1;
+  --color-text-muted: #5f6b7a;
 
   /* ── Borders ────────────────────────────────────────────────── */
   --color-border: #e3e6eb;
@@ -129,7 +129,7 @@
 
   --color-text: #e8ecf3;
   --color-text-secondary: #aab3c2;
-  --color-text-muted: #7c8798;
+  --color-text-muted: #8b95a7;
 
   --color-border: #2a3448;
   --color-border-strong: #3b475e;

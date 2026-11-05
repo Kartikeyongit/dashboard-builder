@@ -186,9 +186,14 @@ jobs:
 
       - name: Run Cypress
         working-directory: frontend
+        shell: bash
         env:
           CYPRESS_apiUrl: http://127.0.0.1:8099/api/v1
-        run: npx cypress run --spec 'cypress/e2e/*.cy.ts' 2>&1 | tee /tmp/cypress.log
+        run: |
+          # Without pipefail the pipeline would report tee's exit code and a
+          # failing Cypress run would look green.
+          set -o pipefail
+          npx cypress run --spec 'cypress/e2e/*.cy.ts' 2>&1 | tee /tmp/cypress.log
 
       # On the first run for a platform this records baselines instead of
       # failing. Commit cypress/visual-baseline/linux/ from the uploaded
@@ -211,15 +216,25 @@ jobs:
           retention-days: 7
 
       # Surface the failing assertion in the check run even when logs are not
-      # available, so a red build still says what broke.
+      # available, so a red build still says what broke. Context lines are
+      # included because Cypress splits the spec name, error, and stack across
+      # several lines.
       - name: Cypress failure summary
         if: failure()
         working-directory: frontend
         run: |
           if [ -f /tmp/cypress.log ]; then
-            grep -nE "failing|AssertionError|CypressError|Timed out|^  [0-9]+\)" /tmp/cypress.log | head -20 | while IFS= read -r line; do
-              echo "::error title=Cypress failure::$line"
-            done
+            grep -nE -A 12 "failing$|CypressError|AssertionError|Timed out|Error: " /tmp/cypress.log \
+              | head -120 \
+              | while IFS= read -r line; do
+                  echo "::error title=Cypress failure::$line"
+                done
+            {
+              echo '### Cypress failures'
+              echo '```'
+              grep -nE -A 20 "failing$|CypressError|AssertionError|Timed out|Error: " /tmp/cypress.log | head -160
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: API logs
