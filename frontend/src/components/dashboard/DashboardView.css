@@ -138,7 +138,7 @@
 .dv-btn--primary {
   background: var(--color-primary);
   border-color: var(--color-primary);
-  color: #fff;
+  color: var(--color-primary-contrast);
 }
 
 .dv-btn--primary:hover {
@@ -249,7 +249,7 @@
 .filter-apply-btn {
   background: var(--color-primary);
   border: 1px solid var(--color-primary);
-  color: #fff;
+  color: var(--color-primary-contrast);
 }
 
 .filter-apply-btn:hover:not(:disabled) {

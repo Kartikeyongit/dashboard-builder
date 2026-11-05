@@ -247,6 +247,46 @@ rules with `RequireRole("admin", "editor")`. Never rely on the UI alone.
 
 ---
 
+## Pre-deploy and post-deploy checks
+
+CI already runs these on every push, but run them locally before a manual
+deploy:
+
+```bash
+cd frontend
+npm test                 # Vitest unit tests
+npm run build
+npm run budget           # gzip budgets + lazy-chunk guard
+npm run test:e2e:a11y    # needs the local API/preview stack
+npm run test:visual      # screenshots, then `npm run visual:check`
+```
+
+After the services are live:
+
+1. `curl -fsS https://YOUR-API/healthz` and `/readyz` must return 200.
+2. Open a deep link such as `https://YOUR-FRONTEND/dashboards` directly. Static
+   hosts must rewrite unknown paths to `index.html`; `render.yaml` does this,
+   but a manually created Render static site needs the same rewrite rule.
+3. Run the read-only production smoke test against the deployed origin:
+
+   ```bash
+   cd frontend
+   VITE_API_URL= npm run build   # or use the deployed build
+   npm run test:e2e -- --config baseUrl=https://YOUR-FRONTEND
+   ```
+
+   The smoke spec only signs in and opens a seeded dashboard, so it does not
+   modify data. Do not point the feature/builder/library specs at a shared demo
+   deployment: they create and delete fixtures through the API.
+4. Retire or re-key the seeded demo account before sharing the URL publicly.
+
+Accessibility and bundle checks are part of CI, so a deploy that passed CI
+already has no critical/serious axe findings and is inside the performance
+budget. Visual baselines are platform-specific; commit the Linux baselines from
+the CI artifact to enforce the screenshot comparison on future runs.
+
+---
+
 ## Security checklist
 
 - Never commit `backend/.env`. Use `backend/.env.example` as the template.

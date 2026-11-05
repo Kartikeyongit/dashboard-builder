@@ -17,6 +17,13 @@ export default defineConfig({
               test: /node_modules[\\/](react|react-dom|react-router|react-router-dom|react-redux|redux|immer|reselect|@reduxjs[\\/]toolkit)[\\/]/,
             },
             {
+              // tslib is a dependency of both echarts and several UI packages
+              // used by the entry chunk. Give it its own tiny chunk so the
+              // entry never has to preload the whole charting vendor bundle.
+              name: 'shared-vendor',
+              test: /node_modules[\\/]tslib[\\/]/,
+            },
+            {
               name: 'charts-vendor',
               test: /node_modules[\\/](echarts|echarts-for-react|zrender)[\\/]/,
             },

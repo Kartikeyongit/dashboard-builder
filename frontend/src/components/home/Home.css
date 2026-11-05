@@ -121,7 +121,7 @@
 
 .hero-btn--primary {
   background: var(--color-primary);
-  color: white;
+  color: var(--color-primary-contrast);
   border: none;
   box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
 }
@@ -1241,7 +1241,7 @@
 
 .checklist-action:hover {
   background: var(--color-primary);
-  color: white;
+  color: var(--color-primary-contrast);
 }
 
 /* ---------- Integrations ---------- */
@@ -1455,7 +1455,7 @@
   left: 50%;
   transform: translateX(-50%);
   background: var(--color-primary);
-  color: white;
+  color: var(--color-primary-contrast);
   font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -1545,7 +1545,7 @@
 .pricing-cta--primary {
   background: var(--color-primary);
   border-color: var(--color-primary);
-  color: white;
+  color: var(--color-primary-contrast);
 }
 
 .pricing-cta--primary:hover {
@@ -1624,7 +1624,7 @@
   align-items: center;
   justify-content: center;
   background: var(--color-primary);
-  color: white;
+  color: var(--color-primary-contrast);
   border: none;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);

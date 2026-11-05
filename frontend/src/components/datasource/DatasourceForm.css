@@ -213,7 +213,7 @@
 
 .save-btn {
   background: var(--color-primary);
-  color: white;
+  color: var(--color-primary-contrast);
   border: none;
   padding: 0.6rem 1.5rem;
   font-size: 0.9rem;

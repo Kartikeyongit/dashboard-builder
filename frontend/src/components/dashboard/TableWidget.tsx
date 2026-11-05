@@ -1,11 +1,29 @@
 import React, { useEffect, useState } from 'react';
-import { AllCommunityModule, ModuleRegistry, themeAlpine, colorSchemeDark } from 'ag-grid-community';
+import {
+  ClientSideRowModelModule,
+  DateFilterModule,
+  ModuleRegistry,
+  NumberFilterModule,
+  TextFilterModule,
+  ValidationModule,
+  colorSchemeDark,
+  themeAlpine,
+} from 'ag-grid-community';
 import { AgGridReact } from 'ag-grid-react';
 import type { ColDef } from 'ag-grid-community';
 import type { QueryResult, WidgetConfig } from '../../types';
 import { formatNumber } from '../../utils/widgetConfig';
 
-ModuleRegistry.registerModules([AllCommunityModule]);
+// Register only the features this table uses. Pulling in AllCommunityModule
+// would bundle editors, CSV export, infinite scrolling, and other modules the
+// dashboard never reaches.
+ModuleRegistry.registerModules([
+  ClientSideRowModelModule,
+  TextFilterModule,
+  NumberFilterModule,
+  DateFilterModule,
+  ValidationModule,
+]);
 
 interface Props {
   data?: QueryResult;

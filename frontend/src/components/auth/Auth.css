@@ -312,7 +312,7 @@
 .auth-btn {
   width: 100%;
   background: var(--color-primary);
-  color: white;
+  color: var(--color-primary-contrast);
   border: none;
   padding: 0.7rem;
   font-size: 0.95rem;

@@ -43,7 +43,7 @@
 
 .toast--info {
   background: var(--color-primary);
-  color: white;
+  color: var(--color-primary-contrast);
 }
 
 .toast-icon {

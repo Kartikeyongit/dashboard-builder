@@ -91,6 +91,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Performance budget
+        run: npm run budget
+
   e2e:
     name: E2E (Cypress)
     runs-on: ubuntu-latest
@@ -186,6 +189,26 @@ jobs:
         env:
           CYPRESS_apiUrl: http://127.0.0.1:8099/api/v1
         run: npx cypress run --spec 'cypress/e2e/*.cy.ts' 2>&1 | tee /tmp/cypress.log
+
+      # On the first run for a platform this records baselines instead of
+      # failing. Commit cypress/visual-baseline/linux/ from the uploaded
+      # artifact to turn the check into a gate for CI.
+      - name: Visual regression
+        if: success()
+        working-directory: frontend
+        run: npm run visual:check
+
+      - name: Upload visual artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-visual-${{ github.run_attempt }}
+          path: |
+            frontend/cypress/screenshots/visual.cy.ts
+            frontend/cypress/visual-diff
+            frontend/cypress/visual-baseline
+          if-no-files-found: ignore
+          retention-days: 7
 
       # Surface the failing assertion in the check run even when logs are not
       # available, so a red build still says what broke.

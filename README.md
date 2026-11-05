@@ -110,8 +110,10 @@ dashboard-builder/
 │   │   │   ├── datasource/    # DatasourceList, DatasourceForm
 │   │   │   ├── errors/        # RouteError, NotFound, WidgetBoundary
 │   │   │   ├── home/          # Home page
-│   │   │   ├── layout/        # AppShell
+│   │   │   ├── layout/        # AppShell, TopBar, command palette
 │   │   │   ├── query/         # QueryEditor, QueryList
+│   │   │   ├── settings/      # Profile and password settings
+│   │   │   ├── team/          # Members, invites, activity
 │   │   │   └── viewer/        # SharedDashboardView
 │   │   ├── hooks/             # Custom hooks (useDashboardSocket)
 │   │   ├── store/             # Redux slices (auth, datasource, query, dashboard, toast)
@@ -123,6 +125,11 @@ dashboard-builder/
 │   │   ├── animations.ts      # Framer motion variants
 │   │   ├── hooks.ts           # Shared hooks
 │   │   └── theme.ts           # Pre-mount theme bootstrap (no flash of the wrong theme)
+│   ├── cypress/                # E2E, accessibility, and visual specs
+│   │   ├── e2e/                # *.cy.ts specs
+│   │   ├── support/            # Shared Cypress support (cypress-axe)
+│   │   └── visual-baseline/    # Per-platform visual baselines
+│   ├── scripts/                # Bundle budget and visual-diff checks
 │   ├── Dockerfile             # Frontend container (Nginx)
 │   └── nginx-frontend.conf    # Nginx config for SPA
 └── docker-compose.yml         # Local development environment
@@ -155,7 +162,12 @@ read.
   `aria-label`.
 - **Accessibility is part of done.** Every form control has a label tied to its
   id, focus is always visible (`:focus-visible` in `base.css`), and motion
-  respects `prefers-reduced-motion`.
+  respects `prefers-reduced-motion`. Text on a primary fill uses
+  `--color-primary-contrast`, never hard-coded white, because the dark theme
+  uses a light indigo fill.
+- **Budgets are part of done.** New dependencies must not push the initial
+  JavaScript past the gzip budget; expensive libraries belong in a lazy route
+  and a dedicated vendor chunk (see `vite.config.ts`).
 - **Theme and layout state persist.** The theme is stored under
   `dashboard-builder-theme` (`light`, `dark`, or `system`) and applied before
   React mounts. The sidebar collapse state is stored under
@@ -304,6 +316,65 @@ CI does exactly that in the `e2e` job: it starts a throwaway PostgreSQL
 service, boots the API on `:8099` (which applies the migrations), seeds the
 demo data, builds the frontend against that API, serves it with `vite preview`,
 and runs the suite in Electron. No external services or secrets are involved.
+
+### Accessibility checks
+
+`npm run test:e2e:a11y` scans login, register, the authenticated list pages, the
+team and settings pages, and the dashboard viewer and editor with
+[axe-core](https://github.com/dequelabs/axe-core) via `cypress-axe`. It also
+re-scans the home page and dashboard viewer in dark mode. Only **critical** and
+**serious** violations fail the run; minor best-practice hints are reported by
+cypress-axe without blocking a merge. The spec is part of the normal CI E2E
+run, so a regression turns the build red.
+
+### Performance budgets
+
+```bash
+npm run build
+npm run budget
+```
+
+The budget check gzips the production output and enforces:
+
+| Budget | Limit |
+|--------|-------|
+| Initial JavaScript (entry + modulepreload) | 175 KB gzip |
+| Initial CSS | 12 KB gzip |
+| Total JavaScript | 900 KB gzip |
+| Any single chunk | 270 KB gzip |
+
+It also fails if `charts-vendor`, `grid-vendor`, `editor-vendor`, or Monaco are
+preloaded by `index.html`. ECharts is only needed by dashboard pages, AG Grid
+only by table widgets, and Monaco only by the query editor, so each stays in a
+lazy route chunk. `tslib` is split into its own tiny `shared-vendor` chunk:
+several eager UI packages use it, and without the split the entry would drag
+the entire charting bundle into the first paint.
+
+The table widget registers only the AG Grid modules it uses
+(`ClientSideRowModel`, text/number/date filters, and validation) instead of
+`AllCommunityModule`; that alone removes roughly 25 KB gzip from the lazy grid
+chunk.
+
+### Visual regression
+
+```bash
+npm run test:visual     # capture screenshots of login, register, settings, and a chart widget
+npm run visual:check    # compare against cypress/visual-baseline/<platform>/
+npm run visual:update   # rewrite the baselines for this machine
+```
+
+Baselines are stored per operating system because font rasterisation differs.
+Commit the PNGs after `visual:update`. On a platform without committed
+baselines, `visual:check` records the current screenshots as baselines and
+exits successfully, so first-time setup never fails a build. Once baselines
+exist, more than 1.5% differing pixels (pixelmatch threshold `0.2`) fails the
+check and writes a diff image to `cypress/visual-diff/<platform>/`. Tune those
+values with `VISUAL_THRESHOLD` and `VISUAL_ALLOWED_PERCENT`. CI uploads the
+screenshots and diffs as artifacts.
+
+Animations and transitions are disabled before every screenshot, and the chart
+is given 1.5 s to finish its canvas animation, so runs on the same platform are
+deterministic.
 
 ---
 

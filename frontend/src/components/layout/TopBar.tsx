@@ -61,7 +61,6 @@ const TopBar: React.FC<TopBarProps> = ({ userEmail, onOpenMenu, onOpenPalette })
           type="button"
           className="topbar__palette"
           onClick={onOpenPalette}
-          aria-label="Search or jump to"
         >
           <Search size={15} aria-hidden="true" />
           <span className="topbar__palette-label">Search or jump to…</span>

@@ -175,7 +175,7 @@
 .query-btn--primary {
   background: var(--color-primary);
   border: 1px solid var(--color-primary);
-  color: white;
+  color: var(--color-primary-contrast);
 }
 
 .query-btn--primary:hover:not(:disabled) {
