@@ -4,6 +4,7 @@ import { useAppDispatch, useAppSelector } from '../../hooks';
 import { acceptTeamInvite, registerUser, clearError } from '../../store/authSlice';
 import { teamAPI } from '../../api/team';
 import { apiErrorMessage } from '../../utils/apiError';
+import { usePageTitle } from '../../utils/usePageTitle';
 import type { InvitePreview } from '../../types';
 import './Auth.css';
 
@@ -33,6 +34,7 @@ function getPasswordStrength(pw: string): { score: number; label: string; color:
 }
 
 const Register: React.FC = () => {
+  usePageTitle('Create your account — Dashboard Builder');
   const [searchParams] = useSearchParams();
   const inviteToken = searchParams.get('invite') ?? '';
 

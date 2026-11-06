@@ -26,6 +26,8 @@ const stabilize = () => {
         transition-duration: 0s !important;
         caret-color: transparent !important;
       }
+      /* Landing anchors scroll smoothly; screenshots must not capture mid-scroll. */
+      html { scroll-behavior: auto !important; }
     `;
     doc.head.appendChild(style);
   });
@@ -78,10 +80,6 @@ const login = (attempt = 0): void => {
 };
 
 describe('visual regression', () => {
-  before(() => {
-    login();
-  });
-
   beforeEach(() => {
     cy.viewport(1280, 800);
   });
@@ -100,29 +98,77 @@ describe('visual regression', () => {
     shot('register');
   });
 
-  it('settings', () => {
-    cy.session('visual-admin', () => {
-      window.localStorage.setItem('access_token', accessToken);
-      window.localStorage.setItem('refresh_token', refreshToken);
-    });
-    visit('/settings');
-    cy.contains('Your settings', { timeout: 20000 }).should('be.visible');
-    shot('settings');
+  it('landing', () => {
+    cy.clearLocalStorage();
+    visit('/');
+    cy.contains('h1', /live dashboard/i, { timeout: 20000 }).should('be.visible');
+    shot('landing');
   });
 
-  it('dashboard widget', () => {
-    cy.session('visual-admin', () => {
-      window.localStorage.setItem('access_token', accessToken);
-      window.localStorage.setItem('refresh_token', refreshToken);
+  it('landing (dark theme)', () => {
+    cy.clearLocalStorage();
+    cy.visit('/', {
+      onBeforeLoad(win) {
+        win.localStorage.setItem('dashboard-builder-theme', 'dark');
+      },
     });
-    visit(`/dashboards/${dashboardId}`);
-    cy.get('.dashboard-view-widget canvas', { timeout: 30000 }).should('exist');
-    // ECharts animates on first paint with its own canvas clock; let it settle.
-    cy.wait(1500);
+    cy.contains('h1', /live dashboard/i, { timeout: 20000 }).should('be.visible');
+    shot('landing-dark');
+  });
+
+  it('landing (mobile)', () => {
+    cy.viewport(390, 844);
+    cy.clearLocalStorage();
+    visit('/');
+    cy.contains('h1', /live dashboard/i, { timeout: 20000 }).should('be.visible');
+    shot('landing-mobile');
+  });
+
+  it('landing (FAQ open)', () => {
+    cy.clearLocalStorage();
+    visit('/');
+    cy.contains('h1', /live dashboard/i, { timeout: 20000 }).should('be.visible');
+    // Freeze smooth scrolling before any programmatic scroll so the capture
+    // cannot land mid-animation on a slower machine.
     stabilize();
-    cy.get('.dashboard-view-widget')
-      .filter(':has(canvas)')
-      .first()
-      .screenshot('dashboard-chart', { overwrite: true });
+    cy.get('#faq-question-1').click();
+    cy.get('#faq-answer-1').should('be.visible');
+    cy.get('#faq').scrollIntoView();
+    cy.wait(400);
+    shot('landing-faq');
+  });
+
+  // Only these two surfaces need the API; keeping the login here lets the
+  // public screenshots run against a static preview on their own.
+  describe('authenticated surfaces', () => {
+    before(() => {
+      login();
+    });
+
+    it('settings', () => {
+      cy.session('visual-admin', () => {
+        window.localStorage.setItem('access_token', accessToken);
+        window.localStorage.setItem('refresh_token', refreshToken);
+      });
+      visit('/settings');
+      cy.contains('Your settings', { timeout: 20000 }).should('be.visible');
+      shot('settings');
+    });
+
+    it('dashboard widget', () => {
+      cy.session('visual-admin', () => {
+        window.localStorage.setItem('access_token', accessToken);
+        window.localStorage.setItem('refresh_token', refreshToken);
+      });
+      visit(`/dashboards/${dashboardId}`);
+      cy.get('.dashboard-view-widget canvas', { timeout: 30000 }).should('exist');
+      // ECharts animates on first paint with its own canvas clock; let it settle.
+      cy.wait(1500);
+      stabilize();
+      cy.get('.dashboard-view-widget')
+        .filter(':has(canvas)')
+        .first()
+        .screenshot('dashboard-chart', { overwrite: true });
+    });
   });
 });

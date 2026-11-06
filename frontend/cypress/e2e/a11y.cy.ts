@@ -63,34 +63,8 @@ const visitAndScan = (
 };
 
 describe('accessibility', () => {
-  before(() => {
-    cy.request('POST', `${apiUrl}/auth/login`, { email, password }).then((res) => {
-      accessToken = res.body.tokens.access_token;
-      refreshToken = res.body.tokens.refresh_token;
-      cy.request({
-        url: `${apiUrl}/dashboards`,
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }).then((dashboards) => {
-        const list = dashboards.body as { id: string; name: string }[];
-        const sales = list.find((dashboard) => dashboard.name === 'Sales Overview');
-        dashboardId = (sales ?? list[0]).id;
-      });
-    });
-  });
-
-  beforeEach(() => {
-    cy.session(
-      'a11y-admin',
-      () => {
-        window.localStorage.setItem('access_token', accessToken);
-        window.localStorage.setItem('refresh_token', refreshToken);
-      },
-      { cacheAcrossSpecs: true },
-    );
-  });
-
   describe('public pages', () => {
-    // Clear the cached session for the two anonymous routes.
+    // Public routes must not inherit the cached authenticated session.
     beforeEach(() => {
       cy.clearLocalStorage();
     });
@@ -106,9 +80,57 @@ describe('accessibility', () => {
         cy.contains('h2', 'Create an account', { timeout: 20000 }).should('be.visible'),
       );
     });
+
+    it('landing', () => {
+      visitAndScan('/', () =>
+        cy.contains('h1', /live dashboard/i, { timeout: 20000 }).should('be.visible'),
+      );
+    });
+
+    it('landing (dark theme)', () => {
+      visitAndScan(
+        '/',
+        () => cy.contains('h1', /live dashboard/i, { timeout: 20000 }).should('be.visible'),
+        'dark',
+      );
+      cy.get('html').should('have.attr', 'data-theme', 'dark');
+    });
+
+    it('landing (mobile)', () => {
+      cy.viewport(390, 844);
+      visitAndScan('/', () =>
+        cy.contains('h1', /live dashboard/i, { timeout: 20000 }).should('be.visible'),
+      );
+    });
   });
 
   describe('authenticated pages', () => {
+    before(() => {
+      cy.request('POST', `${apiUrl}/auth/login`, { email, password }).then((res) => {
+        accessToken = res.body.tokens.access_token;
+        refreshToken = res.body.tokens.refresh_token;
+        cy.request({
+          url: `${apiUrl}/dashboards`,
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }).then((dashboards) => {
+          const list = dashboards.body as { id: string; name: string }[];
+          const sales = list.find((dashboard) => dashboard.name === 'Sales Overview');
+          dashboardId = (sales ?? list[0]).id;
+        });
+      });
+    });
+
+    beforeEach(() => {
+      cy.session(
+        'a11y-admin',
+        () => {
+          window.localStorage.setItem('access_token', accessToken);
+          window.localStorage.setItem('refresh_token', refreshToken);
+        },
+        { cacheAcrossSpecs: true },
+      );
+    });
+
     it('home', () => {
       visitAndScan('/', () =>
         cy.contains('.welcome-greeting', 'Welcome back', { timeout: 20000 }).should('be.visible'),

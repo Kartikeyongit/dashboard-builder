@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import { loginUser, clearError } from '../../store/authSlice';
+import { usePageTitle } from '../../utils/usePageTitle';
 import './Auth.css';
 
 const Login: React.FC = () => {
+  usePageTitle('Sign in — Dashboard Builder');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
