@@ -51,6 +51,117 @@ const shot = (name: string) => {
   cy.screenshot(name, { capture: 'viewport', overwrite: true });
 };
 
+/**
+ * Home screenshots are fully hermetic: the fixture timestamps and the frozen
+ * clock make relative-time labels identical on every run.
+ */
+const HOME_NOW = new Date('2026-03-10T12:00:00Z').getTime();
+const homeUser = {
+  id: 'user-1',
+  org_id: 'org-home',
+  email: 'admin@acme.com',
+  role: 'admin',
+  created_at: '2026-01-01T00:00:00Z',
+};
+const homeDashboard = (id: string, name: string, updated: string, extra = {}) => ({
+  id,
+  org_id: 'org-home',
+  name,
+  description: '',
+  tags: [],
+  refresh_interval_seconds: 0,
+  is_favorite: false,
+  widget_count: 2,
+  created_by: 'user-1',
+  created_at: '2026-01-01T00:00:00Z',
+  updated_at: updated,
+  ...extra,
+});
+
+const seedHome = () => {
+  cy.intercept('GET', '**/api/v1/me', { body: homeUser }).as('home-me');
+  cy.intercept('GET', '**/api/v1/dashboards', {
+    body: [
+      homeDashboard('d-1', 'Revenue overview', '2026-03-10T11:00:00Z', { widget_count: 4 }),
+      homeDashboard('d-2', 'Customer churn', '2026-03-10T09:00:00Z'),
+      homeDashboard('d-3', 'Ops health', '2026-03-09T12:00:00Z', { is_favorite: true }),
+      homeDashboard('d-4', 'Marketing funnel', '2026-03-08T12:00:00Z'),
+    ],
+  }).as('home-dashboards');
+  cy.intercept('GET', '**/api/v1/datasources', {
+    body: [
+      {
+        id: 'ds-1',
+        org_id: 'org-home',
+        name: 'Warehouse',
+        type: 'postgres',
+        host: 'db.internal',
+        port: 5432,
+        db_name: 'analytics',
+        username: 'reader',
+        ssl_mode: 'require',
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      },
+    ],
+  }).as('home-datasources');
+  cy.intercept('GET', '**/api/v1/queries', { body: [] }).as('home-queries');
+  cy.intercept('GET', '**/api/v1/team/audit*', {
+    body: {
+      events: [
+        {
+          id: 'e-1',
+          org_id: 'org-home',
+          actor_email: 'admin@acme.com',
+          action: 'dashboard.updated',
+          target_type: 'dashboard',
+          target_name: 'Revenue overview',
+          metadata: {},
+          created_at: '2026-03-10T10:30:00Z',
+        },
+        {
+          id: 'e-2',
+          org_id: 'org-home',
+          actor_email: 'editor@acme.com',
+          action: 'share.created',
+          target_type: 'share',
+          target_name: 'Sales share link',
+          metadata: {},
+          created_at: '2026-03-10T08:00:00Z',
+        },
+        {
+          id: 'e-3',
+          org_id: 'org-home',
+          actor_email: 'admin@acme.com',
+          action: 'member.invited',
+          target_type: 'invite',
+          target_name: 'analyst@acme.com',
+          metadata: {},
+          created_at: '2026-03-09T16:00:00Z',
+        },
+      ],
+    },
+  }).as('home-audit');
+};
+
+const visitHome = (theme: 'light' | 'dark' = 'light') => {
+  cy.clock(HOME_NOW);
+  cy.visit('/', {
+    onBeforeLoad(win) {
+      win.localStorage.setItem('access_token', 'visual-access-token');
+      win.localStorage.setItem('refresh_token', 'visual-refresh-token');
+      win.localStorage.setItem('dashboard-builder-theme', theme);
+      win.localStorage.removeItem('dashboard-builder-onboarding-dismissed');
+    },
+  });
+  cy.wait('@home-me');
+  cy.wait(['@home-dashboards', '@home-datasources', '@home-queries']);
+  cy.get('.home-recent__row', { timeout: 20000 }).should('have.length', 4);
+  cy.wait('@home-audit');
+  cy.contains('.home-activity__item', 'Revenue overview').should('be.visible');
+  stabilize();
+};
+
 const login = (attempt = 0): void => {
   cy.request({
     method: 'POST',
@@ -138,10 +249,27 @@ describe('visual regression', () => {
     shot('landing-faq');
   });
 
+  // Hermetic: no API or seeded database is needed for these two shots.
+  it('home', () => {
+    seedHome();
+    visitHome('light');
+    shot('home');
+  });
+
+  it('home (dark theme)', () => {
+    seedHome();
+    visitHome('dark');
+    shot('home-dark');
+  });
+
   // Only these two surfaces need the API; keeping the login here lets the
   // public screenshots run against a static preview on their own.
   describe('authenticated surfaces', () => {
-    before(() => {
+    before(function () {
+      if (Cypress.env('visualHomeOnly')) {
+        this.skip();
+        return;
+      }
       login();
     });
 

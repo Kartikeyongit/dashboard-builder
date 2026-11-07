@@ -14,6 +14,7 @@
     "test:e2e:builder": "cypress run --spec cypress/e2e/builder.cy.ts",
     "test:e2e:a11y": "cypress run --spec cypress/e2e/a11y.cy.ts",
     "test:e2e:landing": "cypress run --spec cypress/e2e/landing.cy.ts",
+    "test:e2e:home": "cypress run --spec cypress/e2e/home.cy.ts",
     "test:visual": "cypress run --spec cypress/e2e/visual.cy.ts",
     "visual:check": "node scripts/visual-regression.mjs",
     "visual:update": "npm run test:visual && node scripts/visual-regression.mjs --update",

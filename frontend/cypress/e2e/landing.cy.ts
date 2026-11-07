@@ -19,7 +19,7 @@ describe('public landing', () => {
   it('renders the marketing page without app chrome', () => {
     cy.get('.lp-hero').should('be.visible');
     cy.get('.sidebar').should('not.exist');
-    cy.get('.welcome-greeting').should('not.exist');
+    cy.get('.home-header').should('not.exist');
   });
 
   it('points the primary conversion paths at signup', () => {

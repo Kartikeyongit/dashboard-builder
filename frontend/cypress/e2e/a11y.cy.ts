@@ -133,7 +133,7 @@ describe('accessibility', () => {
 
     it('home', () => {
       visitAndScan('/', () =>
-        cy.contains('.welcome-greeting', 'Welcome back', { timeout: 20000 }).should('be.visible'),
+        cy.get('.home-summary', { timeout: 20000 }).should('be.visible'),
       );
     });
 
@@ -170,7 +170,7 @@ describe('accessibility', () => {
     it('home (dark theme)', () => {
       visitAndScan(
         '/',
-        () => cy.contains('.welcome-greeting', 'Welcome back', { timeout: 20000 }).should('be.visible'),
+        () => cy.get('.home-summary', { timeout: 20000 }).should('be.visible'),
         'dark',
       );
       cy.get('html').should('have.attr', 'data-theme', 'dark');

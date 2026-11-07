@@ -17,6 +17,7 @@ architecture, local setup, API reference, and UI conventions.
 | `npm run test:e2e:library` | Search, rename, pin, command palette, undo delete |
 | `npm run test:e2e:builder` | Widget inspector, duplicate, refresh override |
 | `npm run test:e2e:a11y` | axe scans of the key pages (light + dark) |
+| `npm run test:e2e:home` | Signed-in home: fixtures, roles, states, list order |
 | `npm run test:e2e:landing` | Public landing structure, CTAs, FAQ, mobile menu |
 | `npm run test:visual` | Capture visual-regression screenshots |
 | `npm run visual:check` | Compare screenshots to the platform baselines |
@@ -37,17 +38,26 @@ viewport. Only **critical** and **serious** axe findings fail the run. The theme
 before the app boots so the result does not depend on the CI host's system
 preference.
 
+`cypress/e2e/home.cy.ts` runs the same critical/serious scan against a
+fixture-backed signed-in home, so the launchpad can be checked without the
+seeded API.
+
 ## Visual regression
 
 Screenshots of the landing page (desktop, dark, mobile, FAQ open), login,
-register, settings, and a dashboard chart are compared with `pixelmatch`.
-Baselines live in `cypress/visual-baseline/<platform>/` because font
-rasterisation differs between operating systems.
+register, home (desktop and dark, fixture-backed), settings, and a dashboard
+chart are compared with `pixelmatch`. Baselines live in
+`cypress/visual-baseline/<platform>/` because font rasterisation differs
+between operating systems.
 
 1. Run `npm run test:visual`.
 2. Run `npm run visual:check` to compare, or `npm run visual:update` to accept
    the current screenshots as the baseline.
 3. Commit the PNGs under `cypress/visual-baseline/`.
+
+The two home screenshots are fixture-backed. Capture them without the seeded
+API with
+`npx cypress run --spec cypress/e2e/visual.cy.ts --env visualHomeOnly=1`.
 
 A missing baseline is created instead of failing (first run on a new platform).
 Once baselines exist, more than 1.5% differing pixels fails the check and writes

@@ -8,6 +8,8 @@ interface DashboardState {
   list: Dashboard[];
   currentFull: DashboardFull | null;
   loading: boolean;
+  /** True once the library has been fetched, even if the request failed. */
+  loaded: boolean;
   error: string | null;
 }
 
@@ -15,6 +17,7 @@ const initialState: DashboardState = {
   list: [],
   currentFull: null,
   loading: false,
+  loaded: false,
   error: null,
 };
 
@@ -149,9 +152,21 @@ const dashboardSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchDashboards.pending, (state) => { state.loading = true; })
-      .addCase(fetchDashboards.fulfilled, (state, action) => { state.loading = false; state.list = action.payload; })
-      .addCase(fetchDashboards.rejected, (state, action) => { state.loading = false; state.error = action.error.message ?? null; })
+      .addCase(fetchDashboards.pending, (state) => {
+        state.loading = true;
+        state.loaded = false;
+        state.error = null;
+      })
+      .addCase(fetchDashboards.fulfilled, (state, action) => {
+        state.loading = false;
+        state.loaded = true;
+        state.list = action.payload;
+      })
+      .addCase(fetchDashboards.rejected, (state, action) => {
+        state.loading = false;
+        state.loaded = true;
+        state.error = action.error.message ?? null;
+      })
       .addCase(loadDashboardFull.pending, (state) => { state.loading = true; })
       .addCase(loadDashboardFull.fulfilled, (state, action) => { state.loading = false; state.currentFull = action.payload; })
       .addCase(loadDashboardFull.rejected, (state, action) => { state.loading = false; state.error = action.error.message ?? null; })

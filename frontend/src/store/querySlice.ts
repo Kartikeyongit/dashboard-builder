@@ -6,12 +6,15 @@ import type { Query, CreateQueryPayload } from '../types';
 interface QueryState {
   items: Query[];
   loading: boolean;
+  /** True once the library has been fetched, even if the request failed. */
+  loaded: boolean;
   error: string | null;
 }
 
 const initialState: QueryState = {
   items: [],
   loading: false,
+  loaded: false,
   error: null,
 };
 
@@ -50,9 +53,21 @@ const querySlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchQueries.pending, (state) => { state.loading = true; state.error = null; })
-      .addCase(fetchQueries.fulfilled, (state, action) => { state.loading = false; state.items = action.payload; })
-      .addCase(fetchQueries.rejected, (state, action) => { state.loading = false; state.error = action.error.message ?? null; })
+      .addCase(fetchQueries.pending, (state) => {
+        state.loading = true;
+        state.loaded = false;
+        state.error = null;
+      })
+      .addCase(fetchQueries.fulfilled, (state, action) => {
+        state.loading = false;
+        state.loaded = true;
+        state.items = action.payload;
+      })
+      .addCase(fetchQueries.rejected, (state, action) => {
+        state.loading = false;
+        state.loaded = true;
+        state.error = action.error.message ?? null;
+      })
       .addCase(createQuery.fulfilled, (state, action) => { state.items.unshift(action.payload); })
       .addCase(updateQuery.fulfilled, (state, action) => {
         const idx = state.items.findIndex(q => q.id === action.payload.id);

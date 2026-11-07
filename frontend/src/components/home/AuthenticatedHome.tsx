@@ -1,16 +1,33 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ArrowRight, Activity, Check, Star, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import {
+  Activity,
+  ArrowRight,
+  Check,
+  Database,
+  LayoutDashboard,
+  Star,
+  Terminal,
+  X,
+} from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../hooks';
 import { fetchDashboards } from '../../store/dashboardSlice';
 import { fetchDatasources } from '../../store/datasourceSlice';
 import { fetchQueries } from '../../store/querySlice';
 import { teamAPI } from '../../api/team';
 import { auditActionLabel } from '../../utils/audit';
-import type { AuditEvent } from '../../types';
+import { canEditContent } from '../../utils/permissions';
 import { pluralize, relativeTime } from '../../utils/format';
-import { fadeInUp, staggerContainer } from '../../animations';
+import { usePageTitle } from '../../utils/usePageTitle';
+import type { AuditEvent } from '../../types';
+import EmptyState from '../ui/EmptyState';
+import ErrorState from '../../ui/ErrorState';
+import {
+  buildOnboarding,
+  buildRecentDashboards,
+  completedSteps,
+  getPrimaryAction,
+} from './homeModel';
 import './Home.css';
 
 const ONBOARDING_STORAGE_KEY = 'dashboard-builder-onboarding-dismissed';
@@ -23,88 +40,83 @@ function readOnboardingDismissed(): boolean {
   }
 }
 
+const HomeSkeleton = () => (
+  <div className="home-skeleton" role="status" aria-live="polite">
+    <span className="sr-only">Loading your workspace</span>
+    <div className="home-skeleton__summary" aria-hidden="true">
+      {[0, 1, 2].map((item) => (
+        <span key={item} className="home-skeleton__tile" />
+      ))}
+    </div>
+    <div className="home-skeleton__grid" aria-hidden="true">
+      <div className="home-skeleton__card" />
+      <div className="home-skeleton__card home-skeleton__card--short" />
+    </div>
+  </div>
+);
+
 const AuthenticatedHome = () => {
   const user = useAppSelector((state) => state.auth.user);
   const dashboards = useAppSelector((state) => state.dashboards.list);
+  const dashboardsLoaded = useAppSelector((state) => state.dashboards.loaded);
+  const dashboardsError = useAppSelector((state) => state.dashboards.error);
   const datasources = useAppSelector((state) => state.datasources.items);
+  const datasourcesLoaded = useAppSelector((state) => state.datasources.loaded);
+  const datasourcesError = useAppSelector((state) => state.datasources.error);
   const queries = useAppSelector((state) => state.queries.items);
+  const queriesLoaded = useAppSelector((state) => state.queries.loaded);
+  const queriesError = useAppSelector((state) => state.queries.error);
+
   const dispatch = useAppDispatch();
-  const navigate = useNavigate();
   const [onboardingDismissed, setOnboardingDismissed] = useState(readOnboardingDismissed);
-  const [activity, setActivity] = useState<AuditEvent[]>([]);
+  const [activity, setActivity] = useState<AuditEvent[] | null>(null);
+  const [activityError, setActivityError] = useState(false);
+  const [activityAttempt, setActivityAttempt] = useState(0);
 
-  useEffect(() => {
-    dispatch(fetchDashboards());
-    dispatch(fetchDatasources());
-    dispatch(fetchQueries());
-  }, [dispatch]);
+  usePageTitle('Home — Dashboard Builder');
 
-  // Activity is admin-only, so viewers simply do not see the section.
+  const canEdit = canEditContent(user);
+  const isAdmin = user?.role === 'admin';
+  const librariesLoaded = dashboardsLoaded && datasourcesLoaded && queriesLoaded;
+  const libraryError = dashboardsError ?? datasourcesError ?? queriesError ?? null;
+
+  const counts = useMemo(
+    () => ({
+      dashboardCount: dashboards.length,
+      datasourceCount: datasources.length,
+      queryCount: queries.length,
+    }),
+    [dashboards.length, datasources.length, queries.length],
+  );
+
+  const primaryAction = librariesLoaded && !libraryError
+    ? getPrimaryAction({ canEdit, ...counts })
+    : null;
+  const onboarding = useMemo(() => buildOnboarding(counts), [counts]);
+  const doneSteps = completedSteps(onboarding);
+  const allDone = doneSteps === onboarding.length;
+  const recentDashboards = useMemo(() => buildRecentDashboards(dashboards), [dashboards]);
+
+  // AppShell owns library loading. This effect only adds the admin audit feed,
+  // which no other route needs.
   useEffect(() => {
-    if (user?.role !== 'admin') return;
+    if (!isAdmin) return;
     let cancelled = false;
     teamAPI
-      .listAudit(6)
+      .listAudit(5)
       .then((res) => {
-        if (!cancelled) setActivity(res.data.events);
+        if (!cancelled) setActivity(res.data.events.slice(0, 5));
       })
       .catch(() => {
-        if (!cancelled) setActivity([]);
+        if (!cancelled) {
+          setActivity([]);
+          setActivityError(true);
+        }
       });
     return () => {
       cancelled = true;
     };
-  }, [user?.role]);
-
-  const recentDashboards = useMemo(
-    () =>
-      [...dashboards]
-        .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-        .slice(0, 4),
-    [dashboards],
-  );
-
-  const pinnedDashboards = useMemo(
-    () => dashboards.filter((dashboard) => dashboard.is_favorite),
-    [dashboards],
-  );
-
-  const totalWidgets = useMemo(
-    () => dashboards.reduce((sum, dashboard) => sum + (dashboard.widget_count ?? 0), 0),
-    [dashboards],
-  );
-
-  const onboardingSteps = [
-    {
-      done: datasources.length > 0,
-      title: 'Connect a datasource',
-      desc: 'Add a PostgreSQL or MySQL database',
-      to: '/datasources/new',
-      action: 'Add',
-    },
-    {
-      done: queries.length > 0,
-      title: 'Write a query',
-      desc: 'Create SQL queries to fetch your data',
-      to: '/queries/new',
-      action: 'Write',
-    },
-    {
-      done: dashboards.length > 0,
-      title: 'Build a dashboard',
-      desc: 'Create a dashboard and add widgets',
-      to: '/dashboards?new=1',
-      action: 'Build',
-    },
-    {
-      done: totalWidgets > 0,
-      title: 'Add a widget',
-      desc: 'Turn a saved query into a chart, table, or metric',
-      to: '/dashboards',
-      action: 'Add',
-    },
-  ];
-  const completedSteps = onboardingSteps.filter((step) => step.done).length;
+  }, [isAdmin, activityAttempt]);
 
   const dismissOnboarding = () => {
     setOnboardingDismissed(true);
@@ -115,272 +127,262 @@ const AuthenticatedHome = () => {
     }
   };
 
+  const retryLibraries = () => {
+    dispatch(fetchDashboards());
+    dispatch(fetchDatasources());
+    dispatch(fetchQueries());
+  };
+
+  const retryActivity = () => {
+    setActivity(null);
+    setActivityError(false);
+    setActivityAttempt((attempt) => attempt + 1);
+  };
+
   const firstName = user?.email?.split('@')[0] || 'there';
   const displayName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
 
   return (
-    <motion.div
-      className="home-authenticated"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
-    >
-      {/* Welcome Banner */}
-      <motion.div
-        className="welcome-banner"
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-      >
-        <div className="welcome-content">
-          <p className="welcome-greeting">Welcome back</p>
-          <h1 className="welcome-title">{displayName}</h1>
-          <p className="welcome-desc">
-            {dashboards.length > 0
-              ? 'Pick up where you left off or create something new.'
-              : 'Start by connecting a database, then write a query and build a dashboard.'}
+    <div className="home-page">
+      <header className="home-header">
+        <div className="home-header__copy">
+          <p className="home-header__eyebrow">Welcome back</p>
+          <h1 className="home-header__title">{displayName}</h1>
+          <p className="home-header__lede">
+            {canEdit
+              ? 'Pick up where you left off, or take the next step in your workspace.'
+              : 'Browse the dashboards your team has shared with you.'}
           </p>
-          <div className="welcome-actions">
-            <Link to="/dashboards?new=1" className="home-cta">
-              New dashboard
-              <ArrowRight size={15} aria-hidden="true" />
-            </Link>
-            <Link to="/datasources/new" className="home-cta home-cta--ghost">
-              Connect data
-            </Link>
-          </div>
         </div>
-      </motion.div>
+        {primaryAction && (
+          <Link to={primaryAction.to} className="home-primary">
+            {primaryAction.label}
+            <ArrowRight size={16} aria-hidden="true" />
+          </Link>
+        )}
+      </header>
 
-      {/* Stats Cards */}
-      <motion.div
-        className="home-stats"
-        variants={staggerContainer}
-        initial="hidden"
-        animate="visible"
-      >
-        {[
-          { to: '/dashboards', icon: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="4" rx="1" /><rect x="3" y="14" width="7" height="4" rx="1" /><rect x="14" y="11" width="7" height="7" rx="1" /></>, value: dashboards.length, label: 'Dashboards' },
-          { to: '/datasources', icon: <path d="M4 7c0 1.657 3.582 3 8 3s8-1.343 8-3M4 7v6c0 1.657 3.582 3 8 3s8-1.343 8-3V7M4 7c0 1.657 3.582 3 8 3s8-1.343 8-3" />, value: datasources.length, label: 'Datasources' },
-          { to: '/queries', icon: <path d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" strokeLinecap="round" strokeLinejoin="round" />, value: queries.length, label: 'Queries' },
-          { to: null, icon: <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zm0 8a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zm6-6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zm0 8a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />, value: totalWidgets, label: 'Widgets' },
-        ].map((stat, i) => (
-          <motion.div key={i} variants={fadeInUp}>
-            {stat.to ? (
-              <Link to={stat.to} className="stat-card">
-                <div className="stat-card-icon">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{stat.icon}</svg>
+      {!librariesLoaded && !libraryError && <HomeSkeleton />}
+
+      {libraryError && (
+        <ErrorState
+          title="Could not load your workspace"
+          description="The dashboard, datasource, or query library did not respond. Check the API and try again."
+          details={libraryError}
+          onRetry={retryLibraries}
+        />
+      )}
+
+      {librariesLoaded && !libraryError && (
+        <>
+          <nav className="home-summary" aria-label="Workspace summary">
+            <ul>
+              <li>
+                <Link to="/dashboards">
+                  <span className="home-summary__icon" aria-hidden="true">
+                    <LayoutDashboard size={16} />
+                  </span>
+                  <span className="home-summary__text">
+                    <span className="home-summary__value">{counts.dashboardCount}</span>
+                    <span className="home-summary__label">Dashboards</span>
+                  </span>
+                </Link>
+              </li>
+              <li>
+                <Link to="/datasources">
+                  <span className="home-summary__icon" aria-hidden="true">
+                    <Database size={16} />
+                  </span>
+                  <span className="home-summary__text">
+                    <span className="home-summary__value">{counts.datasourceCount}</span>
+                    <span className="home-summary__label">Datasources</span>
+                  </span>
+                </Link>
+              </li>
+              <li>
+                <Link to="/queries">
+                  <span className="home-summary__icon" aria-hidden="true">
+                    <Terminal size={16} />
+                  </span>
+                  <span className="home-summary__text">
+                    <span className="home-summary__value">{counts.queryCount}</span>
+                    <span className="home-summary__label">Queries</span>
+                  </span>
+                </Link>
+              </li>
+            </ul>
+          </nav>
+
+          {canEdit && !onboardingDismissed && !allDone && (
+            <section className="home-card home-onboarding" aria-labelledby="home-onboarding-heading">
+              <div className="home-card__head">
+                <div>
+                  <h2 id="home-onboarding-heading">Get started</h2>
+                  <p>
+                    {doneSteps} of {onboarding.length} steps complete
+                  </p>
                 </div>
-                <div className="stat-card-value">{stat.value}</div>
-                <div className="stat-card-label">{stat.label}</div>
-              </Link>
-            ) : (
-              <div className="stat-card">
-                <div className="stat-card-icon">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{stat.icon}</svg>
-                </div>
-                <div className="stat-card-value">{stat.value}</div>
-                <div className="stat-card-label">{stat.label}</div>
+                <button
+                  type="button"
+                  className="home-dismiss"
+                  onClick={dismissOnboarding}
+                  aria-label="Dismiss getting started checklist"
+                >
+                  <X size={16} aria-hidden="true" />
+                </button>
               </div>
+
+              <div
+                className="home-onboarding__progress"
+                role="progressbar"
+                aria-label="Getting started progress"
+                aria-valuemin={0}
+                aria-valuemax={onboarding.length}
+                aria-valuenow={doneSteps}
+              >
+                <span style={{ width: `${(doneSteps / onboarding.length) * 100}%` }} />
+              </div>
+
+              <ol className="home-steps">
+                {onboarding.map((step, index) => (
+                  <li
+                    key={step.id}
+                    className={`home-step${step.done ? ' home-step--done' : ''}`}
+                  >
+                    <span className="home-step__marker" aria-hidden="true">
+                      {step.done ? <Check size={14} /> : index + 1}
+                    </span>
+                    <div className="home-step__body">
+                      <span className="home-step__title">
+                        {step.title}
+                        {step.done && <span className="sr-only"> (done)</span>}
+                      </span>
+                      <span className="home-step__desc">{step.description}</span>
+                      {step.done ? (
+                        <span className="home-step__state">Done</span>
+                      ) : (
+                        <Link to={step.to} className="home-step__action">
+                          {step.action}
+                        </Link>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+
+          <div className={`home-grid${isAdmin ? ' home-grid--rail' : ''}`}>
+            <section className="home-card home-recent" aria-labelledby="home-recent-heading">
+              <div className="home-card__head">
+                <div>
+                  <h2 id="home-recent-heading">Recently updated</h2>
+                  <p>Pinned dashboards first, then the latest changes.</p>
+                </div>
+                {counts.dashboardCount > 0 && (
+                  <Link to="/dashboards" className="home-card__link">
+                    View all
+                  </Link>
+                )}
+              </div>
+
+              {recentDashboards.length === 0 ? (
+                <EmptyState
+                  icon="dashboard"
+                  title="No dashboards yet"
+                  description={
+                    canEdit
+                      ? 'Create your first dashboard to start visualizing your data.'
+                      : 'No dashboards have been shared with you yet.'
+                  }
+                  action={canEdit ? { label: 'New dashboard', to: '/dashboards?new=1' } : undefined}
+                />
+              ) : (
+                <ul className="home-recent__list">
+                  {recentDashboards.map((dashboard) => (
+                    <li key={dashboard.id}>
+                      <Link to={`/dashboards/${dashboard.id}`} className="home-recent__row">
+                        <span
+                          className={`home-recent__icon${dashboard.is_favorite ? ' home-recent__icon--pinned' : ''}`}
+                          aria-hidden="true"
+                        >
+                          {dashboard.is_favorite ? (
+                            <Star size={16} fill="currentColor" />
+                          ) : (
+                            <LayoutDashboard size={16} />
+                          )}
+                        </span>
+                        <span className="home-recent__body">
+                          <span className="home-recent__name">
+                            {dashboard.name}
+                            {dashboard.is_favorite && <span className="sr-only"> (pinned)</span>}
+                          </span>
+                          <span className="home-recent__meta">
+                            {pluralize(dashboard.widget_count ?? 0, 'widget')} · updated{' '}
+                            {relativeTime(dashboard.updated_at)}
+                          </span>
+                        </span>
+                        <ArrowRight className="home-recent__chevron" size={16} aria-hidden="true" />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            {isAdmin && (
+              <aside className="home-card home-activity" aria-labelledby="home-activity-heading">
+                <div className="home-card__head">
+                  <div>
+                    <h2 id="home-activity-heading">Team activity</h2>
+                    <p>Recent changes across the workspace.</p>
+                  </div>
+                  <Link to="/team" className="home-card__link">
+                    View all
+                  </Link>
+                </div>
+
+                {activityError ? (
+                  <ErrorState
+                    compact
+                    title="Could not load activity"
+                    description="The audit feed is unavailable right now."
+                    onRetry={retryActivity}
+                  />
+                ) : activity === null ? (
+                  <div className="home-activity__skeleton" aria-hidden="true">
+                    <span className="home-skeleton__tile" />
+                    <span className="home-skeleton__tile" />
+                    <span className="home-skeleton__tile" />
+                  </div>
+                ) : activity.length === 0 ? (
+                  <p className="home-activity__empty">No team activity yet.</p>
+                ) : (
+                  <ul className="home-activity__list">
+                    {activity.map((event) => (
+                      <li className="home-activity__item" key={event.id}>
+                        <span className="home-activity__icon" aria-hidden="true">
+                          <Activity size={13} />
+                        </span>
+                        <span className="home-activity__body">
+                          <span className="home-activity__title">
+                            {auditActionLabel(event.action)}
+                            {event.target_name && <strong> {event.target_name}</strong>}
+                          </span>
+                          <span className="home-activity__meta">
+                            {event.actor_email || 'System'} · {relativeTime(event.created_at)}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </aside>
             )}
-          </motion.div>
-        ))}
-      </motion.div>
-
-      {/* Quick Action Cards */}
-      <motion.div
-        className="home-actions"
-        variants={staggerContainer}
-        initial="hidden"
-        animate="visible"
-      >
-        {[
-          { to: '/datasources/new', icon: <path d="M4 7c0 1.657 3.582 3 8 3s8-1.343 8-3M4 7v6c0 1.657 3.582 3 8 3s8-1.343 8-3V7M4 7c0 1.657 3.582 3 8 3s8-1.343 8-3" />, title: 'Add Datasource', desc: 'Connect a PostgreSQL or MySQL database' },
-          { to: '/queries/new', icon: <path d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" strokeLinecap="round" strokeLinejoin="round" />, title: 'Write a Query', desc: 'Create SQL with schema auto-complete' },
-          { to: '/dashboards', icon: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="4" rx="1" /><rect x="3" y="14" width="7" height="4" rx="1" /><rect x="14" y="11" width="7" height="7" rx="1" /></>, title: 'View Dashboards', desc: 'Explore, view and edit your dashboards' },
-        ].map((action, i) => (
-          <motion.div key={i} variants={fadeInUp}>
-            <Link to={action.to} className="action-card">
-              <div className="action-card-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  {action.icon}
-                </svg>
-              </div>
-              <div className="action-card-title">{action.title}</div>
-              <p className="action-card-desc">{action.desc}</p>
-              <svg className="action-card-arrow" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-              </svg>
-            </Link>
-          </motion.div>
-        ))}
-      </motion.div>
-
-      {/* Pinned Dashboards */}
-      {pinnedDashboards.length > 0 && (
-        <motion.div
-          className="home-section"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.4 }}
-        >
-          <div className="home-section-header">
-            <h3>Pinned</h3>
-            <Link to="/dashboards" className="home-section-link">Manage pins</Link>
           </div>
-          <div className="home-dashboard-list">
-            {pinnedDashboards.map((dashboard) => (
-              <button
-                key={dashboard.id}
-                type="button"
-                className="home-dashboard-item"
-                onClick={() => navigate(`/dashboards/${dashboard.id}`)}
-              >
-                <div className="home-dashboard-icon home-dashboard-icon--pinned">
-                  <Star size={18} fill="currentColor" aria-hidden="true" />
-                </div>
-                <div className="home-dashboard-info">
-                  <span className="home-dashboard-name">{dashboard.name}</span>
-                  <span className="home-dashboard-date">
-                    {pluralize(dashboard.widget_count ?? 0, 'widget')} · updated {relativeTime(dashboard.updated_at)}
-                  </span>
-                </div>
-                <ArrowRight className="home-dashboard-chevron" size={16} aria-hidden="true" />
-              </button>
-            ))}
-          </div>
-        </motion.div>
+        </>
       )}
-
-      {/* Recently Updated */}
-      {recentDashboards.length > 0 && (
-        <motion.div
-          className="home-section"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35, duration: 0.4 }}
-        >
-          <div className="home-section-header">
-            <h3>Recently updated</h3>
-            <Link to="/dashboards" className="home-section-link">View all</Link>
-          </div>
-          <div className="home-dashboard-list">
-            {recentDashboards.map((dashboard, i) => (
-              <motion.button
-                key={dashboard.id}
-                type="button"
-                className="home-dashboard-item"
-                onClick={() => navigate(`/dashboards/${dashboard.id}`)}
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.4 + i * 0.05, duration: 0.3 }}
-              >
-                <div className="home-dashboard-icon">
-                  <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zm0 8a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zm6-6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zm0 8a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                  </svg>
-                </div>
-                <div className="home-dashboard-info">
-                  <span className="home-dashboard-name">{dashboard.name}</span>
-                  <span className="home-dashboard-date">
-                    {pluralize(dashboard.widget_count ?? 0, 'widget')} · updated {relativeTime(dashboard.updated_at)}
-                  </span>
-                </div>
-                <ArrowRight className="home-dashboard-chevron" size={16} aria-hidden="true" />
-              </motion.button>
-            ))}
-          </div>
-        </motion.div>
-      )}
-
-      {/* Team activity */}
-      {user?.role === 'admin' && activity.length > 0 && (
-        <motion.div
-          className="home-section"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.38, duration: 0.4 }}
-        >
-          <div className="home-section-header">
-            <h3>Team activity</h3>
-            <Link to="/team" className="home-section-link">View all</Link>
-          </div>
-          <div className="home-activity-list">
-            {activity.map((event) => (
-              <div className="home-activity-item" key={event.id}>
-                <span className="home-activity-icon" aria-hidden="true">
-                  <Activity size={14} />
-                </span>
-                <span className="home-activity-text">
-                  <span className="home-activity-title">
-                    {auditActionLabel(event.action)}
-                    {event.target_name && <strong>{event.target_name}</strong>}
-                  </span>
-                  <span className="home-activity-meta">
-                    {event.actor_email || 'System'} · {relativeTime(event.created_at)}
-                  </span>
-                </span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-      )}
-
-      {/* Onboarding */}
-      {!onboardingDismissed && (
-        <motion.div
-          className="home-section"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4, duration: 0.4 }}
-        >
-          <div className="home-section-header">
-            <div>
-              <h3>{completedSteps === onboardingSteps.length ? 'You are all set' : 'Getting started'}</h3>
-              <p className="home-section-sub">
-                {completedSteps} of {onboardingSteps.length} steps complete
-              </p>
-            </div>
-            <button
-              type="button"
-              className="home-onboarding-dismiss"
-              onClick={dismissOnboarding}
-              aria-label="Dismiss getting started checklist"
-            >
-              <X size={16} aria-hidden="true" />
-            </button>
-          </div>
-
-          <div className="home-progress" aria-hidden="true">
-            <span style={{ width: `${(completedSteps / onboardingSteps.length) * 100}%` }} />
-          </div>
-
-          <motion.div
-            className="home-checklist"
-            variants={staggerContainer}
-            initial="hidden"
-            animate="visible"
-          >
-            {onboardingSteps.map((item, i) => (
-              <motion.div key={item.title} className={`checklist-item ${item.done ? 'done' : ''}`} variants={fadeInUp}>
-                <div className="checklist-check">
-                  {item.done ? (
-                    <Check size={16} aria-hidden="true" />
-                  ) : (
-                    <span className="checklist-number">{i + 1}</span>
-                  )}
-                </div>
-                <div className="checklist-content">
-                  <span className="checklist-title">{item.title}</span>
-                  <span className="checklist-desc">{item.desc}</span>
-                </div>
-                {!item.done && <Link to={item.to} className="checklist-action">{item.action}</Link>}
-              </motion.div>
-            ))}
-          </motion.div>
-        </motion.div>
-      )}
-    </motion.div>
+    </div>
   );
 };
 

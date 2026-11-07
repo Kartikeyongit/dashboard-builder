@@ -7,12 +7,15 @@ import { apiErrorMessage } from '../utils/apiError';
 interface DatasourceState {
   items: Datasource[];
   loading: boolean;
+  /** True once the library has been fetched, even if the request failed. */
+  loaded: boolean;
   error: string | null;
 }
 
 const initialState: DatasourceState = {
   items: [],
   loading: false,
+  loaded: false,
   error: null,
 };
 
@@ -80,9 +83,21 @@ const datasourceSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchDatasources.pending, (state) => { state.loading = true; state.error = null; })
-      .addCase(fetchDatasources.fulfilled, (state, action) => { state.loading = false; state.items = action.payload; })
-      .addCase(fetchDatasources.rejected, (state, action) => { state.loading = false; state.error = action.error.message || 'Failed'; })
+      .addCase(fetchDatasources.pending, (state) => {
+        state.loading = true;
+        state.loaded = false;
+        state.error = null;
+      })
+      .addCase(fetchDatasources.fulfilled, (state, action) => {
+        state.loading = false;
+        state.loaded = true;
+        state.items = action.payload;
+      })
+      .addCase(fetchDatasources.rejected, (state, action) => {
+        state.loading = false;
+        state.loaded = true;
+        state.error = action.error.message || 'Failed';
+      })
       .addCase(createDatasource.fulfilled, (state, action) => { state.items.unshift(action.payload); })
       .addCase(updateDatasource.fulfilled, (state, action) => {
         const index = state.items.findIndex(d => d.id === action.payload.id);
