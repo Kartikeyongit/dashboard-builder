@@ -21,6 +21,11 @@ interface CommandPaletteProps {
   items: CommandItem[];
 }
 
+const LISTBOX_ID = 'command-palette-list';
+
+const optionId = (item: CommandItem) =>
+  `command-option-${item.id.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+
 /**
  * Keyboard-first launcher. Ctrl/Cmd+K opens it from the shell; typing filters
  * actions and entities, and Enter runs the highlighted row.
@@ -102,11 +107,18 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onOpenChange, ite
               placeholder="Search dashboards, pages, and actions…"
               aria-label="Search commands"
               className="ui-command__input"
+              role="combobox"
+              aria-expanded={open}
+              aria-controls={LISTBOX_ID}
+              aria-autocomplete="list"
+              aria-activedescendant={
+                filtered[active] ? optionId(filtered[active]) : undefined
+              }
             />
             <kbd className="ui-command__kbd">Esc</kbd>
           </div>
 
-          <div className="ui-command__list" role="listbox" aria-label="Commands">
+          <div id={LISTBOX_ID} className="ui-command__list" role="listbox" aria-label="Commands">
             {filtered.length === 0 && (
               <p className="ui-command__empty">No matches. Try a dashboard name or page.</p>
             )}
@@ -115,9 +127,14 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onOpenChange, ite
               const showGroup = index === 0 || filtered[index - 1].group !== item.group;
               return (
                 <React.Fragment key={item.id}>
-                  {showGroup && <p className="ui-command__group">{item.group}</p>}
+                  {showGroup && (
+                    <p className="ui-command__group" role="presentation">
+                      {item.group}
+                    </p>
+                  )}
                   <button
                     type="button"
+                    id={optionId(item)}
                     role="option"
                     aria-selected={index === active}
                     ref={(element) => {

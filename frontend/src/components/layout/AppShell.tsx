@@ -1,20 +1,19 @@
-import React, { Suspense, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Database,
-  Home as HomeIcon,
   LayoutDashboard,
   LogOut,
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
-  Settings as SettingsIcon,
   Sun,
   Terminal,
-  Users,
+  X,
 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../hooks';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { logoutUser, restoreAuth } from '../../store/authSlice';
 import { fetchDashboards } from '../../store/dashboardSlice';
 import { fetchDatasources } from '../../store/datasourceSlice';
@@ -26,9 +25,11 @@ import RouteFallback from '../ui/RouteFallback';
 import CommandPalette from '../../ui/CommandPalette';
 import type { CommandItem } from '../../ui/CommandPalette';
 import TopBar from './TopBar';
+import { SHELL_NAV_SECTIONS, isNavItemActive } from './shellNav';
 import './AppShell.css';
 
 const SIDEBAR_STORAGE_KEY = 'dashboard-builder-sidebar-collapsed';
+const MOBILE_QUERY = '(max-width: 768px)';
 
 function readSidebarCollapsed(): boolean {
   try {
@@ -37,14 +38,6 @@ function readSidebarCollapsed(): boolean {
     return false;
   }
 }
-
-const NAV_ITEMS = [
-  { to: '/', label: 'Home', icon: HomeIcon, end: true },
-  { to: '/datasources', label: 'Datasources', icon: Database },
-  { to: '/queries', label: 'Queries', icon: Terminal },
-  { to: '/dashboards', label: 'Dashboards', icon: LayoutDashboard },
-  { to: '/team', label: 'Team', icon: Users },
-];
 
 const AppShell: React.FC = () => {
   const user = useAppSelector((state) => state.auth.user);
@@ -60,6 +53,10 @@ const AppShell: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const isMobile = useMediaQuery(MOBILE_QUERY);
+  const collapsed = sidebarCollapsed && !isMobile;
 
   useEffect(() => {
     dispatch(restoreAuth());
@@ -83,20 +80,55 @@ const AppShell: React.FC = () => {
     }
   }, [sidebarCollapsed]);
 
-  // Close the mobile drawer whenever navigation happens.
-  const [lastPath, setLastPath] = useState(location.pathname);
-  if (location.pathname !== lastPath) {
-    setLastPath(location.pathname);
+  // The drawer is a mobile-only surface; never leave the desktop content inert.
+  useEffect(() => {
+    if (isMobile || !mobileOpen) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resizing to desktop dismisses the drawer
     setMobileOpen(false);
-  }
+  }, [isMobile, mobileOpen]);
 
-  // Ctrl/Cmd+K opens the palette from anywhere in the app.
+  const closeMobile = useCallback((returnFocus = false) => {
+    setMobileOpen(false);
+    if (returnFocus) {
+      requestAnimationFrame(() => menuButtonRef.current?.focus());
+    }
+  }, []);
+
+  // Escape dismisses the drawer and returns focus to its trigger.
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeMobile(true);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [mobileOpen, closeMobile]);
+
+  // Put focus inside the drawer as soon as it opens.
+  useEffect(() => {
+    if (!mobileOpen) return;
+    requestAnimationFrame(() => closeButtonRef.current?.focus());
+  }, [mobileOpen]);
+
+  // Close the mobile drawer whenever navigation happens.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- transient drawer state resets on navigation
+    setMobileOpen(false);
+  }, [location.pathname]);
+
+  // Ctrl/Cmd+K opens the palette from anywhere, except inside the SQL editor
+  // where Monaco owns its own chords.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        setPaletteOpen((open) => !open);
-      }
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'k') return;
+      if (event.defaultPrevented || event.repeat) return;
+      const target = event.target;
+      if (target instanceof HTMLElement && target.closest('.monaco-editor')) return;
+      event.preventDefault();
+      setPaletteOpen((open) => !open);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
@@ -109,12 +141,15 @@ const AppShell: React.FC = () => {
 
   const commandItems = useMemo<CommandItem[]>(() => {
     const items: CommandItem[] = [
-      { id: 'nav-home', label: 'Go to Home', group: 'Navigate', icon: HomeIcon, run: () => navigate('/') },
-      { id: 'nav-datasources', label: 'Go to Datasources', group: 'Navigate', icon: Database, run: () => navigate('/datasources') },
-      { id: 'nav-queries', label: 'Go to Queries', group: 'Navigate', icon: Terminal, run: () => navigate('/queries') },
-      { id: 'nav-dashboards', label: 'Go to Dashboards', group: 'Navigate', icon: LayoutDashboard, run: () => navigate('/dashboards') },
-      { id: 'nav-team', label: 'Go to Team', group: 'Navigate', icon: Users, run: () => navigate('/team') },
-      { id: 'nav-settings', label: 'Go to Settings', group: 'Navigate', icon: SettingsIcon, run: () => navigate('/settings') },
+      ...SHELL_NAV_SECTIONS.flatMap((section) =>
+        section.items.map((item) => ({
+          id: `nav-${item.to === '/' ? 'home' : item.to.slice(1)}`,
+          label: `Go to ${item.label}`,
+          group: 'Navigate',
+          icon: item.icon,
+          run: () => navigate(item.to),
+        })),
+      ),
       { id: 'new-dashboard', label: 'New dashboard', group: 'Create', icon: Plus, run: () => navigate('/dashboards?new=1') },
       { id: 'new-query', label: 'New query', group: 'Create', icon: Plus, run: () => navigate('/queries/new') },
       { id: 'new-datasource', label: 'New datasource', group: 'Create', icon: Plus, run: () => navigate('/datasources/new') },
@@ -169,8 +204,9 @@ const AppShell: React.FC = () => {
 
   if (isInitializing) {
     return (
-      <div className="loading-screen">
-        <div className="loading-spinner" />
+      <div className="loading-screen" role="status" aria-live="polite">
+        <span className="sr-only">Loading your workspace</span>
+        <div className="loading-spinner" aria-hidden="true" />
       </div>
     );
   }
@@ -185,62 +221,106 @@ const AppShell: React.FC = () => {
     return routedPage;
   }
 
-  const isActive = (path: string, end?: boolean) => {
-    if (end) return location.pathname === path;
-    return location.pathname.startsWith(path);
-  };
-
   return (
-    <div className="app-shell">
-      {mobileOpen && <div className="sidebar-backdrop" onClick={() => setMobileOpen(false)} />}
+    <div className={`app-shell${mobileOpen ? ' app-shell--drawer-open' : ''}`}>
+      <a className="skip-link" href="#main">
+        Skip to content
+      </a>
+
+      {mobileOpen && (
+        <div
+          className="sidebar-backdrop"
+          aria-hidden="true"
+          onClick={() => closeMobile(true)}
+        />
+      )}
 
       <aside
-        className={`sidebar${mobileOpen ? ' sidebar--mobile-open' : ''}${sidebarCollapsed ? ' sidebar--collapsed' : ''}`}
+        id="app-sidebar"
+        className={`sidebar${mobileOpen ? ' sidebar--mobile-open' : ''}${collapsed ? ' sidebar--collapsed' : ''}`}
         aria-label="Main navigation"
       >
-        <div className="sidebar-logo">
-          <LayoutDashboard className="sidebar-logo-icon" size={22} aria-hidden="true" />
-          <span className="sidebar-logo-text">Dashboard Builder</span>
-          <Tooltip content={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+        <div className="sidebar-head">
+          <Link to="/" className="sidebar-brand" aria-label="Dashboard Builder home">
+            <span className="sidebar-brand__mark" aria-hidden="true">
+              <LayoutDashboard size={17} />
+            </span>
+            <span className="sidebar-brand__text">Dashboard Builder</span>
+          </Link>
+
+          <button
+            ref={closeButtonRef}
+            type="button"
+            className="sidebar-mobile-close"
+            onClick={() => closeMobile(true)}
+            aria-label="Close navigation"
+          >
+            <X size={18} aria-hidden="true" />
+          </button>
+
+          <Tooltip content={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
             <button
+              type="button"
               className="sidebar-collapse-btn"
-              onClick={() => setSidebarCollapsed((c) => !c)}
-              aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              onClick={() => setSidebarCollapsed((current) => !current)}
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
-              {sidebarCollapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
+              {collapsed ? <PanelLeftOpen size={15} aria-hidden="true" /> : <PanelLeftClose size={15} aria-hidden="true" />}
             </button>
           </Tooltip>
         </div>
 
-        <nav>
-          <ul className="sidebar-nav">
-            {NAV_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const active = isActive(item.to, item.end);
-              return (
-                <li key={item.to}>
-                  <Link
-                    to={item.to}
-                    className={active ? 'active' : ''}
-                    aria-current={active ? 'page' : undefined}
-                  >
-                    <Icon className="nav-icon" size={18} aria-hidden="true" />
-                    <span className="nav-label">{item.label}</span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
+        <div className="sidebar-nav">
+          {SHELL_NAV_SECTIONS.map((section) => (
+            <nav key={section.id} className="sidebar-group" aria-label={section.label}>
+              <p className="sidebar-group__title" aria-hidden="true">
+                {section.label}
+              </p>
+              <ul>
+                {section.items.map((item) => {
+                  const Icon = item.icon;
+                  const active = isNavItemActive(location.pathname, item);
+                  const link = (
+                    <Link
+                      to={item.to}
+                      className={active ? 'active' : ''}
+                      aria-current={active ? 'page' : undefined}
+                    >
+                      <Icon className="nav-icon" size={18} aria-hidden="true" />
+                      <span className="nav-label">{item.label}</span>
+                    </Link>
+                  );
+
+                  return (
+                    <li key={item.to}>
+                      {collapsed ? (
+                        <Tooltip content={item.label} side="right">
+                          {link}
+                        </Tooltip>
+                      ) : (
+                        link
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+          ))}
+        </div>
       </aside>
 
-      <div className="main-wrapper">
+      <div className="main-wrapper" inert={mobileOpen || undefined}>
         <TopBar
           userEmail={user.email}
+          userRole={user.role}
+          menuOpen={mobileOpen}
+          menuButtonRef={menuButtonRef}
           onOpenMenu={() => setMobileOpen(true)}
           onOpenPalette={() => setPaletteOpen(true)}
         />
-        <main className="main-content">{routedPage}</main>
+        <main className="main-content" id="main" tabIndex={-1}>
+          {routedPage}
+        </main>
       </div>
 
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} items={commandItems} />

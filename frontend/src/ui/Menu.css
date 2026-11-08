@@ -9,6 +9,11 @@
   animation: ui-menu-in 120ms ease;
 }
 
+.ui-menu__header {
+  padding: 0.45rem 0.6rem;
+  min-width: 0;
+}
+
 .ui-menu__item {
   display: flex;
   align-items: center;

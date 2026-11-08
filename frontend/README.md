@@ -42,11 +42,16 @@ preference.
 fixture-backed signed-in home, so the launchpad can be checked without the
 seeded API.
 
+`cypress/e2e/shell.cy.ts` is also fixture-backed. It covers the signed-in header,
+grouped navigation rail, collapse persistence, breadcrumbs, account menu,
+command palette, the mobile drawer (closed-tab-order, Escape, focus return), and
+axe scans with the drawer and palette open.
+
 ## Visual regression
 
 Screenshots of the landing page (desktop, dark, mobile, FAQ open), login,
-register, home (desktop and dark, fixture-backed), settings, and a dashboard
-chart are compared with `pixelmatch`. Baselines live in
+register, home (desktop, dark, and mobile, fixture-backed), settings, and a
+dashboard chart are compared with `pixelmatch`. Baselines live in
 `cypress/visual-baseline/<platform>/` because font rasterisation differs
 between operating systems.
 

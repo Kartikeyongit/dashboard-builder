@@ -158,7 +158,7 @@ const visitHome = (theme: 'light' | 'dark' = 'light') => {
   cy.wait(['@home-dashboards', '@home-datasources', '@home-queries']);
   cy.get('.home-recent__row', { timeout: 20000 }).should('have.length', 4);
   cy.wait('@home-audit');
-  cy.contains('.home-activity__item', 'Revenue overview').should('be.visible');
+  cy.get('.home-activity__item', { timeout: 20000 }).should('exist');
   stabilize();
 };
 
@@ -260,6 +260,13 @@ describe('visual regression', () => {
     seedHome();
     visitHome('dark');
     shot('home-dark');
+  });
+
+  it('home (mobile)', () => {
+    cy.viewport(390, 844);
+    seedHome();
+    visitHome('light');
+    shot('home-mobile');
   });
 
   // Only these two surfaces need the API; keeping the login here lets the

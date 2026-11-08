@@ -1,5 +1,6 @@
 .breadcrumbs {
   min-width: 0;
+  overflow: hidden;
 }
 
 .breadcrumbs ol {
@@ -30,6 +31,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
+  max-width: 220px;
   padding: 0.2rem 0.35rem;
   border-radius: var(--radius-sm);
   font-size: var(--text-sm);
@@ -38,7 +40,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 220px;
 }
 
 .breadcrumbs__link:hover {
@@ -48,7 +49,15 @@
 
 .breadcrumbs__current {
   color: var(--color-text);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
+}
+
+@media (max-width: 1024px) {
+  .breadcrumbs__link,
+  .breadcrumbs__label,
+  .breadcrumbs__current {
+    max-width: 160px;
+  }
 }
 
 @media (max-width: 720px) {
@@ -60,5 +69,18 @@
   .breadcrumbs__label,
   .breadcrumbs__current {
     max-width: 130px;
+  }
+}
+
+/* On narrow screens the current section is the useful part of the trail. */
+@media (max-width: 560px) {
+  .breadcrumbs li:not(:last-child) {
+    display: none;
+  }
+
+  .breadcrumbs__link,
+  .breadcrumbs__label,
+  .breadcrumbs__current {
+    max-width: 150px;
   }
 }

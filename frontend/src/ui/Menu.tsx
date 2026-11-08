@@ -19,6 +19,8 @@ export interface MenuProps {
   /** A single element; Radix wires the trigger behaviour onto it. */
   trigger: React.ReactElement;
   items: MenuItem[];
+  /** Non-interactive content rendered above the items, such as an identity. */
+  header?: React.ReactNode;
   align?: 'start' | 'center' | 'end';
   /** Accessible name for the menu. */
   label?: string;
@@ -29,7 +31,14 @@ export interface MenuProps {
  * Accessible action menu built on Radix DropdownMenu: arrow-key navigation,
  * typeahead, Escape, and focus restoration come from the primitive.
  */
-const Menu: React.FC<MenuProps> = ({ trigger, items, align = 'end', label = 'Actions', className }) => (
+const Menu: React.FC<MenuProps> = ({
+  trigger,
+  items,
+  header,
+  align = 'end',
+  label = 'Actions',
+  className,
+}) => (
   <DropdownMenu.Root>
     <DropdownMenu.Trigger asChild>{trigger}</DropdownMenu.Trigger>
     <DropdownMenu.Portal>
@@ -39,6 +48,12 @@ const Menu: React.FC<MenuProps> = ({ trigger, items, align = 'end', label = 'Act
         sideOffset={6}
         aria-label={label}
       >
+        {header && (
+          <>
+            <DropdownMenu.Label className="ui-menu__header">{header}</DropdownMenu.Label>
+            <DropdownMenu.Separator className="ui-menu__separator" />
+          </>
+        )}
         {items.map((item) => {
           const Icon = item.icon;
           return (

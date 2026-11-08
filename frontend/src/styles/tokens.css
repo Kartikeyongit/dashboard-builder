@@ -48,6 +48,11 @@
   --space-20: 5rem;
   --space-24: 6rem;
 
+  /* ── Application shell layout ───────────────────────────────── */
+  --shell-topbar-height: 64px;
+  --shell-sidebar-width: 240px;
+  --shell-sidebar-width-collapsed: 64px;
+
   /* ── Surfaces ───────────────────────────────────────────────── */
   --color-bg: #f6f7f9;
   --color-surface: #ffffff;
