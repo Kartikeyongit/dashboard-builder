@@ -13,6 +13,10 @@
   width: fit-content;
   max-width: 100%;
   overflow-x: auto;
+  /* As a scroll container this flex item has an automatic min-height of 0, so
+     the panel would otherwise shrink it to nothing when a tab's content
+     overflows. */
+  flex: 0 0 auto;
 }
 
 .team-tab {

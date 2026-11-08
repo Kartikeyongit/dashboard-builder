@@ -90,6 +90,9 @@
 
 .sidebar--collapsed .sidebar-brand {
   flex: 0 0 auto;
+  /* The hidden label would otherwise leave its flex gap and push the mark
+     off-centre in the 64px rail. */
+  gap: 0;
 }
 
 .sidebar--collapsed .sidebar-brand__text {

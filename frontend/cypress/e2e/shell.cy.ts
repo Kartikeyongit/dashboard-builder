@@ -139,6 +139,16 @@ describe('application shell — desktop', () => {
     cy.contains('.sidebar-group a', 'Home')
       .find('.nav-label')
       .should('have.css', 'opacity', '0');
+
+    // The hidden brand label must not leave a gap that pushes the mark off-centre.
+    cy.get('.sidebar-brand__mark').should(($mark) => {
+      const mark = $mark[0].getBoundingClientRect();
+      const rail = $mark[0].closest('.sidebar')!.getBoundingClientRect();
+      const offset = Math.abs(
+        mark.left + mark.width / 2 - (rail.left + rail.width / 2),
+      );
+      expect(offset, 'brand mark offset from the rail centre').to.be.lessThan(1);
+    });
     cy.window().then((win) => {
       expect(win.localStorage.getItem('dashboard-builder-sidebar-collapsed')).to.eq('1');
     });
