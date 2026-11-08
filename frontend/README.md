@@ -50,8 +50,10 @@ axe scans with the drawer and palette open.
 ## Visual regression
 
 Screenshots of the landing page (desktop, dark, mobile, FAQ open), login,
-register, home (desktop, dark, and mobile, fixture-backed), settings, and a
-dashboard chart are compared with `pixelmatch`. Baselines live in
+register, home (desktop, dark, and mobile, fixture-backed), and settings are
+compared with `pixelmatch`. The dashboard chart is captured for artifact review
+but skipped by the comparison: its canvas renders rows from the demo seed, which
+randomises sample data on every run. Baselines live in
 `cypress/visual-baseline/<platform>/` because font rasterisation differs
 between operating systems.
 
