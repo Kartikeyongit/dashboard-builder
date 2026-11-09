@@ -1,5 +1,5 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import {
   Database,
   LayoutDashboard,
@@ -30,6 +30,8 @@ import './AppShell.css';
 
 const SIDEBAR_STORAGE_KEY = 'dashboard-builder-sidebar-collapsed';
 const MOBILE_QUERY = '(max-width: 768px)';
+/** Routes an anonymous visitor may see. Everything else needs a session. */
+const PUBLIC_PATHS = new Set(['/', '/login', '/register']);
 
 function readSidebarCollapsed(): boolean {
   try {
@@ -134,9 +136,13 @@ const AppShell: React.FC = () => {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  const handleLogout = () => {
-    dispatch(logoutUser());
-    navigate('/login');
+  const handleLogout = async () => {
+    // Wait for the session to clear before showing the sign-in page. Otherwise
+    // Login mounts while `user` is still set and redirects straight back to the
+    // landing page.
+    await dispatch(logoutUser());
+    // Replace the protected page so Back cannot return to it.
+    navigate('/login', { replace: true });
   };
 
   const commandItems = useMemo<CommandItem[]>(() => {
@@ -218,7 +224,10 @@ const AppShell: React.FC = () => {
   );
 
   if (!user) {
-    return routedPage;
+    // Public routes render for anonymous visitors; protected ones fall back to
+    // the landing page so browser Back cannot expose a signed-out workspace.
+    if (PUBLIC_PATHS.has(location.pathname)) return routedPage;
+    return <Navigate to="/" replace />;
   }
 
   return (

@@ -49,9 +49,13 @@ const TopBar: React.FC<TopBarProps> = ({
   const navigate = useNavigate();
   const { resolved: theme, toggle: toggleTheme } = useTheme();
 
-  const handleLogout = () => {
-    dispatch(logoutUser());
-    navigate('/login');
+  const handleLogout = async () => {
+    // Wait for the session to clear before showing the sign-in page. Otherwise
+    // Login mounts while `user` is still set and redirects straight back to the
+    // landing page.
+    await dispatch(logoutUser());
+    // Replace the protected page so Back cannot return to it.
+    navigate('/login', { replace: true });
   };
 
   const themeLabel = theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme';

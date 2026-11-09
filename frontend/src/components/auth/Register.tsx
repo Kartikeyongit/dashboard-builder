@@ -53,7 +53,7 @@ const Register: React.FC = () => {
   const { user, isLoading, error } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
-    if (user) navigate('/');
+    if (user) navigate('/', { replace: true });
   }, [user, navigate]);
 
   useEffect(() => {

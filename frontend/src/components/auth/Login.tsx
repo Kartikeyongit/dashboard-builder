@@ -15,7 +15,7 @@ const Login: React.FC = () => {
   const { user, isLoading, error } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
-    if (user) navigate('/');
+    if (user) navigate('/', { replace: true });
   }, [user, navigate]);
 
   // Seeded demo credentials only exist on a local database. Showing the button

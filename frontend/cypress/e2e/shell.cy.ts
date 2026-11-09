@@ -273,3 +273,43 @@ describe('application shell — mobile', () => {
     scan();
   });
 });
+
+describe('application shell — signed out', () => {
+  beforeEach(() => {
+    cy.viewport(1280, 800);
+    stubApi();
+  });
+
+  it('takes Back from the sign-in page to the landing page', () => {
+    cy.clearLocalStorage();
+    visitApp();
+
+    cy.contains('.sidebar-group a', 'Dashboards').click();
+    cy.location('pathname').should('eq', '/dashboards');
+    cy.contains('.sidebar-group a', 'Datasources').click();
+    cy.location('pathname').should('eq', '/datasources');
+
+    cy.get('.topbar__avatar').click();
+    cy.contains('.ui-menu__item', 'Sign out').click();
+
+    cy.location('pathname').should('eq', '/login');
+    cy.contains('h2', 'Welcome back').should('be.visible');
+
+    // Signing out replaces the protected page, and the protected entry behind
+    // it redirects to the landing page instead of rendering a stale workspace.
+    cy.go('back');
+    cy.location('pathname', { timeout: 10000 }).should('eq', '/');
+    cy.contains('h1', /live dashboard/i, { timeout: 20000 }).should('be.visible');
+    cy.contains('Connected Databases').should('not.exist');
+    cy.get('#app-sidebar').should('not.exist');
+  });
+
+  it('redirects a signed-out deep link to the landing page', () => {
+    cy.clearLocalStorage();
+    cy.visit('/dashboards');
+
+    cy.location('pathname').should('eq', '/');
+    cy.contains('h1', /live dashboard/i, { timeout: 20000 }).should('be.visible');
+    cy.get('#app-sidebar').should('not.exist');
+  });
+});
