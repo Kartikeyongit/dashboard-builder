@@ -34,6 +34,12 @@
   padding: 0 0.85rem;
 }
 
+.ui-btn--lg {
+  height: 44px;
+  padding: 0 1.1rem;
+  font-size: var(--text-md);
+}
+
 .ui-btn--primary {
   background: var(--color-primary);
   color: var(--color-primary-contrast);

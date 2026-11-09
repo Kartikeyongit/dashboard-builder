@@ -61,6 +61,12 @@ export const loginUser = createAsyncThunk(
       localStorage.setItem('refresh_token', response.data.tokens.refresh_token);
       return response.data.user;
     } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        return rejectWithValue('Email or password is incorrect.');
+      }
+      if (axios.isAxiosError(err) && err.response?.status === 429) {
+        return rejectWithValue('Too many attempts. Wait a moment and try again.');
+      }
       return rejectWithValue(apiErrorMessage(err, 'Login failed'));
     }
   }
