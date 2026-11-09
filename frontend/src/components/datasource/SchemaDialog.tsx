@@ -3,6 +3,7 @@ import { Check, Copy, Database, Search } from 'lucide-react';
 import { datasourceAPI } from '../../api/datasource';
 import type { TableSchema } from '../../types';
 import { apiErrorMessage } from '../../utils/apiError';
+import { pluralize } from '../../utils/format';
 import Dialog from '../../ui/Dialog';
 import Button from '../../ui/Button';
 import { Input } from '../../ui/Field';
@@ -70,7 +71,7 @@ const SchemaDialog: React.FC<Props> = ({ open, datasourceId, datasourceName, onC
     }
   };
 
-  const columnCount = schema.reduce((total, table) => total + table.columns.length, 0);
+  const columnCount = filtered.reduce((total, table) => total + table.columns.length, 0);
 
   return (
     <Dialog
@@ -99,7 +100,8 @@ const SchemaDialog: React.FC<Props> = ({ open, datasourceId, datasourceName, onC
         </div>
         {!loading && !error && (
           <span className="schema-count">
-            {filtered.length} of {schema.length} tables · {columnCount} columns
+            {filtered.length} of {pluralize(schema.length, 'table')} ·{' '}
+            {pluralize(columnCount, 'column')}
           </span>
         )}
       </div>

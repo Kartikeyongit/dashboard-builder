@@ -51,6 +51,10 @@
 }
 
 .schema-table {
+  /* Sections are flex children of the scrolling list. They have overflow
+     hidden, so their automatic minimum height is zero; without a fixed basis
+     the list squashes them and clips the column rows instead of scrolling. */
+  flex: 0 0 auto;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-bg);
@@ -62,6 +66,7 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.45rem 0.65rem;
+  min-width: 0;
   background: var(--color-surface-hover);
   border-bottom: 1px solid var(--color-border-light, var(--color-border));
   color: var(--color-text-secondary);
@@ -71,15 +76,22 @@
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
   color: var(--color-text);
+  /* Long table names must truncate instead of pushing the copy button out. */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .schema-table-meta {
+  flex-shrink: 0;
   font-size: var(--text-xs);
   color: var(--color-text-muted);
 }
 
 .schema-copy {
   margin-left: auto;
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
