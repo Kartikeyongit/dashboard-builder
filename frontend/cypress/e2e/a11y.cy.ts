@@ -71,13 +71,29 @@ describe('accessibility', () => {
 
     it('login', () => {
       visitAndScan('/login', () =>
-        cy.contains('h2', 'Welcome back', { timeout: 20000 }).should('be.visible'),
+        cy.contains('h1', 'Welcome back', { timeout: 20000 }).should('be.visible'),
       );
     });
 
     it('register', () => {
       visitAndScan('/register', () =>
-        cy.contains('h2', 'Create an account', { timeout: 20000 }).should('be.visible'),
+        cy.contains('h1', 'Create an account', { timeout: 20000 }).should('be.visible'),
+      );
+    });
+
+    it('login (dark theme)', () => {
+      visitAndScan(
+        '/login',
+        () => cy.contains('h1', 'Welcome back', { timeout: 20000 }).should('be.visible'),
+        'dark',
+      );
+    });
+
+    it('register (dark theme)', () => {
+      visitAndScan(
+        '/register',
+        () => cy.contains('h1', 'Create an account', { timeout: 20000 }).should('be.visible'),
+        'dark',
       );
     });
 

@@ -198,15 +198,42 @@ describe('visual regression', () => {
   it('login', () => {
     cy.clearLocalStorage();
     visit('/login');
-    cy.contains('h2', 'Welcome back', { timeout: 20000 }).should('be.visible');
+    cy.contains('h1', 'Welcome back', { timeout: 20000 }).should('be.visible');
     shot('login');
   });
 
   it('register', () => {
     cy.clearLocalStorage();
     visit('/register');
-    cy.contains('h2', 'Create an account', { timeout: 20000 }).should('be.visible');
+    cy.contains('h1', 'Create an account', { timeout: 20000 }).should('be.visible');
     shot('register');
+  });
+
+  it('login (dark theme)', () => {
+    cy.clearLocalStorage();
+    cy.visit('/login', {
+      onBeforeLoad(win) {
+        win.localStorage.setItem('dashboard-builder-theme', 'dark');
+      },
+    });
+    cy.contains('h1', 'Welcome back', { timeout: 20000 }).should('be.visible');
+    shot('login-dark');
+  });
+
+  it('login (mobile)', () => {
+    cy.viewport(390, 844);
+    cy.clearLocalStorage();
+    visit('/login');
+    cy.contains('h1', 'Welcome back', { timeout: 20000 }).should('be.visible');
+    shot('login-mobile');
+  });
+
+  it('register (mobile)', () => {
+    cy.viewport(390, 844);
+    cy.clearLocalStorage();
+    visit('/register');
+    cy.contains('h1', 'Create an account', { timeout: 20000 }).should('be.visible');
+    shot('register-mobile');
   });
 
   it('landing', () => {

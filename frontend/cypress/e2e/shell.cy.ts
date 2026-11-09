@@ -293,7 +293,7 @@ describe('application shell — signed out', () => {
     cy.contains('.ui-menu__item', 'Sign out').click();
 
     cy.location('pathname').should('eq', '/login');
-    cy.contains('h2', 'Welcome back').should('be.visible');
+    cy.contains('h1', 'Welcome back').should('be.visible');
 
     // Signing out replaces the protected page, and the protected entry behind
     // it redirects to the landing page instead of rendering a stale workspace.
