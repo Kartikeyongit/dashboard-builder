@@ -31,7 +31,8 @@ func (r *UserRepo) CreateUser(orgID, email, passwordHash, role string) (*model.U
 func (r *UserRepo) GetByEmail(email string) (*model.User, error) {
 	user := &model.User{}
 	err := r.db.QueryRow(
-		`SELECT id, org_id, email, password_hash, role, created_at FROM users WHERE email = $1`,
+		// Addresses are case-insensitive; registration stores them lowercased.
+		`SELECT id, org_id, email, password_hash, role, created_at FROM users WHERE lower(email) = lower($1)`,
 		email,
 	).Scan(&user.ID, &user.OrgID, &user.Email, &user.PasswordHash, &user.Role, &user.CreatedAt)
 	if err == sql.ErrNoRows {
