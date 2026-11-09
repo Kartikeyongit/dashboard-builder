@@ -111,7 +111,7 @@ describe('team onboarding and management', () => {
     cy.clearLocalStorage();
     cy.visit(inviteUrl);
 
-    cy.contains('h2', `Join ${orgName}`, { timeout: 30000 }).should('exist');
+    cy.contains('h1', `Join ${orgName}`, { timeout: 30000 }).should('exist');
     cy.get('#invite-name').type('Cypress Teammate');
     cy.get('input[type="password"]').type(memberPassword);
     cy.contains('button', 'Join team').click();
